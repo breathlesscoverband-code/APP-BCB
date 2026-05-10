@@ -1,6 +1,6 @@
-const APP_BCB_APP_VERSION = '2.7.0-final-sync-iframe-fallback-bcb';
-const STORE_KEY = 'app_bcb_control_pro_v27_iframe_fallback';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
+const APP_BCB_APP_VERSION = '2.8.0-final-sync-sheet-direct-bcb';
+const STORE_KEY = 'app_bcb_control_pro_v28_sheet_direct';
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
 let db = loadData();
 let filteredCRM = [];
 let rehearsalSyncRunning = false;
@@ -42,7 +42,7 @@ function clearOldLocalCaches(){
     OLD_STORE_KEYS.forEach(k=>localStorage.removeItem(k));
     if(window.caches){
       caches.keys().then(keys=>keys.forEach(k=>{
-        if(!String(k).includes('v1-8')) caches.delete(k);
+        if(String(k).includes('app-bcb') || String(k).includes('APP-BCB')) caches.delete(k);
       })).catch(()=>{});
     }
   }catch(e){}
@@ -488,6 +488,148 @@ function appBcbEndpointUrl(params={}){
   Object.entries(params).forEach(([k,v])=>url.searchParams.set(k, v));
   url.searchParams.set('ts', String(Date.now()));
   return url.toString();
+}
+
+function googleSheetGvizUrl(tab){
+  const url = new URL('https://docs.google.com/spreadsheets/d/'+GOOGLE_SHEET_MASTER.spreadsheetId+'/gviz/tq');
+  url.searchParams.set('sheet', tab);
+  url.searchParams.set('headers', '0');
+  url.searchParams.set('tq', 'select *');
+  url.searchParams.set('tqx', 'out:json');
+  url.searchParams.set('ts', String(Date.now()));
+  return url.toString();
+}
+
+function gvizCellValue(cell){
+  if(!cell) return '';
+  if(cell.f !== undefined && cell.f !== null && String(cell.f).trim() !== '') return cell.f;
+  if(cell.v === undefined || cell.v === null) return '';
+  return cell.v;
+}
+
+function scoreHeaderCandidate(row, tab){
+  const vals = (row || []).map(v=>normalizeHeader(v));
+  let score = 0;
+  const has = (needle)=>vals.some(v=>v.includes(normalizeHeader(needle)));
+  if(has('id')) score += 3;
+  if(has('estado')) score += 3;
+  if(has('fecha')) score += 2;
+  if(has('cancion') || has('canción')) score += 4;
+  if(has('artista')) score += 2;
+  if(has('local') || has('sala') || has('organizacion') || has('organización')) score += 4;
+  if(has('email') || has('correo')) score += 2;
+  if(has('telefono') || has('teléfono')) score += 2;
+  if(has('siguiente paso')) score += 3;
+  if(tab === 'CRM_GENERAL'){
+    if(has('organizacion') || has('organización') || has('local') || has('empresa')) score += 6;
+    if(has('email') || has('web') || has('instagram')) score += 3;
+  }
+  if(tab === 'ENSAYOS'){
+    if(has('hora inicio') || has('hora_inicio')) score += 4;
+    if(has('lugar') || has('objetivo')) score += 4;
+  }
+  if(tab === 'REPERTORIO'){
+    if(has('cancion') || has('canción')) score += 6;
+    if(has('duracion') || has('duración') || has('voz principal')) score += 3;
+  }
+  if(tab === 'CONCIERTOS'){
+    if(has('fecha') && (has('lugar') || has('sala'))) score += 5;
+  }
+  if(tab === 'PAGOS_LOCAL'){
+    if(has('mes') && (has('pagado') || has('cuota'))) score += 5;
+  }
+  return score;
+}
+
+function gvizResponseToObjects(resp, tab, limit=500){
+  if(!resp) throw new Error('Google Sheet directo no devolvió respuesta.');
+  if(resp.status && resp.status !== 'ok'){
+    const msg = (resp.errors && resp.errors[0] && (resp.errors[0].detailed_message || resp.errors[0].message)) || resp.status;
+    throw new Error('Google Sheet directo: '+msg);
+  }
+  const table = resp.table || {};
+  const rawRows = (table.rows || []).map(r => (r.c || []).map(gvizCellValue));
+  const cleanRows = rawRows.filter(r => r.some(v => String(v ?? '').trim() !== ''));
+  if(!cleanRows.length) return [];
+
+  let headerIndex = 0;
+  let bestScore = -1;
+  cleanRows.slice(0, 12).forEach((row, idx)=>{
+    const sc = scoreHeaderCandidate(row, tab);
+    if(sc > bestScore){ bestScore = sc; headerIndex = idx; }
+  });
+
+  // Si no encontramos cabecera clara, usamos etiquetas de columnas de Google.
+  let headers = (cleanRows[headerIndex] || []).map((h,i)=>String(h || ('Columna '+(i+1))).trim());
+  const usefulHeader = bestScore >= 4 && headers.some(h=>String(h||'').trim());
+  let dataRows = usefulHeader ? cleanRows.slice(headerIndex + 1) : cleanRows;
+
+  if(!usefulHeader){
+    headers = (table.cols || []).map((c,i)=>String((c && (c.label || c.id)) || ('Columna '+(i+1))).trim());
+  }
+
+  // Normaliza cabeceras vacías.
+  headers = headers.map((h,i)=>String(h || ('Columna '+(i+1))).trim());
+
+  const out = dataRows.slice(0, Number(limit)||500).map((row, idx)=>{
+    const obj = {};
+    headers.forEach((h,i)=>{ obj[h] = row[i] ?? ''; });
+    obj.sheetRow = (usefulHeader ? headerIndex + 2 + idx : 1 + idx);
+    obj.__source = 'Google Sheet directo';
+    obj.__tab = tab;
+    return obj;
+  }).filter(o => Object.keys(o).some(k => !k.startsWith('__') && String(o[k] ?? '').trim() !== ''));
+
+  return out;
+}
+
+function fetchSheetTabViaGoogleSheetDirect(tab, limit=500){
+  return new Promise((resolve,reject)=>{
+    const previousGoogle = window.google;
+    const previousVisualization = previousGoogle && previousGoogle.visualization;
+    const previousQuery = previousVisualization && previousVisualization.Query;
+    const previousSetResponse = previousQuery && previousQuery.setResponse;
+    const script = document.createElement('script');
+    let done = false;
+    const timeout = setTimeout(()=>{
+      cleanup();
+      reject(new Error('Tiempo agotado leyendo Google Sheet directo. Publica la hoja en la web o comparte con enlace de lectura.'));
+    }, 30000);
+
+    function cleanup(){
+      if(done) return;
+      done = true;
+      clearTimeout(timeout);
+      if(script.parentNode) script.parentNode.removeChild(script);
+      // Conservamos google si ya existía; si no existía, retiramos solo nuestra función.
+      try{
+        if(previousSetResponse){
+          window.google.visualization.Query.setResponse = previousSetResponse;
+        }
+      }catch(e){}
+    }
+
+    window.google = window.google || {};
+    window.google.visualization = window.google.visualization || {};
+    window.google.visualization.Query = window.google.visualization.Query || {};
+    window.google.visualization.Query.setResponse = function(resp){
+      try{
+        const rows = gvizResponseToObjects(resp, tab, limit);
+        cleanup();
+        resolve(rows);
+      }catch(err){
+        cleanup();
+        reject(err);
+      }
+    };
+
+    script.onerror = function(){
+      cleanup();
+      reject(new Error('No se pudo cargar Google Sheet directo. Revisa publicación web/permiso de lectura del Sheet.'));
+    };
+    script.src = googleSheetGvizUrl(tab);
+    document.head.appendChild(script);
+  });
 }
 function appsScriptJsonpOnly(params={}){
   return new Promise((resolve,reject)=>{
@@ -1018,7 +1160,7 @@ function applyAllFromGoogleSheetPayload(payload){
     setlist: report.setlist,
     updatedAt: new Date().toISOString(),
     status: 'ok',
-    endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl,
+    endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl, directSheet: GOOGLE_SHEET_MASTER.userUrl,
     version: payload.version || ''
   };
   return report;
@@ -1051,7 +1193,7 @@ function applyRehearsalsOnlyPayload(payload){
     status: 'ok',
     rehearsalOnly: true,
     updatedAt: new Date().toISOString(),
-    endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl,
+    endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl, directSheet: GOOGLE_SHEET_MASTER.userUrl,
     version: payload.version || db.sheetSync?.version || ''
   });
   return count;
@@ -1095,9 +1237,18 @@ function ensureRehearsalsFreshOnMobile(){
 
 
 async function fetchSheetTabViaAppsScript(tab, limit=500){
-  const payload = await appsScriptJSONP({action:'sheet', tab, limit:String(limit)});
-  if(!payload || payload.ok===false) throw new Error((payload && payload.error) || ('No se pudo leer '+tab));
-  return Array.isArray(payload.rows) ? payload.rows : [];
+  try{
+    const payload = await appsScriptJSONP({action:'sheet', tab, limit:String(limit)});
+    if(!payload || payload.ok===false) throw new Error((payload && payload.error) || ('No se pudo leer '+tab));
+    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    rows.forEach(r=>{ if(r && typeof r==='object') r.__source = r.__source || 'Apps Script'; });
+    return rows;
+  }catch(appsErr){
+    console.warn('APP-BCB: Apps Script no cargó '+tab+'. Probando Google Sheet directo:', appsErr);
+    const rows = await fetchSheetTabViaGoogleSheetDirect(tab, limit);
+    rows.forEach(r=>{ if(r && typeof r==='object') r.__fallbackError = String(appsErr.message||appsErr); });
+    return rows;
+  }
 }
 
 function applyCoreSheetRows(tab, rows){
@@ -1155,9 +1306,9 @@ async function syncCoreSheetsIndividually(opts={}){
   }
   db.sheetSync = Object.assign({}, db.sheetSync||{}, {
     status: report.errors.length ? 'partial' : 'ok',
-    method: 'individual-tabs-mobile-safe',
+    method: 'individual-tabs-mobile-safe-with-sheet-direct-fallback',
     updatedAt: new Date().toISOString(),
-    endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl,
+    endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl, directSheet: GOOGLE_SHEET_MASTER.userUrl,
     report
   });
   saveData();
@@ -1169,16 +1320,35 @@ async function syncCoreSheetsIndividually(opts={}){
 }
 
 async function diagnosticoMovilBCB(){
+  const lines = [];
+  let ok = false;
   try{
-    sheetStatus('Probando conexión móvil con Apps Script…');
-    const health = await appsScriptJSONP({action:'health'});
-    const crm = await fetchSheetTabViaAppsScript('CRM_GENERAL', 5);
-    const ensayos = await fetchSheetTabViaAppsScript('ENSAYOS', 5);
-    const msg = `Diagnóstico OK.\nTransporte: ${health._transport || '—'}\nVersión bridge: ${health.version || '—'}\nSheet: ${health.spreadsheetName || '—'}\nCRM primeras filas: ${crm.length}\nEnsayos primeras filas: ${ensayos.length}\nEndpoint: ${GOOGLE_SHEET_MASTER.appsScriptUrl}`;
-    sheetStatus(msg.replace(/\n/g,'<br>'), 'ok');
+    sheetStatus('Probando conexión móvil… primero Apps Script, después Google Sheet directo.', 'info');
+
+    try{
+      const health = await appsScriptJSONP({action:'health'});
+      lines.push('Apps Script: OK · '+(health.version || 'sin versión')+' · transporte '+(health._transport || '—'));
+    }catch(asErr){
+      lines.push('Apps Script: FALLA en este móvil · '+(asErr.message || asErr));
+    }
+
+    try{
+      const crm = await fetchSheetTabViaGoogleSheetDirect('CRM_GENERAL', 5);
+      const ensayos = await fetchSheetTabViaGoogleSheetDirect('ENSAYOS', 5);
+      lines.push('Google Sheet directo: OK');
+      lines.push('CRM primeras filas: '+crm.length);
+      lines.push('Ensayos primeras filas: '+ensayos.length);
+      ok = true;
+    }catch(gsErr){
+      lines.push('Google Sheet directo: FALLA · '+(gsErr.message || gsErr));
+      lines.push('Solución: en el Google Sheet BCB, Archivo → Compartir → Publicar en la web → Documento completo → Publicar. Después abre la app con ?reset=1.');
+    }
+
+    const msg = (ok ? 'Diagnóstico OK para lectura móvil.\n' : 'Diagnóstico fallido para lectura móvil.\n') + lines.join('\n');
+    sheetStatus(esc(msg).replace(/\n/g,'<br>'), ok ? 'ok' : 'bad');
     alert(msg);
   }catch(err){
-    const msg = 'Diagnóstico fallido: '+(err.message||err)+'. Endpoint configurado: '+GOOGLE_SHEET_MASTER.appsScriptUrl+'. Si health directo funciona, sube APP-BCB v2.7 y sustituye también Code.gs v2.7 para activar el iframe fallback.';
+    const msg = 'Diagnóstico fallido: '+(err.message||err)+'.';
     sheetStatus(esc(msg), 'bad');
     alert(msg);
   }

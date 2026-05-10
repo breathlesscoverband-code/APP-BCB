@@ -1,18 +1,23 @@
 <!doctype html>
 <html lang="es">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>APP-BCB diagnóstico móvil</title>
-<style>body{font-family:system-ui;background:#090b10;color:#fff;padding:20px}button{padding:12px 16px;border:0;border-radius:10px;margin:6px;background:#d6b45b;color:#111;font-weight:700}pre{white-space:pre-wrap;background:#111827;padding:12px;border-radius:12px;border:1px solid #333}</style></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>APP-BCB diagnóstico móvil v2.8</title>
+<style>body{font-family:system-ui;background:#090b10;color:#fff;padding:20px}button{padding:12px 16px;border:0;border-radius:10px;margin:6px;background:#d6b45b;color:#111;font-weight:700}pre{white-space:pre-wrap;background:#111827;padding:12px;border-radius:12px;border:1px solid #333;min-height:180px}</style></head>
 <body>
-<h1>APP-BCB diagnóstico móvil</h1>
-<p>Prueba directa de conexión con Apps Script.</p>
-<button onclick="testJsonp()">Probar JSONP</button>
-<button onclick="testIframe()">Probar iframe fallback</button>
+<h1>APP-BCB diagnóstico móvil v2.8</h1>
+<p>Esta prueba ya no depende solo de Apps Script. Comprueba Apps Script y Google Sheet directo.</p>
+<button onclick="testAppsScript()">1 · Probar Apps Script</button>
+<button onclick="testSheetDirect()">2 · Probar Google Sheet directo</button>
+<button onclick="testAll()">Probar todo</button>
 <pre id="out">Pendiente...</pre>
 <script>
 const ENDPOINT='https://script.google.com/macros/s/AKfycbzbddqoQzAwtxY9zpZNjRnWhziFjw6J0oEYqbDEQYpqe37TkTw3f6T6J4kwxokMKBhycg/exec';
+const SHEET_ID='1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q';
 function log(x){document.getElementById('out').textContent=typeof x==='string'?x:JSON.stringify(x,null,2);}
+function append(x){document.getElementById('out').textContent += '\n'+(typeof x==='string'?x:JSON.stringify(x,null,2));}
 function url(params){const u=new URL(ENDPOINT); Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v)); u.searchParams.set('ts',Date.now()); return u.toString();}
-function testJsonp(){log('Probando JSONP...'); const cb='DBG_'+Date.now(); window[cb]=p=>{log({ok:true,method:'jsonp',payload:p}); delete window[cb];}; const s=document.createElement('script'); s.onerror=()=>log('ERROR JSONP'); s.src=url({action:'health',callback:cb}); document.head.appendChild(s);}
-function testIframe(){log('Probando iframe...'); const requestId='IFR_'+Date.now(); window.addEventListener('message', function h(ev){ if(!ev.data||ev.data.requestId!==requestId)return; window.removeEventListener('message',h); log({ok:true,method:'iframe',payload:ev.data.payload});}); const f=document.createElement('iframe'); f.style.display='none'; f.src=url({action:'iframe',payloadAction:'health',requestId}); document.body.appendChild(f); setTimeout(()=>log('Si no ha salido OK, el Code.gs v2.7 no está implementado o no está público.'),15000);}
+function testAppsScript(){return new Promise(resolve=>{log('Probando Apps Script JSONP...'); const cb='DBG_'+Date.now(); window[cb]=p=>{append({ok:true,method:'apps-script',payload:p}); delete window[cb]; resolve(true);}; const s=document.createElement('script'); s.onerror=()=>{append('ERROR Apps Script JSONP. Si health directo abre pero esto no, no está público para carga externa.'); resolve(false);}; s.src=url({action:'health',callback:cb}); document.head.appendChild(s); setTimeout(()=>resolve(false),15000);});}
+function testSheet(tab){return new Promise((resolve,reject)=>{window.google=window.google||{}; google.visualization=google.visualization||{}; google.visualization.Query=google.visualization.Query||{}; google.visualization.Query.setResponse=function(resp){ if(resp.status && resp.status!=='ok') reject(resp); else resolve(resp); }; const s=document.createElement('script'); s.onerror=()=>reject('No carga Google Sheet directo'); s.src='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?sheet='+encodeURIComponent(tab)+'&headers=0&tq='+encodeURIComponent('select *')+'&tqx=out:json&ts='+Date.now(); document.head.appendChild(s);});}
+async function testSheetDirect(){log('Probando Google Sheet directo...'); try{ const crm=await testSheet('CRM_GENERAL'); append('CRM_GENERAL: OK · filas brutas '+((crm.table&&crm.table.rows)||[]).length); const ens=await testSheet('ENSAYOS'); append('ENSAYOS: OK · filas brutas '+((ens.table&&ens.table.rows)||[]).length); append('Google Sheet directo OK. La app puede leer en móvil aunque Apps Script falle.'); return true; }catch(e){ append('ERROR Google Sheet directo. Publica el Sheet: Archivo → Compartir → Publicar en la web → Documento completo → Publicar. Detalle: '+JSON.stringify(e)); return false; }}
+async function testAll(){log('Inicio diagnóstico completo...'); await testAppsScript(); await testSheetDirect();}
 </script>
 </body></html>

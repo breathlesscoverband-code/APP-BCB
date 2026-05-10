@@ -1,0 +1,13 @@
+{
+  "app": "APP-BCB",
+  "band": "Breathless Cover Band",
+  "version": "APP-BCB v2.8 final sync",
+  "reason": "Lectura móvil directa desde Google Sheet publicado para dejar de depender de Apps Script público en CRM y ensayos.",
+  "sheetId": "1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q",
+  "appsScriptExecUrl": "https://script.google.com/macros/s/AKfycbzbddqoQzAwtxY9zpZNjRnWhziFjw6J0oEYqbDEQYpqe37TkTw3f6T6J4kwxokMKBhycg/exec",
+  "notes": [
+    "La lectura de CRM/Ensayos usa Google Visualization API por script injection, sin CORS.",
+    "Requiere publicar el Google Sheet en la web o que el sheet permita lectura pública.",
+    "Apps Script queda para escritura/admin cuando esté disponible."
+  ]
+}

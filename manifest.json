@@ -2,7 +2,7 @@
   "name": "APP-BCB · Breathless Cover Band",
   "short_name": "APP-BCB",
   "description": "App interna de Breathless Cover Band para CRM, repertorio, setlist, ensayos, local, tareas y seguimiento. Versión 2.7.",
-  "start_url": "./?source=pwa&v=2.7",
+  "start_url": "./?v=28",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
@@ -67,5 +67,6 @@
       ]
     }
   ],
-  "version": "2.5.0"
+  "version": "2.5.0",
+  "id": "APP-BCB-v2-8"
 }
