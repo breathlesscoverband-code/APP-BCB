@@ -1,4 +1,4 @@
-const APP_BCB_APP_VERSION = '2.5.0-final-sync-mobile-core-bcb';
+const APP_BCB_APP_VERSION = '2.6.0-final-sync-public-endpoint-bcb';
 const STORE_KEY = 'app_bcb_control_pro_v25_mobile_core';
 const OLD_STORE_KEYS = ['app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
 let db = loadData();
@@ -364,7 +364,7 @@ const GOOGLE_SHEET_MASTER = {
   gid: '',
   userUrl: 'https://docs.google.com/spreadsheets/d/1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q/edit',
   csvUrl: '',
-  appsScriptUrl: 'https://script.google.com/macros/s/AKfycbx6FfjKaqSvRu9Wc8Ym0yH1y-x4VPryt4J4qVM6EOhRDEhGBGr6RrO51xqaUF36mrD6dg/exec'
+  appsScriptUrl: 'https://script.google.com/macros/s/AKfycbzbddqoQzAwtxY9zpZNjRnWhziFjw6J0oEYqbDEQYpqe37TkTw3f6T6J4kwxokMKBhycg/exec'
 };
 
 function sheetStatus(msg, type='info'){

@@ -8,7 +8,7 @@ Esta versión parte de la estructura técnica completa de la app de referencia v
 - Repo: APP-BCB
 - PWA: instalable en móvil
 - Fuente principal: Google Sheet maestro BCB
-- Apps Script bridge BCB: `https://script.google.com/macros/s/AKfycbx6FfjKaqSvRu9Wc8Ym0yH1y-x4VPryt4J4qVM6EOhRDEhGBGr6RrO51xqaUF36mrD6dg/exec`
+- Apps Script bridge BCB: `https://script.google.com/macros/s/AKfycbzbddqoQzAwtxY9zpZNjRnWhziFjw6J0oEYqbDEQYpqe37TkTw3f6T6J4kwxokMKBhycg/exec`
 - Sheet maestro BCB: `1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q`
 - Admin: 1929
 

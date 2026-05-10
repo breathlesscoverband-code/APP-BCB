@@ -1,5 +1,5 @@
-/* APP-BCB · PWA service worker v2.5 final sync · mobile core sync */
-const CACHE_NAME = "app-bcb-pwa-v2-5-0-mobile-core";
+/* APP-BCB · PWA service worker v2.6 final sync · public endpoint mobile */
+const CACHE_NAME = "app-bcb-pwa-v2-6-0-public-endpoint";
 const APP_SHELL = [
   "./",
   "./index.html",

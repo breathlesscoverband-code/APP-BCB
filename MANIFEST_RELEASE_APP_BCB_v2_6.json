@@ -1,0 +1,14 @@
+{
+  "release": "APP-BCB v2.6 final sync",
+  "band": "BCB",
+  "bandName": "Breathless Cover Band",
+  "change": "Nuevo endpoint público Apps Script aplicado para que móvil pueda leer CRM y ensayos.",
+  "appsScriptExecUrl": "https://script.google.com/macros/s/AKfycbzbddqoQzAwtxY9zpZNjRnWhziFjw6J0oEYqbDEQYpqe37TkTw3f6T6J4kwxokMKBhycg/exec",
+  "googleSheetId": "1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q",
+  "notes": [
+    "Sustituye la URL /exec anterior en la app.",
+    "Mantiene Google Sheet maestro como fuente principal.",
+    "Mantiene localStorage solo como caché temporal.",
+    "Subir ZIP completo a GitHub Pages y no reinstalar PWA hasta probar en navegador móvil."
+  ]
+}
