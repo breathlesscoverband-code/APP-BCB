@@ -1,6 +1,6 @@
-const APP_BCB_APP_VERSION = '2.4.0-final-sync-admin-guard-bcb';
-const STORE_KEY = 'app_bcb_control_pro_v24_admin_guard';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
+const APP_BCB_APP_VERSION = '2.5.0-final-sync-mobile-core-bcb';
+const STORE_KEY = 'app_bcb_control_pro_v25_mobile_core';
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
 let db = loadData();
 let filteredCRM = [];
 let rehearsalSyncRunning = false;
@@ -497,7 +497,7 @@ function appsScriptJSONP(params={}){
     const timeout=setTimeout(()=>{
       cleanup();
       reject(new Error('Tiempo agotado leyendo Apps Script.'));
-    }, 25000);
+    }, 45000);
     function cleanup(){
       clearTimeout(timeout);
       try{delete window[cb];}catch(e){window[cb]=undefined;}
@@ -1046,17 +1046,120 @@ function ensureRehearsalsFreshOnMobile(){
   }
 }
 
+
+async function fetchSheetTabViaAppsScript(tab, limit=500){
+  const payload = await appsScriptJSONP({action:'sheet', tab, limit:String(limit)});
+  if(!payload || payload.ok===false) throw new Error((payload && payload.error) || ('No se pudo leer '+tab));
+  return Array.isArray(payload.rows) ? payload.rows : [];
+}
+
+function applyCoreSheetRows(tab, rows){
+  const safeRows = Array.isArray(rows) ? rows : [];
+  let count = 0;
+  if(tab === 'CRM_GENERAL') count = applyCRMObjectsFromSheet(safeRows);
+  if(tab === 'CONCIERTOS') count = applyConcertsFromSheet(safeRows);
+  if(tab === 'ENSAYOS') count = applyRehearsalsFromSheet(safeRows);
+  if(tab === 'REPERTORIO') count = applySongsFromSheet(safeRows);
+  if(tab === 'SETLISTS') count = applySetlistFromSheet(safeRows);
+  if(tab === 'PAGOS_LOCAL') count = applyLocalPaymentsFromSheet(safeRows);
+  if(tab === 'MIEMBROS' && safeRows.length){
+    db.bandMembers = safeRows.map(m=>({
+      id: normalizeMemberKey(m.id || m.ID || m.nombre || m.Nombre || m.name || m.Miembro),
+      name: m.nombre || m.Nombre || m.name || m.Miembro || '',
+      role: m.rol || m.Rol || m.role || m.instrumento || ''
+    })).filter(x=>x.name);
+    count = db.bandMembers.length;
+  }
+  return count || 0;
+}
+
+async function syncCoreSheetsIndividually(opts={}){
+  const silent = !!opts.silent;
+  const tabsToRead = [
+    ['CRM_GENERAL', 1000],
+    ['CONCIERTOS', 500],
+    ['ENSAYOS', 500],
+    ['REPERTORIO', 500],
+    ['SETLISTS', 500],
+    ['MIEMBROS', 100],
+    ['TAREAS', 500],
+    ['PAGOS_LOCAL', 500],
+    ['RESPUESTAS_GMAIL', 500],
+    ['PLANTILLAS_DOSSIER', 300]
+  ];
+  const report = {crm:0, concerts:0, rehearsals:0, songs:0, setlist:0, miembros:0, local:0, errors:[]};
+  for(const [tab, limit] of tabsToRead){
+    try{
+      sheetStatus('Leyendo '+tab+' desde Google Sheet…');
+      const rows = await fetchSheetTabViaAppsScript(tab, limit);
+      const count = applyCoreSheetRows(tab, rows);
+      if(tab==='CRM_GENERAL') report.crm = count;
+      if(tab==='CONCIERTOS') report.concerts = count;
+      if(tab==='ENSAYOS') report.rehearsals = count;
+      if(tab==='REPERTORIO') report.songs = count;
+      if(tab==='SETLISTS') report.setlist = count;
+      if(tab==='MIEMBROS') report.miembros = count;
+      if(tab==='PAGOS_LOCAL') report.local = count;
+      if(tab==='TAREAS' && rows.length) { db.tasks = rows.map((r,i)=>taskFromSheetRow ? taskFromSheetRow(r,i+1,i) : r).filter(Boolean); }
+      if(tab==='RESPUESTAS_GMAIL' && rows.length && typeof applyGmailResponsesFromSheet === 'function') { try{ applyGmailResponsesFromSheet(rows); }catch(e){} }
+    }catch(err){
+      report.errors.push(tab+': '+(err.message||err));
+    }
+  }
+  db.sheetSync = Object.assign({}, db.sheetSync||{}, {
+    status: report.errors.length ? 'partial' : 'ok',
+    method: 'individual-tabs-mobile-safe',
+    updatedAt: new Date().toISOString(),
+    endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl,
+    report
+  });
+  saveData();
+  refreshAll();
+  const msg = `Sincronización por pestañas. CRM: ${report.crm}. Ensayos: ${report.rehearsals}. Canciones: ${report.songs}. Errores: ${report.errors.length}.`;
+  sheetStatus(msg + (report.errors.length ? '<br>'+esc(report.errors.join(' | ')) : ''), report.errors.length ? 'bad' : 'ok');
+  if(!silent) alert(msg + (report.errors.length ? '\n'+report.errors.join('\n') : ''));
+  return report;
+}
+
+async function diagnosticoMovilBCB(){
+  try{
+    sheetStatus('Probando conexión móvil con Apps Script…');
+    const health = await appsScriptJSONP({action:'health'});
+    const crm = await fetchSheetTabViaAppsScript('CRM_GENERAL', 5);
+    const ensayos = await fetchSheetTabViaAppsScript('ENSAYOS', 5);
+    const msg = `Diagnóstico OK.\nVersión bridge: ${health.version || '—'}\nSheet: ${health.spreadsheetName || '—'}\nCRM primeras filas: ${crm.length}\nEnsayos primeras filas: ${ensayos.length}`;
+    sheetStatus(msg.replace(/\n/g,'<br>'), 'ok');
+    alert(msg);
+  }catch(err){
+    const msg = 'Diagnóstico fallido: '+(err.message||err)+'. Revisa que Apps Script esté implementado como aplicación web para Cualquiera y que hayas creado nueva versión de implementación.';
+    sheetStatus(esc(msg), 'bad');
+    alert(msg);
+  }
+}
+
 async function syncCRMFromGoogleSheet(opts={}){
   const silent = !!opts.silent;
+  const forceIndividual = opts.individual || (window.matchMedia && window.matchMedia('(max-width: 900px)').matches);
   try{
-    sheetStatus('Sincronizando con Google Sheet maestro…');
-    const payload=await appsScriptJSONP({action:'mobile'});
-    const report=applyAllFromGoogleSheetPayload(payload);
-    saveData();
-    refreshAll();
-    sheetStatus(`Google Sheet sincronizada. CRM: ${report.crm}. Conciertos: ${report.concerts}. Ensayos: ${report.rehearsals}. Canciones: ${report.songs}. Local: ${report.local || 0}.`, 'ok');
-    if(!silent) alert(`Datos actualizados desde Google Sheet.\nCRM: ${report.crm}\nConciertos: ${report.concerts}\nEnsayos: ${report.rehearsals}\nCanciones: ${report.songs}\nLocal ensayo: ${report.local || 0}`);
-    return true;
+    sheetStatus(forceIndividual ? 'Sincronizando móvil por pestañas…' : 'Sincronizando con Google Sheet maestro…');
+
+    if(forceIndividual){
+      return await syncCoreSheetsIndividually(opts);
+    }
+
+    let payload;
+    try{
+      payload=await appsScriptJSONP({action:'mobile'});
+      const report=applyAllFromGoogleSheetPayload(payload);
+      saveData();
+      refreshAll();
+      sheetStatus(`Google Sheet sincronizada. CRM: ${report.crm}. Conciertos: ${report.concerts}. Ensayos: ${report.rehearsals}. Canciones: ${report.songs}. Local: ${report.local || 0}.`, 'ok');
+      if(!silent) alert(`Datos actualizados desde Google Sheet.\nCRM: ${report.crm}\nConciertos: ${report.concerts}\nEnsayos: ${report.rehearsals}\nCanciones: ${report.songs}\nLocal ensayo: ${report.local || 0}`);
+      return true;
+    }catch(mobileErr){
+      // Si el paquete completo falla en móvil o por tamaño, se lee pestaña por pestaña.
+      return await syncCoreSheetsIndividually(Object.assign({}, opts, {fallbackFromMobile:true}));
+    }
   }catch(err){
     db.sheetSync = Object.assign({}, db.sheetSync||{}, {status:'error', error:String(err.message||err), updatedAt:new Date().toISOString(), endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl});
     sheetStatus('SIN CONEXIÓN REAL CON GOOGLE SHEET en este dispositivo. No se debe fiar de estos datos hasta sincronizar. Motivo: '+esc(err.message||err), 'bad');
@@ -2349,7 +2452,6 @@ function initialTabFromUrl(){
 }
 clearOldLocalCaches();
 renderNav();refreshAll();setTab(initialTabFromUrl(), {scroll:false, updateUrl:false});
-setTimeout(()=>syncRehearsalsFromGoogleSheet({silent:true, startup:true}), 200);
-setTimeout(()=>syncCRMFromGoogleSheet({silent:true, startup:true}), 900);
+setTimeout(()=>syncCRMFromGoogleSheet({silent:true, startup:true, individual:true}), 300);
 window.addEventListener('focus',()=>syncCRMFromGoogleSheet({silent:true, focus:true}));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden) syncCRMFromGoogleSheet({silent:true, visible:true});});

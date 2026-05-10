@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- APP-BCB v2.4 final sync · admin guard mobile fix -->
+<!-- APP-BCB v2.5 final sync · mobile core sync -->
 <title>Breathless Cover Band · APP-BCB control profesional</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#120608">
@@ -12,9 +12,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="css/styles.css?v=2.4.0-bcb">
-<link rel="stylesheet" href="css/admin-guard.css?v=2.4.0-bcb">
-<script defer src="js/admin-guard.js?v=2.4.0-bcb"></script>
+<link rel="stylesheet" href="css/styles.css?v=2.5.0-bcb">
+<link rel="stylesheet" href="css/admin-guard.css?v=2.5.0-bcb">
+<script defer src="js/admin-guard.js?v=2.5.0-bcb"></script>
 </head>
 <body>
 <div class="app">
@@ -105,7 +105,7 @@
       </div>
       <div class="actions">
         <button class="btn gold" onclick="openRehearsalModal()">+ Ensayo</button>
-        <button class="btn dark" onclick="syncRehearsalsFromGoogleSheet()">Actualizar ensayos</button><button class="btn dark" onclick="exportRehearsalsCSV()">Exportar CSV ensayos</button>
+        <button class="btn dark" onclick="syncCRMFromGoogleSheet({individual:true})">Actualizar todo</button><button class="btn dark" onclick="syncRehearsalsFromGoogleSheet()">Actualizar ensayos</button><button class="btn dark" onclick="exportRehearsalsCSV()">Exportar CSV ensayos</button>
       </div>
     </div>
 
@@ -314,7 +314,7 @@
     <div class="sectionTitle"><div><h3>Importar / Exportar</h3><p>Copias de seguridad, CSV, dossier y libro maestro.</p></div></div>
     <div class="grid two">
       <div class="card"><h4>Backup de la aplicación</h4><p>Incluye contactos editados, conciertos, tareas y setlist.</p><div class="actions"><button class="btn gold" onclick="exportJSON()">Exportar JSON</button><label class="btn dark">Importar JSON<input type="file" accept=".json,application/json" style="display:none" onchange="importJSON(this.files[0])"></label><button class="btn red" onclick="resetData()">Restaurar datos del Excel</button></div></div>
-      <div class="card"><h4>Google Sheet maestro</h4><p>El CRM debe leerse desde la hoja central. El almacenamiento local queda como caché, no como fuente de verdad.</p><div class="actions"><button class="btn gold" onclick="syncCRMFromGoogleSheet()">Actualizar desde Google Sheet maestro</button><a class="btn ghost" href="https://docs.google.com/spreadsheets/d/1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q/edit" target="_blank" rel="noopener">Abrir Sheet</a></div><div id="sheetSyncStatusExport" class="notice">Pendiente de sincronización.</div></div>
+      <div class="card"><h4>Google Sheet maestro</h4><p>El CRM debe leerse desde la hoja central. El almacenamiento local queda como caché, no como fuente de verdad.</p><div class="actions"><button class="btn gold" onclick="syncCRMFromGoogleSheet({individual:true})">Actualizar desde Google Sheet maestro</button><button class="btn dark" onclick="diagnosticoMovilBCB()">Diagnóstico móvil</button><a class="btn ghost" href="https://docs.google.com/spreadsheets/d/1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q/edit" target="_blank" rel="noopener">Abrir Sheet</a></div><div id="sheetSyncStatusExport" class="notice">Pendiente de sincronización.</div></div>
       <div class="card"><h4>Archivos originales</h4><div class="actions"><button class="btn gold" onclick="downloadDossier()">Descargar dossier PDF</button><button class="btn dark" onclick="downloadSetlistPDF()">Descargar setlist PDF</button><button class="btn dark" onclick="downloadXlsx()">Descargar Excel maestro</button></div><div class="hr"></div><a class="btn ghost" id="openSheet" target="_blank" rel="noopener">Abrir Google Sheet facilitado</a></div>
       <div class="card"><h4>Exportar CSV</h4><div class="actions"><button class="btn dark" onclick="exportCSV('crm')">CRM completo</button><button class="btn dark" onclick="exportFilteredCRM()">CRM filtrado</button><button class="btn dark" onclick="exportCSV('concerts')">Conciertos</button><button class="btn dark" onclick="exportSetlistCSV()">Setlist</button><button class="btn dark" onclick="exportCSV('tasks')">Tareas</button><button class="btn dark" onclick="exportCSV('gmailResponses')">Respuestas Gmail</button></div></div>
       <div class="card"><h4>Importar contactos desde CSV pegado</h4><p class="muted">Admite columnas del Excel o nombres básicos: organización, campaña, segmento, municipio, email, teléfono, prioridad, estado, respuesta, próxima acción, notas.</p><textarea id="csvBox" placeholder="Pega aquí CSV con cabecera..."></textarea><br><br><button class="btn gold" onclick="importCSVContacts()">Importar contactos</button></div>

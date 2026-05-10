@@ -1,6 +1,6 @@
 /**
  * APP-BCB Bridge — Breathless Cover Band
- * Version: APP-BCB v2.4 final sync · admin guard mobile fix
+ * Version: APP-BCB v2.5 final sync · mobile core sync
  *
  * Fuente principal: Google Sheet maestro BCB.
  * App GitHub Pages / PWA.
@@ -19,7 +19,7 @@
  * No usar endpoint ni Sheet de otra banda.
  */
 
-const APP_VERSION = 'APP-BCB v2.4 final sync';
+const APP_VERSION = 'APP-BCB v2.5 final sync';
 const BAND = 'BCB';
 const BAND_NAME = 'Breathless Cover Band';
 const SHEET_ID = '1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q';
@@ -81,6 +81,7 @@ function doGet(e) {
     const action = String(params.action || 'health').toLowerCase();
 
     if (action === 'health') return jsonOrJsonp_(health_(), params.callback);
+    if (action === 'diagnostic') return jsonOrJsonp_(diagnostic_(), params.callback);
     if (action === 'tabs') return jsonOrJsonp_(getTabs_(), params.callback);
     if (action === 'mobile') return jsonOrJsonp_(getMobilePayload_(), params.callback);
     if (action === 'rehearsals') return jsonOrJsonp_(getRehearsalsPayload_(), params.callback);
@@ -156,6 +157,21 @@ function health_() {
     spreadsheetName: ss.getName(),
     timestamp: new Date().toISOString(),
     source: 'Google Sheet maestro BCB'
+  };
+}
+
+
+function diagnostic_() {
+  const ss = ss_();
+  const tabs = ss.getSheets().map(s => ({ name: s.getName(), rows: s.getLastRow(), columns: s.getLastColumn(), gid: s.getSheetId() }));
+  return {
+    ok: true,
+    band: BAND,
+    version: APP_VERSION,
+    sheetId: SHEET_ID,
+    spreadsheetName: ss.getName(),
+    tabs: tabs,
+    timestamp: new Date().toISOString()
   };
 }
 

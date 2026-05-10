@@ -1,0 +1,7 @@
+{
+  "app": "APP-BCB",
+  "version": "2.5 final sync",
+  "fix": "Mobile core sync: CRM and rehearsals load per tab from Apps Script, avoiding large mobile payload/cache issues",
+  "sheet": "1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q",
+  "endpoint": "https://script.google.com/macros/s/AKfycbx6FfjKaqSvRu9Wc8Ym0yH1y-x4VPryt4J4qVM6EOhRDEhGBGr6RrO51xqaUF36mrD6dg/exec"
+}

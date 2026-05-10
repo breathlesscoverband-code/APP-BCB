@@ -1,5 +1,5 @@
-/* APP-BCB · PWA service worker v2.4 final sync · admin guard mobile fix */
-const CACHE_NAME = "app-bcb-pwa-v2-4-0-admin-guard";
+/* APP-BCB · PWA service worker v2.5 final sync · mobile core sync */
+const CACHE_NAME = "app-bcb-pwa-v2-5-0-mobile-core";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,7 +8,7 @@ const APP_SHELL = [
   "./css/admin-guard.css",
   "./js/assets.js",
   "./js/data.js",
-  "./js/app.js",
+  "./js/app.js?v=2.5.0-bcb",
   "./js/admin-guard.js",
   "./assets/bcb_logo_main.png",
   "./assets/bcb_home_background.png",
