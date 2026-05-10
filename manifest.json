@@ -1,29 +1,71 @@
 {
   "name": "APP-BCB · Breathless Cover Band",
-  "short_name": "BCB",
-  "description": "App interna de gestión para Breathless Cover Band.",
-  "start_url": "./index.html",
+  "short_name": "APP-BCB",
+  "description": "App interna de Breathless Cover Band para CRM, repertorio, setlist, ensayos, local, tareas y seguimiento.",
+  "start_url": "./?source=pwa",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#060a13",
-  "theme_color": "#071021",
+  "background_color": "#050505",
+  "theme_color": "#090b10",
+  "lang": "es",
   "icons": [
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icons/icon-384.png",
-      "sizes": "384x384",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Canciones",
+      "short_name": "Canciones",
+      "description": "Abrir repertorio BCB",
+      "url": "./?tab=repertoire",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "CRM",
+      "short_name": "CRM",
+      "description": "Abrir CRM BCB",
+      "url": "./?tab=crm",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Ensayos",
+      "short_name": "Ensayos",
+      "description": "Abrir ensayos BCB",
+      "url": "./?tab=rehearsals",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "version": "2.0"
 }

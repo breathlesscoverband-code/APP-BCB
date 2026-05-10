@@ -1,0 +1,191 @@
+/* APP-BCB · roles de acceso
+   Modo usuario: consulta / solo lectura.
+   Modo administrador: edición, importación, exportación y backup. */
+
+.adminModeBadge {
+  position: fixed;
+  right: 18px;
+  bottom: 66px;
+  z-index: 9997;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .01em;
+  box-shadow: 0 10px 26px rgba(0,0,0,.38);
+  backdrop-filter: blur(10px);
+}
+
+.adminModeBadge.is-user {
+  background: rgba(24,18,18,.92);
+  color: #f4a31c;
+}
+
+.adminModeBadge.is-admin {
+  background: linear-gradient(135deg, #f4a31c, #b26113);
+  color: #160d08;
+}
+
+.adminFab {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 9999;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #f4a31c, #b26113);
+  color: #160d08;
+  font-weight: 800;
+  box-shadow: 0 14px 36px rgba(0,0,0,.45);
+  cursor: pointer;
+}
+
+.adminFab.locked {
+  background: linear-gradient(135deg, #2d2a2a, #171313);
+  color: #f4a31c;
+}
+
+.adminPanel {
+  position: fixed;
+  right: 18px;
+  bottom: 106px;
+  z-index: 9998;
+  width: min(370px, calc(100vw - 36px));
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 16px;
+  background: rgba(24,18,18,.98);
+  color: #fff;
+  box-shadow: 0 20px 60px rgba(0,0,0,.55);
+  padding: 14px;
+  display: none;
+}
+
+.adminPanel.open {
+  display: block;
+}
+
+.adminPanel h4 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.adminPanel p {
+  margin: 0 0 12px;
+  color: rgba(255,255,255,.72);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.adminPanel .adminActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.adminPanel .adminActions button {
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.adminPanel .adminActions button.primary {
+  background: #f4a31c;
+  color: #160d08;
+  font-weight: 800;
+}
+
+.adminPanel .adminActions button.danger {
+  background: rgba(138,31,31,.75);
+  color: #fff;
+}
+
+.adminPanel .adminState {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(244,163,28,.15);
+  color: #f4a31c;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.adminLockedControl {
+  opacity: .46;
+  cursor: not-allowed !important;
+  filter: grayscale(.2);
+}
+
+body.user-readonly .modalBody input,
+body.user-readonly .modalBody select,
+body.user-readonly .modalBody textarea {
+  pointer-events: none;
+  opacity: .72;
+}
+
+body.user-readonly .modalBody button:not(.close) {
+  opacity: .46;
+  cursor: not-allowed !important;
+}
+
+body.user-readonly #csvBox {
+  pointer-events: none;
+  opacity: .58;
+}
+
+body.user-readonly label.btn[data-admin-lock="true"] {
+  cursor: not-allowed !important;
+}
+
+body.admin-enabled .adminLockedControl {
+  opacity: 1;
+  cursor: pointer !important;
+  filter: none;
+}
+
+@media (max-width: 720px) {
+  .adminModeBadge {
+    right: 12px;
+    bottom: 62px;
+  }
+
+  .adminFab {
+    right: 12px;
+    bottom: 14px;
+  }
+
+  .adminPanel {
+    right: 12px;
+    bottom: 102px;
+    width: calc(100vw - 24px);
+  }
+}
+
+
+/* v1.3 · En modo usuario los controles de administrador no se muestran.
+   El usuario consulta; el administrador edita, importa, exporta y guarda. */
+body.user-readonly [data-admin-lock="true"],
+body.user-readonly .adminLockedControl {
+  display: none !important;
+}
+
+body.user-readonly #adminFab,
+body.user-readonly #adminPanel,
+body.user-readonly #adminModeBadge {
+  display: initial;
+}
+
+body.user-readonly #adminPanel {
+  display: none;
+}
+
+body.user-readonly #adminPanel.open {
+  display: block;
+}
+

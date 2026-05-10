@@ -1,99 +1,340 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#071021">
-  <meta name="description" content="APP-BCB · CRM, conciertos, ensayos, repertorio y gestión interna de Breathless Cover Band.">
-  <title>APP-BCB · Breathless Cover Band</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="icons/favicon.png">
-  <link rel="apple-touch-icon" href="icons/icon-180.png">
-  <link rel="stylesheet" href="css/styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- APP-BCB v2.0 final sync · clon APP-BCB adaptado -->
+<title>Breathless Cover Band · APP-BCB control profesional</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#120608">
+<meta name="application-name" content="APP-BCB">
+<meta name="apple-mobile-web-app-title" content="APP-BCB">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/styles.css?v=2.0.0-bcb">
+<link rel="stylesheet" href="css/admin-guard.css?v=2.0.0-bcb">
+<script defer src="js/admin-guard.js?v=2.0.0-bcb"></script>
 </head>
 <body>
-  <div id="app" class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="brand-block">
-        <img src="assets/bcb_logo_square.png" alt="Breathless Cover Band" class="brand-logo">
-        <div>
-          <div class="eyebrow">APP-BCB</div>
-          <h1>Breathless Cover Band</h1>
-          <p>Covers pop-rock · español e inglés</p>
-        </div>
-      </div>
-
-      <nav class="nav" id="mainNav" aria-label="Módulos APP-BCB"></nav>
-
-      <div class="sidebar-footer">
-        <div class="mode-card">
-          <span class="label">Modo actual</span>
-          <strong id="modeLabel">Usuario</strong>
-          <button class="btn btn-small btn-ghost" id="toggleAdminBtn" type="button">Entrar admin</button>
-        </div>
-        <button class="btn btn-small btn-outline" id="refreshBtn" type="button">Actualizar desde Google Sheet</button>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <button class="icon-btn mobile-only" id="menuBtn" type="button" aria-label="Abrir menú">☰</button>
-        <div class="topbar-title">
-          <span id="currentModuleLabel">Panel</span>
-          <small id="syncStatus">Sincronizando…</small>
-        </div>
-        <div class="topbar-actions">
-          <button class="btn btn-small btn-outline admin-only" id="backupBtn" type="button">Backup Sheet</button>
-          <button class="btn btn-small" id="installBtn" type="button" hidden>Instalar app</button>
-        </div>
-      </header>
-
-      <section class="hero">
-        <img src="assets/bcb_banner.jpg" alt="Breathless Cover Band" class="hero-image">
-        <div class="hero-copy">
-          <div class="pill">APP-BCB v1.0 final sync</div>
-          <h2>Gestión interna BCB</h2>
-          <p>CRM, seguimiento comercial, conciertos, ensayos, repertorio, setlists, tareas y materiales. Google Sheet BCB es la fuente principal; el móvil usa caché solo si no hay conexión.</p>
-        </div>
-      </section>
-
-      <section class="workspace" id="workspace" aria-live="polite"></section>
-    </main>
+<div class="app">
+<aside>
+  <div class="brand">
+    <img class="logo" alt="Logo Breathless Cover Band" src="assets/bcb_logo_main.png">
+    <div><h1>Breathless Cover Band</h1><p>CRM · conciertos · repertorio · setlist</p></div>
   </div>
+  <div class="nav" id="nav"></div>
+  <div class="sideCard">
+    <strong>Datos cargados</strong>
+    <p><span id="sideLoaded"></span></p>
+  </div>
+  <div class="sideCard">
+    <strong>Uso recomendado</strong>
+    <p>Trabaja contactos y conciertos aquí. Exporta JSON como copia de seguridad antes de limpiar navegador.</p>
+  </div>
+</aside>
 
-  <dialog id="adminDialog" class="dialog">
-    <form method="dialog" class="dialog-card" id="adminForm">
-      <h3>Entrar en modo admin</h3>
-      <p>Introduce la clave admin de BCB. La app la guarda solo para esta sesión y el bridge la valida al editar.</p>
-      <label>
-        Clave admin
-        <input type="password" id="adminKeyInput" autocomplete="current-password" inputmode="numeric" placeholder="Clave admin">
-      </label>
-      <div class="dialog-actions">
-        <button class="btn btn-outline" value="cancel" type="button" id="cancelAdminBtn">Cancelar</button>
-        <button class="btn" value="default" type="submit">Activar admin</button>
+<main>
+  <section class="hero">
+    <h2>APP-BCB · Control profesional de banda y contratación</h2>
+    <p>Aplicación interna para gestionar CRM, seguimiento comercial, Gmail, conciertos, ensayos, local de ensayo, presupuesto, repertorio, setlist, tareas y materiales de Breathless Cover Band.</p>
+    <div class="badges" id="heroBadges"></div>
+    <div class="actions" style="margin-top:14px">
+      <button class="btn gold" type="button" onclick="setTab('crm')">Abrir CRM</button>
+      <button class="btn dark" type="button" onclick="setTab('importExport')">Exportar / Backup</button>
+    </div>
+  </section>
+
+  <section class="tab active" id="dashboard">
+    <div class="sectionTitle"><div><h3>Panel de control</h3><p>Vista rápida del CRM, seguimiento, repertorio, ensayos y estado comercial de BCB.</p></div><div class="actions"><button class="btn gold" onclick="setTab('crm')">Ver CRM</button><button class="btn dark" onclick="exportJSON()">Backup JSON</button></div></div>
+    <div class="grid four" id="kpis"></div>
+    <div class="card sheet-sync-card" id="sheetSyncMini"></div>
+    <div id="sheetSyncStatus" class="notice" style="display:block">Fuente principal: Google Sheet maestro. Si no se puede leer, la app muestra la última caché local.</div>
+    <div class="grid two">
+      <div class="card"><h4>Estado de envíos</h4><div id="sendBars"></div></div>
+      <div class="card"><h4>Prioridad comercial</h4><div id="priorityBars"></div></div>
+      <div class="card"><h4>Acciones recomendadas</h4><div id="actionCards"></div></div>
+      <div class="card"><h4>Últimas respuestas Gmail</h4><div id="dashResponses"></div></div>
+    </div>
+  </section>
+
+  <section class="tab" id="crm">
+    <div class="sectionTitle"><div><h3>CRM de salas, promotores y eventos</h3><p id="crmCount"></p></div><div class="actions"><button class="btn gold" onclick="openContactModal()">+ Contacto</button><button class="btn dark" onclick="exportFilteredCRM()">Exportar filtrados CSV</button></div></div>
+    <div class="filters">
+      <input id="q" placeholder="Buscar por sala, email, municipio, notas..." oninput="renderCRM()">
+      <select id="fCampaign" onchange="renderCRM()"><option value="">Campaña</option></select>
+      <select id="fPriority" onchange="renderCRM()"><option value="">Prioridad</option></select>
+      <select id="fStatus" onchange="renderCRM()"><option value="">Estado envío</option></select>
+      <select id="fSegment" onchange="renderCRM()"><option value="">Segmento</option></select>
+      <select id="fSpecial" onchange="renderCRM()"><option value="">Filtro rápido</option><option value="responded">Con respuesta</option><option value="noemail">Sin email</option><option value="dossier">Enviar dossier</option><option value="next">Con próxima acción</option></select>
+    </div>
+    <div class="tableWrap"><table id="crmTable"><thead><tr><th>Organización</th><th>Campaña</th><th>Segmento</th><th>Municipio</th><th>Contacto</th><th>Prioridad</th><th>Estado</th><th>Respuesta</th><th>Próxima acción</th><th>Dossier</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="tab" id="followup">
+    <div class="sectionTitle"><div><h3>Seguimiento comercial</h3><p>Listas de trabajo para avanzar contratación y no perder oportunidades.</p></div></div>
+    <div class="grid two">
+      <div class="card"><h4>Respuestas recibidas en CRM</h4><div id="followResponded"></div></div>
+      <div class="card"><h4>Dossier pendiente o borrador creado</h4><div id="followDossier"></div></div>
+      <div class="card"><h4>Sin email / revisar</h4><div id="followNoEmail"></div></div>
+      <div class="card"><h4>Próximas acciones</h4><div id="followNext"></div></div>
+    </div>
+  </section>
+
+  <section class="tab" id="gmail">
+    <div class="sectionTitle"><div><h3>Respuestas Gmail importadas</h3><p>Mensajes recibidos y coincidencia con filas del CRM.</p></div></div>
+    <div class="filters"><input id="qGmail" placeholder="Buscar respuesta, remitente, asunto..." oninput="renderGmail()"></div>
+    <div class="tableWrap"><table id="gmailTable"><thead><tr><th>Fecha</th><th>Remitente</th><th>Asunto</th><th>Estado importación</th><th>Resumen</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="tab" id="concerts">
+    <div class="sectionTitle"><div><h3>Conciertos y producción</h3><p>Agenda real de actuaciones, presupuestos, anticipos, cobros, carteles y necesidades.</p></div><button class="btn gold" onclick="openConcertModal()">+ Concierto</button></div>
+    <div class="grid four" id="concertKpis"></div>
+    <div class="sectionTitle"><div><h3>Carteles de conciertos</h3><p>Próximos y pasados. El cartel se gestiona desde la ficha de cada concierto.</p></div><button class="btn dark" onclick="openPosterHelp()">Cómo añadir cartel</button></div>
+    <div id="concertPosterGrid" class="posterBoard"></div>
+    <div class="sectionTitle"><div><h3>Agenda y control interno</h3></div></div>
+    <div class="tableWrap"><table id="concertTable"><thead><tr><th>Fecha</th><th>Evento</th><th>Lugar</th><th>Tipo</th><th>Estado</th><th>Caché</th><th>Anticipo</th><th>Cobrado</th><th>Pendiente</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+
+  <section class="tab" id="rehearsals">
+    <div class="sectionTitle">
+      <div>
+        <h3>Ensayos y asistencia</h3>
+        <p>Calendario de ensayos, horario, temas previstos y confirmación de asistencia para ensayos y conciertos.</p>
       </div>
-    </form>
-  </dialog>
-
-  <dialog id="rowDialog" class="dialog">
-    <form method="dialog" class="dialog-card wide" id="rowForm">
-      <h3 id="rowDialogTitle">Editar registro</h3>
-      <div id="rowFormFields" class="form-grid"></div>
-      <div class="dialog-actions">
-        <button class="btn btn-outline" type="button" id="cancelRowBtn">Cancelar</button>
-        <button class="btn" type="submit">Guardar</button>
+      <div class="actions">
+        <button class="btn gold" onclick="openRehearsalModal()">+ Ensayo</button>
+        <button class="btn dark" onclick="exportRehearsalsCSV()">Exportar CSV ensayos</button>
       </div>
-    </form>
-  </dialog>
+    </div>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="grid three" id="rehearsalKpis"></div>
 
-  <script src="js/config.js" defer></script>
-  <script src="js/state.js" defer></script>
-  <script src="js/utils.js" defer></script>
-  <script src="js/api.js" defer></script>
-  <script src="js/modules.js" defer></script>
-  <script src="js/app.js" defer></script>
+    <div class="grid two">
+      <div class="card">
+        <h4>Próximos ensayos</h4>
+        <div id="nextRehearsals"></div>
+      </div>
+
+      <div class="card">
+        <h4>Confirmar asistencia a concierto</h4>
+        <p class="muted">En modo usuario se puede copiar un mensaje para WhatsApp. En modo administrador también se puede registrar la confirmación recibida.</p>
+        <div class="formGrid">
+          <div class="field span2"><label>Concierto</label><select id="attendanceConcertSelect" onchange="renderConcertAttendancePanel()"></select></div>
+          <div class="field"><label>Miembro</label><select id="attendanceMemberSelect" onchange="renderConcertAttendancePanel()"></select></div>
+          <div class="field"><label>Estado</label><select id="attendanceStatusSelect" onchange="renderConcertAttendancePanel()"><option>Confirmo asistencia</option><option>Pendiente de confirmar</option><option>No puedo asistir</option><option>Llego más tarde</option><option>Necesito revisar horario</option></select></div>
+          <div class="field span4"><label>Notas</label><input id="attendanceNotesInput" placeholder="Ej. llego directo, necesito hora de prueba, pendiente trabajo..." oninput="renderConcertAttendancePanel()"></div>
+        </div>
+        <div class="actions" style="margin-top:12px">
+          <button class="btn gold" onclick="copyConcertAttendanceMessage()">Copiar WhatsApp</button>
+          <button class="btn dark" onclick="saveConcertAttendance()">Guardar confirmación</button>
+        </div>
+        <div class="hr"></div>
+        <div id="concertAttendanceSummary"></div>
+      </div>
+    </div>
+
+    <div class="sectionTitle">
+      <div><h3>Calendario de ensayos</h3><p>Vista de trabajo. La selección de temas de cada ensayo puede tomar todo el repertorio o marcar temas concretos.</p></div>
+    </div>
+    <div class="tableWrap">
+      <table id="rehearsalTable">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Horario</th>
+            <th>Lugar</th>
+            <th>Objetivo</th>
+            <th>Temas</th>
+            <th>Asistencia</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+
+
+  <section class="tab" id="local">
+    <div class="sectionTitle">
+      <div>
+        <h3>Local de ensayo</h3>
+        <p>Control del alquiler mensual del local, cuotas por miembro y pagos pendientes. Fuente principal: pestaña PAGOS_LOCAL de Google Sheet.</p>
+      </div>
+      <a class="btn ghost" href="https://docs.google.com/spreadsheets/d/1mrffAdGxfzRL602XHD4Uw-EKiYBgZ4PgLuVuOFPxEGU/edit" target="_blank" rel="noopener">Abrir Google Sheet</a>
+    </div>
+    <div class="grid five" id="localKpis"></div>
+    <div class="tableWrap">
+      <table id="localTable">
+        <thead>
+          <tr><th>Mes</th><th>Miembro</th><th>Cuota</th><th>Estado</th><th>Fecha pago</th><th>Notas</th><th class="admin-only">Acciones</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="tab" id="budget">
+    <div class="sectionTitle"><div><h3>Calculadora de presupuesto 2026</h3><p>Basada en las tarifas orientativas del dossier comercial.</p></div></div>
+    <div class="grid two">
+      <div class="card">
+        <div class="formGrid">
+          <div class="field span2"><label>Fecha del evento</label><input type="date" id="budgetDate" onchange="calcBudget()"></div>
+          <div class="field span2"><label>Nombre / observación</label><input id="budgetName" placeholder="Ej. Boda Madrid, fiesta privada, sala..." oninput="calcBudget()"></div>
+          <div class="field span4"><label>Extras / incrementos</label><div id="extrasBox" class="grid two"></div></div>
+        </div>
+        <div class="actions" style="margin-top:12px"><button class="btn gold" onclick="createConcertFromBudget()">Crear concierto con este presupuesto</button><button class="btn dark" onclick="copyBudgetText()">Copiar presupuesto</button></div>
+      </div>
+      <div class="card light">
+        <h4>Resultado</h4>
+        <div class="priceBox" id="budgetTotal">—</div>
+        <p id="budgetBreakdown"></p>
+        <div class="hr"></div>
+        <p><strong>Reserva bodas/eventos privados:</strong> anticipo del 50% del presupuesto total para bloquear fecha.</p>
+        <div class="copyBox" id="budgetCopy" style="color:#14110f;background:#fff;border-color:#ead7b3"></div>
+      </div>
+    </div>
+    <div class="sectionTitle"><div><h3>Tabla de tarifas y condiciones</h3></div></div>
+    <div class="grid two">
+      <div class="card"><h4>Fechas especiales</h4><div id="specialDates"></div></div>
+      <div class="card"><h4>Condiciones bodas/eventos</h4><ul id="weddingConditions"></ul></div>
+    </div>
+  </section>
+
+
+  <section class="tab" id="repertoire">
+    <div class="sectionTitle">
+      <div>
+        <h3>Canciones y repertorio</h3>
+        <p>Ficha de trabajo por tema: duración, tono, enlaces, notas y material de letra/acordes para ensayo.</p>
+      </div>
+      <div class="actions">
+        <button class="btn gold" onclick="openSongModal()">+ Canción</button>
+        <button class="btn dark" onclick="openSongLinksImportModal()">Cargar URLs por lote</button>
+        <button class="btn dark" onclick="exportRepertoireCSV()">Exportar CSV canciones</button>
+      </div>
+    </div>
+
+    <div class="grid three">
+      <div class="card">
+        <h4>Playlist Spotify</h4>
+        <div id="spotifyPlaylistBox"></div>
+      </div>
+      <div class="card">
+        <h4>Referencias de repertorio</h4>
+        <div class="pillList" id="artists"></div>
+      </div>
+      <div class="card">
+        <h4>Estado del repertorio</h4>
+        <div id="repBars"></div>
+      </div>
+    </div>
+
+    <div class="filters" style="margin-top:14px">
+      <input id="qRep" placeholder="Buscar tema, artista, tono, notas, enlaces o acordes..." oninput="renderRepertoire()">
+      <select id="fRepBlock" onchange="renderRepertoire()"><option value="">Bloque</option></select>
+      <select id="fRepStatus" onchange="renderRepertoire()"><option value="">Estado</option></select>
+      <select id="fRepSinger" onchange="renderRepertoire()"><option value="">Voz</option></select>
+    </div>
+
+    <div class="tableWrap">
+      <table id="repTable">
+        <thead>
+          <tr>
+            <th>Tema</th>
+            <th>Artista</th>
+            <th>Voz</th>
+            <th>Duración</th>
+            <th>Tono actual</th>
+            <th>Tonos propuestos</th>
+            <th>Bloque</th>
+            <th>Estado</th>
+            <th>Links</th>
+            <th>Material</th>
+            <th>Notas</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="tab" id="setlist">
+    <div class="sectionTitle"><div><h3>Setlist estratégico por bloques</h3><p>Orden de concierto pensado para mantener curva de energía, voces y control de escenario.</p></div><div class="actions"><button class="btn gold" onclick="downloadSetlistPDF()">Descargar setlist base</button><button class="btn dark" onclick="exportSetlistCSV()">Exportar CSV</button></div></div>
+    <div class="setlistHead">
+      <div class="card"><h4 id="setlistTitle"></h4><p id="setlistSubtitle"></p><div class="pillList" id="setlistLegend"></div><div class="hr"></div><div class="notice" id="setlistRule"></div></div>
+      <div class="card light"><h4>Duración del directo</h4><div id="setlistSummary" class="grid three"></div><div class="hr"></div><div id="setlistPromoterReading"></div></div>
+    </div>
+    <div class="setlistFinal" id="setlistFinal"></div>
+    <div class="sectionTitle"><div><h3>Bloques de directo</h3><p>Objetivo artístico y control de escenario por tramo.</p></div></div>
+    <div class="grid two" id="setlistBlocks"></div>
+    <div class="grid two" style="margin-top:14px">
+      <div class="card"><h4>Reparto de voces</h4><div id="setlistVocalBars"></div></div>
+      <div class="card"><h4>Notas de ejecución</h4><p>La recta final debe tratarse como una subida continua. El cierre 24-26 queda como referencia de trabajo y debe validarse antes de cada bolo.</p></div>
+    </div>
+    <div class="sectionTitle"><div><h3>Orden completo</h3><p>Vista de trabajo para ensayo, sala o técnico.</p></div></div>
+    <div class="tableWrap"><table id="setlistTable"><thead><tr><th>#</th><th>Tema</th><th>Voz</th><th>Bloque</th><th>Objetivo</th><th>Control de escenario</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="tab" id="dossier">
+    <div class="sectionTitle"><div><h3>Dossier comercial integrado</h3><p>Propuesta, argumentos, necesidades técnicas, tarifas, bodas y datos de cierre.</p></div><div class="actions"><button class="btn gold" onclick="downloadDossier()">Descargar dossier</button><a class="btn ghost" id="driveDossier" target="_blank" rel="noopener">Abrir Drive</a></div></div>
+    <div class="grid three" id="proposalCards"></div>
+    <div class="grid two">
+      <div class="card"><h4>Encaje natural</h4><ul id="fitList"></ul></div>
+      <div class="card"><h4>Formación actual</h4><ul id="formationList"></ul></div>
+      <div class="card"><h4>Argumentario para salas y promotores</h4><div id="argumentList"></div></div>
+      <div class="card"><h4>Necesidades técnicas básicas</h4><ul id="technicalList"></ul></div>
+    </div>
+    <div class="sectionTitle"><div><h3>Información necesaria para cerrar presupuesto</h3></div></div>
+    <div class="card"><div class="pillList" id="budgetNeeded"></div></div>
+  </section>
+
+  <section class="tab" id="templates">
+    <div class="sectionTitle"><div><h3>Plantillas y envíos</h3><p>Plantillas importadas del Excel para responder y enviar el dossier.</p></div></div>
+    <div class="grid two">
+      <div class="card"><h4>Seleccionar contacto para personalizar</h4><input id="templateContactSearch" placeholder="Buscar contacto..." oninput="renderContactOptions()"><select id="templateContactSelect" onchange="renderTemplates()"></select><div class="hr"></div><p class="muted">Variables: {{Nombre}} y {{Dossier}}.</p></div>
+      <div class="card"><h4>Contacto de la banda</h4><div id="bandContact"></div></div>
+    </div>
+    <div class="grid two" id="templateCards"></div>
+  </section>
+
+  <section class="tab" id="tasks">
+    <div class="sectionTitle"><div><h3>Tareas internas</h3><p>Checklist comercial y producción.</p></div><button class="btn gold" onclick="openTaskModal()">+ Tarea</button></div>
+    <div class="tableWrap"><table id="taskTable"><thead><tr><th>Tarea</th><th>Responsable</th><th>Fecha</th><th>Estado</th><th>Prioridad</th><th>Área</th><th>Notas</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="tab" id="importExport">
+    <div class="sectionTitle"><div><h3>Importar / Exportar</h3><p>Copias de seguridad, CSV, dossier y libro maestro.</p></div></div>
+    <div class="grid two">
+      <div class="card"><h4>Backup de la aplicación</h4><p>Incluye contactos editados, conciertos, tareas y setlist.</p><div class="actions"><button class="btn gold" onclick="exportJSON()">Exportar JSON</button><label class="btn dark">Importar JSON<input type="file" accept=".json,application/json" style="display:none" onchange="importJSON(this.files[0])"></label><button class="btn red" onclick="resetData()">Restaurar datos del Excel</button></div></div>
+      <div class="card"><h4>Google Sheet maestro</h4><p>El CRM debe leerse desde la hoja central. El almacenamiento local queda como caché, no como fuente de verdad.</p><div class="actions"><button class="btn gold" onclick="syncCRMFromGoogleSheet()">Actualizar desde Google Sheet maestro</button><a class="btn ghost" href="https://docs.google.com/spreadsheets/d/1mrffAdGxfzRL602XHD4Uw-EKiYBgZ4PgLuVuOFPxEGU/edit?gid=2128742185#gid=2128742185" target="_blank" rel="noopener">Abrir Sheet</a></div><div id="sheetSyncStatusExport" class="notice">Pendiente de sincronización.</div></div>
+      <div class="card"><h4>Archivos originales</h4><div class="actions"><button class="btn gold" onclick="downloadDossier()">Descargar dossier PDF</button><button class="btn dark" onclick="downloadSetlistPDF()">Descargar setlist PDF</button><button class="btn dark" onclick="downloadXlsx()">Descargar Excel maestro</button></div><div class="hr"></div><a class="btn ghost" id="openSheet" target="_blank" rel="noopener">Abrir Google Sheet facilitado</a></div>
+      <div class="card"><h4>Exportar CSV</h4><div class="actions"><button class="btn dark" onclick="exportCSV('crm')">CRM completo</button><button class="btn dark" onclick="exportFilteredCRM()">CRM filtrado</button><button class="btn dark" onclick="exportCSV('concerts')">Conciertos</button><button class="btn dark" onclick="exportSetlistCSV()">Setlist</button><button class="btn dark" onclick="exportCSV('tasks')">Tareas</button><button class="btn dark" onclick="exportCSV('gmailResponses')">Respuestas Gmail</button></div></div>
+      <div class="card"><h4>Importar contactos desde CSV pegado</h4><p class="muted">Admite columnas del Excel o nombres básicos: organización, campaña, segmento, municipio, email, teléfono, prioridad, estado, respuesta, próxima acción, notas.</p><textarea id="csvBox" placeholder="Pega aquí CSV con cabecera..."></textarea><br><br><button class="btn gold" onclick="importCSVContacts()">Importar contactos</button></div>
+      <div class="card"><h4>Carga segura CRM desde archivo</h4><p class="muted">Añade contactos al CRM actual sin borrar ni sustituir los datos existentes. Acepta CSV o JSON con campos básicos de oportunidad, contacto, fecha, ciudad, estado, próxima acción y notas.</p><div class="actions"><label class="btn gold">Cargar archivo CRM<input type="file" accept=".csv,.json,text/csv,application/json,text/plain" style="display:none" onchange="safeImportCRMFile(this.files[0]); this.value=''"></label></div><div class="notice" style="margin-top:12px">Modo no destructivo: los registros nuevos se añaden al principio del CRM y el backup anterior queda intacto hasta que exportes una nueva copia.</div></div>
+    </div>
+  </section>
+</main>
+</div>
+
+<div class="modal" id="modal"><div class="modalPanel"><div class="modalHead"><strong id="modalTitle">Detalle</strong><button class="close" onclick="closeModal()">×</button></div><div class="modalBody" id="modalBody"></div></div></div>
+
+<script src="js/assets.js?v=2.0.0-bcb"></script>
+<script src="js/data.js?v=2.0.0-bcb"></script>
+<script src="js/app.js?v=2.0.0-bcb"></script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./sw.js?v=2.0.0-bcb").catch(function (error) {
+      console.warn("Service Worker no registrado:", error);
+    });
+  });
+}
+</script>
 </body>
 </html>

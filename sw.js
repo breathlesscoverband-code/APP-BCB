@@ -1,56 +1,78 @@
-const CACHE_NAME = "APP-BCB-v1-0-final-sync";
+/* APP-BCB · PWA service worker v2.0 final sync */
+const CACHE_NAME = "app-bcb-pwa-v2-0-0-final-sync";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
   "./css/styles.css",
-  "./js/config.js",
-  "./js/state.js",
-  "./js/utils.js",
-  "./js/api.js",
-  "./js/modules.js",
+  "./css/admin-guard.css",
+  "./js/assets.js",
+  "./js/data.js",
   "./js/app.js",
-  "./assets/bcb_banner.jpg",
-  "./assets/bcb_logo_square.png",
+  "./js/admin-guard.js",
+  "./assets/bcb_logo_main.png",
+  "./assets/bcb_home_background.png",
   "./assets/bcb_setlist_base.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
-  "./icons/favicon.png"
+  "./icons/maskable-512.png",
+  "./icons/apple-touch-icon.png"
 ];
 
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)));
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", event => {
   event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
+    caches.keys()
+      .then(keys => Promise.all(keys.map(key => key !== CACHE_NAME ? caches.delete(key) : Promise.resolve())))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-self.addEventListener("fetch", event => {
-  const url = new URL(event.request.url);
+function isCoreRequest(request) {
+  const url = new URL(request.url);
+  return request.mode === "navigate" ||
+    url.pathname.endsWith(".html") ||
+    url.pathname.endsWith(".css") ||
+    url.pathname.endsWith(".js") ||
+    url.pathname.endsWith("manifest.json");
+}
 
-  if (url.hostname.includes("script.google.com") || url.hostname.includes("googleusercontent.com")) {
-    event.respondWith(fetch(event.request));
+self.addEventListener("fetch", event => {
+  const request = event.request;
+  if (request.method !== "GET") return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) {
+    event.respondWith(fetch(request, { cache: "no-store" }));
     return;
   }
 
-  if (event.request.method !== "GET") {
-    event.respondWith(fetch(event.request));
+  if (isCoreRequest(request)) {
+    event.respondWith(
+      fetch(request, { cache: "no-store" })
+        .then(response => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+          return response;
+        })
+        .catch(() => caches.match(request).then(cached => cached || caches.match("./index.html")))
+    );
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
+    caches.match(request)
+      .then(cached => cached || fetch(request).then(response => {
         const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
         return response;
-      });
-    })
+      }))
   );
 });
