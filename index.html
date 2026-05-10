@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#071021">
+  <meta name="description" content="APP-BCB · CRM, conciertos, ensayos, repertorio y gestión interna de Breathless Cover Band.">
+  <title>APP-BCB · Breathless Cover Band</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/favicon.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-block">
+        <img src="assets/bcb_logo_square.png" alt="Breathless Cover Band" class="brand-logo">
+        <div>
+          <div class="eyebrow">APP-BCB</div>
+          <h1>Breathless Cover Band</h1>
+          <p>Covers pop-rock · español e inglés</p>
+        </div>
+      </div>
+
+      <nav class="nav" id="mainNav" aria-label="Módulos APP-BCB"></nav>
+
+      <div class="sidebar-footer">
+        <div class="mode-card">
+          <span class="label">Modo actual</span>
+          <strong id="modeLabel">Usuario</strong>
+          <button class="btn btn-small btn-ghost" id="toggleAdminBtn" type="button">Entrar admin</button>
+        </div>
+        <button class="btn btn-small btn-outline" id="refreshBtn" type="button">Actualizar desde Google Sheet</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn mobile-only" id="menuBtn" type="button" aria-label="Abrir menú">☰</button>
+        <div class="topbar-title">
+          <span id="currentModuleLabel">Panel</span>
+          <small id="syncStatus">Sincronizando…</small>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-small btn-outline admin-only" id="backupBtn" type="button">Backup Sheet</button>
+          <button class="btn btn-small" id="installBtn" type="button" hidden>Instalar app</button>
+        </div>
+      </header>
+
+      <section class="hero">
+        <img src="assets/bcb_banner.jpg" alt="Breathless Cover Band" class="hero-image">
+        <div class="hero-copy">
+          <div class="pill">APP-BCB v1.0 final sync</div>
+          <h2>Gestión interna BCB</h2>
+          <p>CRM, seguimiento comercial, conciertos, ensayos, repertorio, setlists, tareas y materiales. Google Sheet BCB es la fuente principal; el móvil usa caché solo si no hay conexión.</p>
+        </div>
+      </section>
+
+      <section class="workspace" id="workspace" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <dialog id="adminDialog" class="dialog">
+    <form method="dialog" class="dialog-card" id="adminForm">
+      <h3>Entrar en modo admin</h3>
+      <p>Introduce la clave admin de BCB. La app la guarda solo para esta sesión y el bridge la valida al editar.</p>
+      <label>
+        Clave admin
+        <input type="password" id="adminKeyInput" autocomplete="current-password" inputmode="numeric" placeholder="Clave admin">
+      </label>
+      <div class="dialog-actions">
+        <button class="btn btn-outline" value="cancel" type="button" id="cancelAdminBtn">Cancelar</button>
+        <button class="btn" value="default" type="submit">Activar admin</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="rowDialog" class="dialog">
+    <form method="dialog" class="dialog-card wide" id="rowForm">
+      <h3 id="rowDialogTitle">Editar registro</h3>
+      <div id="rowFormFields" class="form-grid"></div>
+      <div class="dialog-actions">
+        <button class="btn btn-outline" type="button" id="cancelRowBtn">Cancelar</button>
+        <button class="btn" type="submit">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/config.js" defer></script>
+  <script src="js/state.js" defer></script>
+  <script src="js/utils.js" defer></script>
+  <script src="js/api.js" defer></script>
+  <script src="js/modules.js" defer></script>
+  <script src="js/app.js" defer></script>
+</body>
+</html>

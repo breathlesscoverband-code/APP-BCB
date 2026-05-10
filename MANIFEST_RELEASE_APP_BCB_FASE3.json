@@ -1,0 +1,28 @@
+{
+  "release": "APP-BCB Fase 3",
+  "version": "APP-BCB v1.0 final sync",
+  "band": "BCB",
+  "bandName": "Breathless Cover Band",
+  "sheetId": "1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q",
+  "endpoint": "https://script.google.com/macros/s/AKfycbx6FfjKaqSvRu9Wc8Ym0yH1y-x4VPryt4J4qVM6EOhRDEhGBGr6RrO51xqaUF36mrD6dg/exec",
+  "repo": "APP-BCB",
+  "modules": [
+    "Panel",
+    "CRM",
+    "Seguimiento",
+    "Gmail",
+    "Conciertos",
+    "Ensayos",
+    "Local / Pagos",
+    "Presupuesto",
+    "Canciones",
+    "Setlist",
+    "Dossier",
+    "Plantillas",
+    "Tareas",
+    "Exportar"
+  ],
+  "pwa": true,
+  "createdAt": "2026-05-10T11:30:53.341766Z",
+  "notes": "Separada de Ñ. Google Sheet BCB como fuente principal. localStorage solo caché temporal."
+}
