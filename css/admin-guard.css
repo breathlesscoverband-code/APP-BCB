@@ -222,3 +222,37 @@ body.user-readonly #adminPanel.open {
   flex: 1 1 auto;
   white-space: nowrap;
 }
+
+
+/* v2.4 · Aviso no intrusivo: sustituye los alert() repetidos en móvil. */
+.adminGuardNotice {
+  position: fixed;
+  left: 50%;
+  bottom: 88px;
+  transform: translateX(-50%) translateY(14px);
+  z-index: 10002;
+  max-width: min(520px, calc(100vw - 28px));
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(244,163,28,.38);
+  background: rgba(15,12,12,.94);
+  color: #f7deb0;
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: 0 16px 44px rgba(0,0,0,.48);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s ease, transform .22s ease;
+}
+
+.adminGuardNotice.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (max-width: 720px) {
+  .adminGuardNotice {
+    bottom: 104px;
+    font-size: 12px;
+  }
+}

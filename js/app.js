@@ -1,8 +1,10 @@
-const APP_BCB_APP_VERSION = '2.2.0-final-sync-spotify-bcb';
-const STORE_KEY = 'app_bcb_control_pro_v22_mobile_sheet_lite';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
+const APP_BCB_APP_VERSION = '2.4.0-final-sync-admin-guard-bcb';
+const STORE_KEY = 'app_bcb_control_pro_v24_admin_guard';
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
 let db = loadData();
 let filteredCRM = [];
+let rehearsalSyncRunning = false;
+let rehearsalLastSync = 0;
 const tabs = [
   ['dashboard','Panel','●'],['crm','CRM','●'],['followup','Seguimiento','●'],['gmail','Gmail','●'],['concerts','Conciertos','●'],['rehearsals','Ensayos','●'],['local','Local ensayo','●'],
   ['budget','Presupuesto','●'],['repertoire','Canciones','●'],['setlist','Setlist','●'],['dossier','Dossier','●'],['templates','Plantillas','●'],['tasks','Tareas','●'],['importExport','Exportar','●']
@@ -248,6 +250,42 @@ function normalizeMonthValue(v){
   const d=new Date(raw);
   if(!isNaN(d.getTime())) return d.toISOString().slice(0,7);
   return raw.slice(0,7);
+}
+
+function normalizeSheetDateToISO(v){
+  if(v instanceof Date && !isNaN(v.getTime())) return v.toISOString().slice(0,10);
+  const raw=String(v??'').trim();
+  if(!raw) return '';
+  // ISO o fecha con hora: 2026-05-14 / 2026-05-14T...
+  let m=raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+  // Google Sheet en español: 14/05/2026 o 14-05-2026
+  m=raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){
+    const y=m[3].length===2 ? '20'+m[3] : m[3];
+    return `${y}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+  }
+  const d=new Date(raw);
+  if(!isNaN(d.getTime())) return d.toISOString().slice(0,10);
+  return raw;
+}
+function normalizeSheetTimeToHHMM(v){
+  if(v instanceof Date && !isNaN(v.getTime())){
+    return `${String(v.getHours()).padStart(2,'0')}:${String(v.getMinutes()).padStart(2,'0')}`;
+  }
+  const raw=String(v??'').trim();
+  if(!raw) return '';
+  let m=raw.match(/(\d{1,2})[:.](\d{2})/);
+  if(m) return `${String(m[1]).padStart(2,'0')}:${m[2]}`;
+  m=raw.match(/^(\d{1,2})$/);
+  if(m) return `${String(m[1]).padStart(2,'0')}:00`;
+  return raw.slice(0,5);
+}
+function rehearsalSheetStatus(msg, type='info'){
+  const el=document.getElementById('rehearsalSyncStatus');
+  if(!el) return;
+  el.className = 'notice ' + (type==='ok'?'ok':type==='bad'?'bad':'');
+  el.innerHTML = msg;
 }
 function normalizeMemberKey(v){
   let s=norm(v).replace(/[^a-z0-9]+/g,'');
@@ -713,8 +751,8 @@ function memberAttendanceFromRow(row, prefix='asistencia_'){
 function mapConcertRow(row,i){
   return {
     id: Number(pick(row,['id','ID'])) || i+1,
-    date: String(pick(row,['fecha','Fecha','date','Fecha evento'])||'').slice(0,10),
-    time: String(pick(row,['hora','Hora','time'])||'').slice(0,5),
+    date: normalizeSheetDateToISO(pick(row,['fecha','Fecha','date','Fecha evento'])),
+    time: normalizeSheetTimeToHHMM(pick(row,['hora','Hora','time'])),
     eventName: pick(row,['titulo','Título','eventName','Concierto','Evento']) || 'Concierto Breathless Cover Band',
     venue: pick(row,['sala_lugar','Sala / lugar','venue','Sala','Lugar','lugar']),
     city: pick(row,['ciudad','Ciudad','city']),
@@ -749,9 +787,9 @@ function mapRehearsalRow(row,i){
   const allSongs=norm(pick(row,['todos_los_temas','Todos los temas','allSongs'])).includes('si') || norm(pick(row,['temas_ids','temas_ids'])).includes('todos');
   return {
     id: Number(pick(row,['id','ID'])) || i+1,
-    date: String(pick(row,['fecha','Fecha','date'])||'').slice(0,10),
-    startTime: String(pick(row,['hora_inicio','Hora inicio','startTime'])||'').slice(0,5),
-    endTime: String(pick(row,['hora_fin','Hora fin','endTime'])||'').slice(0,5),
+    date: normalizeSheetDateToISO(pick(row,['fecha','Fecha','date'])),
+    startTime: normalizeSheetTimeToHHMM(pick(row,['hora_inicio','Hora inicio','startTime','Hora'])),
+    endTime: normalizeSheetTimeToHHMM(pick(row,['hora_fin','Hora fin','endTime'])),
     place: pick(row,['lugar','Lugar','place','local','Local']),
     status: pick(row,['estado','Estado','status']) || 'Pendiente',
     objective: pick(row,['objetivo','Objetivo','objective']),
@@ -938,6 +976,76 @@ function applyAllFromGoogleSheetPayload(payload){
   };
   return report;
 }
+
+function applyRehearsalsOnlyPayload(payload){
+  if(!payload || payload.ok===false) throw new Error(payload?.error || 'Respuesta no válida de Apps Script.');
+  const rehearsalSheet = findPayloadSheet(payload, ['ENSAYOS','Ensayos','CALENDARIO_ENSAYOS','Calendario ensayos']) || firstSheetByRows(payload, rowsLookLikeRehearsals);
+  const rehearsalRows = rowsFromPayloadSheet(rehearsalSheet).length ? rowsFromPayloadSheet(rehearsalSheet) : (Array.isArray(payload.rows) ? payload.rows : []);
+  const count = applyRehearsalsFromSheet(rehearsalRows);
+
+  const memberSheet = findPayloadSheet(payload, ['MIEMBROS','Miembros','FORMACION','Formación']);
+  let memberRows = rowsFromPayloadSheet(memberSheet);
+  if(!memberRows.length) memberRows = payload?.data?.MIEMBROS?.rows || payload?.data?.miembros || [];
+  if(Array.isArray(memberRows) && memberRows.length){
+    db.bandMembers = memberRows.map(m=>({
+      id: normalizeMemberKey(m.id || m.ID || m.nombre || m.Nombre || m.name || m.Miembro),
+      name: m.nombre || m.Nombre || m.name || m.Miembro || '',
+      role: m.rol || m.Rol || m.role || m.instrumento || ''
+    })).filter(x=>x.name);
+  }
+
+  const songRows = rowsFromPayloadSheet(findPayloadSheet(payload, ['REPERTORIO','Repertorio','CANCIONES','Canciones']));
+  if(Array.isArray(songRows) && songRows.length && !(db.repertoire||[]).length){
+    applySongsFromSheet(songRows);
+  }
+
+  db.sheetSync = Object.assign({}, db.sheetSync||{}, {
+    rehearsals: count,
+    status: 'ok',
+    rehearsalOnly: true,
+    updatedAt: new Date().toISOString(),
+    endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl,
+    version: payload.version || db.sheetSync?.version || ''
+  });
+  return count;
+}
+
+async function syncRehearsalsFromGoogleSheet(opts={}){
+  const silent = !!opts.silent;
+  if(rehearsalSyncRunning) return false;
+  rehearsalSyncRunning = true;
+  try{
+    rehearsalSheetStatus('Actualizando ensayos desde Google Sheet…');
+    let payload;
+    try{
+      payload = await appsScriptJSONP({action:'rehearsals'});
+    }catch(firstErr){
+      payload = await appsScriptJSONP({action:'sheet', tab:'ENSAYOS', limit:'300'});
+    }
+    const count = applyRehearsalsOnlyPayload(payload);
+    rehearsalLastSync = Date.now();
+    saveData();
+    rehearsalSheetStatus(`Ensayos actualizados desde Google Sheet: ${count}.`, 'ok');
+    if(!silent) alert(`Ensayos actualizados desde Google Sheet: ${count}`);
+    return true;
+  }catch(err){
+    db.sheetSync = Object.assign({}, db.sheetSync||{}, {status:'error', rehearsalError:String(err.message||err), updatedAt:new Date().toISOString(), endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl});
+    rehearsalSheetStatus('No se han podido actualizar ensayos desde este dispositivo: '+esc(err.message||err), 'bad');
+    if(!silent) alert('No se pudieron cargar los ensayos desde Google Sheet: '+(err.message||err));
+    return false;
+  }finally{
+    rehearsalSyncRunning = false;
+  }
+}
+
+function ensureRehearsalsFreshOnMobile(){
+  const isSmall = window.matchMedia && window.matchMedia('(max-width: 900px)').matches;
+  const stale = Date.now() - rehearsalLastSync > 60000;
+  if((isSmall || !(db.rehearsals||[]).length) && stale){
+    syncRehearsalsFromGoogleSheet({silent:true, mobile:true});
+  }
+}
+
 async function syncCRMFromGoogleSheet(opts={}){
   const silent = !!opts.silent;
   try{
@@ -977,7 +1085,7 @@ function setTab(id, opts={}){
   if(id==='gmail') renderGmail();
   if(id==='followup') renderFollowup();
   if(id==='concerts') renderConcerts();
-  if(id==='rehearsals') renderRehearsals();
+  if(id==='rehearsals') { renderRehearsals(); ensureRehearsalsFreshOnMobile(); }
   if(id==='local') renderLocalPayments();
   if(id==='budget') calcBudget();
   if(id==='repertoire') renderRepertoire();
@@ -2241,6 +2349,7 @@ function initialTabFromUrl(){
 }
 clearOldLocalCaches();
 renderNav();refreshAll();setTab(initialTabFromUrl(), {scroll:false, updateUrl:false});
-setTimeout(()=>syncCRMFromGoogleSheet({silent:true, startup:true}), 250);
+setTimeout(()=>syncRehearsalsFromGoogleSheet({silent:true, startup:true}), 200);
+setTimeout(()=>syncCRMFromGoogleSheet({silent:true, startup:true}), 900);
 window.addEventListener('focus',()=>syncCRMFromGoogleSheet({silent:true, focus:true}));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden) syncCRMFromGoogleSheet({silent:true, visible:true});});

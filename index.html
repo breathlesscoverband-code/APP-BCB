@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- APP-BCB v2.2 final sync · Spotify playlist BCB -->
+<!-- APP-BCB v2.4 final sync · admin guard mobile fix -->
 <title>Breathless Cover Band · APP-BCB control profesional</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#120608">
@@ -12,9 +12,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="css/styles.css?v=2.2.0-bcb">
-<link rel="stylesheet" href="css/admin-guard.css?v=2.2.0-bcb">
-<script defer src="js/admin-guard.js?v=2.2.0-bcb"></script>
+<link rel="stylesheet" href="css/styles.css?v=2.4.0-bcb">
+<link rel="stylesheet" href="css/admin-guard.css?v=2.4.0-bcb">
+<script defer src="js/admin-guard.js?v=2.4.0-bcb"></script>
 </head>
 <body>
 <div class="app">
@@ -105,9 +105,11 @@
       </div>
       <div class="actions">
         <button class="btn gold" onclick="openRehearsalModal()">+ Ensayo</button>
-        <button class="btn dark" onclick="exportRehearsalsCSV()">Exportar CSV ensayos</button>
+        <button class="btn dark" onclick="syncRehearsalsFromGoogleSheet()">Actualizar ensayos</button><button class="btn dark" onclick="exportRehearsalsCSV()">Exportar CSV ensayos</button>
       </div>
     </div>
+
+    <div id="rehearsalSyncStatus" class="notice">Fuente principal: Google Sheet maestro BCB. En móvil, usa “Actualizar ensayos” si no aparecen los últimos datos.</div>
 
     <div class="grid three" id="rehearsalKpis"></div>
 
@@ -165,7 +167,7 @@
         <h3>Local de ensayo</h3>
         <p>Control del alquiler mensual del local, cuotas por miembro y pagos pendientes. Fuente principal: pestaña PAGOS_LOCAL de Google Sheet.</p>
       </div>
-      <a class="btn ghost" href="https://docs.google.com/spreadsheets/d/1mrffAdGxfzRL602XHD4Uw-EKiYBgZ4PgLuVuOFPxEGU/edit" target="_blank" rel="noopener">Abrir Google Sheet</a>
+      <a class="btn ghost" href="https://docs.google.com/spreadsheets/d/1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q/edit" target="_blank" rel="noopener">Abrir Google Sheet</a>
     </div>
     <div class="grid five" id="localKpis"></div>
     <div class="tableWrap">

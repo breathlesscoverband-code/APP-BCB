@@ -45,7 +45,7 @@ Cambios:
 Después de subir esta versión, sustituir también `apps-script/Code.gs` en Apps Script y crear nueva implementación.
 
 
-## APP-BCB v2.2 final sync · playlist Spotify
+## APP-BCB v2.3 final sync · playlist Spotify
 
 Cambios:
 - Playlist Spotify general de BCB cargada:
@@ -56,3 +56,20 @@ Cambios:
 - Cache PWA subida a v2.2 para forzar actualización.
 
 Subir todo el contenido del ZIP al repo `APP-BCB` y hacer Ctrl+F5. En móvil, si mantiene versión anterior, desinstalar/reinstalar la PWA.
+
+
+## v2.3 · Corrección móvil ensayos
+
+- Nuevo endpoint Apps Script `?action=rehearsals` para cargar ENSAYOS de forma ligera en móvil.
+- Botón `Actualizar ensayos` en el módulo Ensayos.
+- Normalización de fechas y horas procedentes de Google Sheets.
+- Cache PWA renovada para forzar actualización.
+
+
+## APP-BCB v2.4 final sync · admin guard móvil
+
+Corrección de uso móvil:
+- El aviso de modo usuario ya no aparece como ventana emergente repetida.
+- Se sustituye por aviso inferior no intrusivo y limitado por tiempo.
+- La caché local puede actualizarse en modo usuario para permitir lectura estable en móvil.
+- Las acciones de administración siguen protegidas: editar, borrar, importar, exportar y backup.

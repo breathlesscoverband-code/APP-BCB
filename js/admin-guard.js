@@ -3,6 +3,8 @@
 
   const ADMIN_KEY = 'app_bcb_admin_local_unlocked_v2';
   const ADMIN_CODE = '1929';
+  const NOTICE_COOLDOWN_MS = 8000;
+  let lastNoticeAt = 0;
 
   const ADMIN_FUNCTIONS = [
     'openContactModal',
@@ -38,49 +40,37 @@
     'composeForContact'
   ];
 
-  const ADMIN_ONCLICK_PATTERNS = [
-    'openContactModal',
-    'saveContact',
-    'deleteRecord',
-    'openConcertModal',
-    'saveConcert',
-    'openRehearsalModal',
-    'saveRehearsal',
-    'saveConcertAttendance',
-    'markLocalPayment',
-    'exportRehearsalsCSV',
-    'loadConcertPosterFile',
-    'createConcertFromBudget',
-    'openSongModal',
-    'saveSong',
-    'openTaskModal',
-    'saveTask',
-    'resetData',
-    'importJSON',
-    'importCSVContacts',
-    'safeImportCRMFile',
-    'exportJSON',
-    'exportCSV',
-    'exportFilteredCRM',
-    'exportSetlistCSV',
-    'exportRepertoireCSV',
-    'applySongLinksImport',
-    'openSongLinksImportModal',
-    'downloadXlsx',
-    'copyBudgetText',
-    'composeTemplate',
-    'composeForContact'
-  ];
+  const ADMIN_ONCLICK_PATTERNS = ADMIN_FUNCTIONS.slice();
 
   function isAdmin(){
     return localStorage.getItem(ADMIN_KEY) === '1';
   }
 
-  function notifyUserMode(){
-    alert(
-      'Modo usuario: solo lectura.\n\n' +
-      'Para editar, importar, exportar, hacer backups o modificar datos, entra como administrador.'
-    );
+  function ensureNoticeBox(){
+    let box = document.getElementById('adminGuardNotice');
+    if(box) return box;
+    box = document.createElement('div');
+    box.id = 'adminGuardNotice';
+    box.className = 'adminGuardNotice';
+    box.setAttribute('role', 'status');
+    box.setAttribute('aria-live', 'polite');
+    document.body.appendChild(box);
+    return box;
+  }
+
+  function notifyUserMode(force){
+    const now = Date.now();
+    if(!force && now - lastNoticeAt < NOTICE_COOLDOWN_MS) return;
+    lastNoticeAt = now;
+
+    const box = ensureNoticeBox();
+    box.textContent = 'Modo usuario: solo lectura. Para modificar datos, entra como administrador.';
+    box.classList.add('show');
+
+    clearTimeout(box.__hideTimer);
+    box.__hideTimer = setTimeout(function(){
+      box.classList.remove('show');
+    }, 3200);
   }
 
   function setAdmin(value){
@@ -115,7 +105,7 @@
 
   function callWhenReady(fnName, args){
     if(!isAdmin()){
-      notifyUserMode();
+      notifyUserMode(true);
       return;
     }
 
@@ -129,7 +119,7 @@
 
   function openExportPanel(){
     if(!isAdmin()){
-      notifyUserMode();
+      notifyUserMode(true);
       return;
     }
 
@@ -268,42 +258,31 @@
       event.preventDefault();
       event.stopPropagation();
       if(typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-      notifyUserMode();
+      notifyUserMode(false);
     }
   }
 
   function guardWindowFunctions(){
     ADMIN_FUNCTIONS.forEach(name => {
       const original = window[name];
-      if(typeof original !== 'function' || original.__appEnheGuarded) return;
+      if(typeof original !== 'function' || original.__appBcbGuarded) return;
 
       const guarded = function(){
         if(!isAdmin()){
-          notifyUserMode();
+          notifyUserMode(false);
           return null;
         }
         return original.apply(this, arguments);
       };
 
-      guarded.__appEnheGuarded = true;
-      guarded.__appEnheOriginal = original;
+      guarded.__appBcbGuarded = true;
+      guarded.__appBcbOriginal = original;
       window[name] = guarded;
     });
 
-    const originalSaveData = window.saveData;
-    if(typeof originalSaveData === 'function' && !originalSaveData.__appEnheGuarded){
-      const guardedSave = function(){
-        if(!isAdmin()){
-          console.warn('APP-BCB: intento de guardado bloqueado en modo usuario.');
-          notifyUserMode();
-          return null;
-        }
-        return originalSaveData.apply(this, arguments);
-      };
-      guardedSave.__appEnheGuarded = true;
-      guardedSave.__appEnheOriginal = originalSaveData;
-      window.saveData = guardedSave;
-    }
+    // No se bloquea saveData en modo usuario.
+    // saveData solo actualiza la caché local del navegador y es necesario para que
+    // móvil pueda guardar la última lectura de Google Sheet sin mostrar avisos repetidos.
   }
 
   function installObserver(){
@@ -319,7 +298,7 @@
 
     const modeBadge = document.createElement('div');
     modeBadge.id = 'adminModeBadge';
-    modeBadge.className = 'adminModeBadge is-user';
+    modeBadge.className = 'adminModeBadge';
     modeBadge.textContent = 'Usuario · solo lectura';
 
     const fab = document.createElement('button');
@@ -334,18 +313,18 @@
     panel.className = 'adminPanel';
     panel.innerHTML = `
       <div class="adminPanelTop">
-        <span class="adminState" id="adminState">Modo usuario: solo lectura</span>
-        <button type="button" class="adminPanelClose" id="adminPanelClose" title="Cerrar panel">×</button>
+        <h4>Panel administrador</h4>
+        <button type="button" id="adminPanelClose" class="adminPanelClose" aria-label="Cerrar panel">×</button>
       </div>
-      <h4>Panel administrador</h4>
-      <p>Accesos rápidos. El panel queda cerrado por defecto para no tapar botones ni tablas.</p>
+      <span id="adminState" class="adminState">Modo usuario: solo lectura</span>
+      <p>Acceso de gestión para APP-BCB. El grupo puede entrar en modo usuario y consultar datos, pero no editar ni exportar.</p>
       <div class="adminActions">
-        <button type="button" class="primary" id="adminOpenExport">Abrir Exportar</button>
+        <button type="button" id="adminOpenExport" class="primary">Abrir Exportar</button>
         <button type="button" id="adminBackup">Backup JSON</button>
         <button type="button" id="adminExportCRM">CRM CSV</button>
         <button type="button" id="adminExportFiltered">CRM filtrado</button>
         <button type="button" id="adminOpenRehearsals">Abrir Ensayos</button>
-        <button type="button" class="danger" id="adminLock">Salir de admin</button>
+        <button type="button" id="adminLock" class="danger">Salir de admin</button>
       </div>
     `;
 
@@ -374,15 +353,13 @@
 
     guardWindowFunctions();
     markAdminControls();
-    installObserver();
     updateAdminUI();
+    installObserver();
   }
 
   window.APP_BCB_ADMIN = {
-    login: requestAdminAccess,
     unlock: requestAdminAccess,
     lock: function(){ setAdmin(false); },
-    closePanel: closeAdminPanel,
     isAdmin: isAdmin,
     mode: function(){ return isAdmin() ? 'admin' : 'user'; }
   };

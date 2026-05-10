@@ -1,6 +1,6 @@
 /**
  * APP-BCB Bridge — Breathless Cover Band
- * Version: APP-BCB v2.2 final sync · Spotify playlist + admin UX + delete real
+ * Version: APP-BCB v2.4 final sync · admin guard mobile fix
  *
  * Fuente principal: Google Sheet maestro BCB.
  * App GitHub Pages / PWA.
@@ -19,7 +19,7 @@
  * No usar endpoint ni Sheet de otra banda.
  */
 
-const APP_VERSION = 'APP-BCB v2.2 final sync';
+const APP_VERSION = 'APP-BCB v2.4 final sync';
 const BAND = 'BCB';
 const BAND_NAME = 'Breathless Cover Band';
 const SHEET_ID = '1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q';
@@ -83,6 +83,7 @@ function doGet(e) {
     if (action === 'health') return jsonOrJsonp_(health_(), params.callback);
     if (action === 'tabs') return jsonOrJsonp_(getTabs_(), params.callback);
     if (action === 'mobile') return jsonOrJsonp_(getMobilePayload_(), params.callback);
+    if (action === 'rehearsals') return jsonOrJsonp_(getRehearsalsPayload_(), params.callback);
     if (action === 'sheet') return jsonOrJsonp_(getSheetPayload_(params.tab, params.limit), params.callback);
 
     if (action === 'upsertconcert') return jsonOrJsonp_(upsertById_('CONCIERTOS', rowFromParam_(params), params.key), params.callback);
@@ -191,6 +192,33 @@ function getMobilePayload_() {
   payload.data.miembros = payload.data.MIEMBROS && payload.data.MIEMBROS.rows ? payload.data.MIEMBROS.rows : [];
   payload.data.pagosLocal = payload.data.PAGOS_LOCAL && payload.data.PAGOS_LOCAL.rows ? payload.data.PAGOS_LOCAL.rows : [];
 
+  return payload;
+}
+
+
+function getRehearsalsPayload_() {
+  const tabs = ['ENSAYOS', 'MIEMBROS', 'REPERTORIO'];
+  const payload = {
+    ok: true,
+    band: BAND,
+    bandName: BAND_NAME,
+    version: APP_VERSION,
+    source: 'Google Sheet maestro BCB',
+    mode: 'rehearsals-light',
+    generatedAt: new Date().toISOString(),
+    data: {},
+    sheets: {}
+  };
+
+  tabs.forEach(tabName => {
+    const limit = tabName === 'REPERTORIO' ? 300 : 300;
+    const obj = readSheetAsObjects_(tabName, limit);
+    payload.data[tabName] = obj;
+    payload.sheets[tabName] = Object.assign({ key: tabName, name: tabName }, obj);
+  });
+
+  payload.rows = payload.data.ENSAYOS && payload.data.ENSAYOS.rows ? payload.data.ENSAYOS.rows : [];
+  payload.data.miembros = payload.data.MIEMBROS && payload.data.MIEMBROS.rows ? payload.data.MIEMBROS.rows : [];
   return payload;
 }
 

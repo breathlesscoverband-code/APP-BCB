@@ -1,0 +1,16 @@
+{
+  "app": "APP-BCB",
+  "band": "BCB",
+  "version": "APP-BCB v2.4 final sync",
+  "date": "2026-05-10",
+  "scope": "Corrección de aviso repetido en modo usuario móvil",
+  "changes": [
+    "El aviso de modo usuario deja de ser alert() bloqueante.",
+    "Nuevo aviso no intrusivo tipo toast con limitación de frecuencia.",
+    "saveData deja de estar bloqueado por modo usuario porque solo actualiza caché local.",
+    "Se mantiene bloqueo de acciones reales de administrador: editar, borrar, importar, exportar y backup.",
+    "Cache PWA actualizada a v2.4 para forzar recarga."
+  ],
+  "source": "Google Sheet maestro BCB",
+  "endpoint": "https://script.google.com/macros/s/AKfycbx6FfjKaqSvRu9Wc8Ym0yH1y-x4VPryt4J4qVM6EOhRDEhGBGr6RrO51xqaUF36mrD6dg/exec"
+}
