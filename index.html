@@ -15,6 +15,20 @@
 <link rel="stylesheet" href="css/styles.css?v=2.5.0-bcb">
 <link rel="stylesheet" href="css/admin-guard.css?v=2.5.0-bcb">
 <script defer src="js/admin-guard.js?v=2.5.0-bcb"></script>
+
+<script>
+(function(){
+  var p = new URLSearchParams(location.search);
+  if (p.get('reset') === '1') {
+    Promise.resolve()
+      .then(function(){ return window.caches ? caches.keys().then(function(keys){ return Promise.all(keys.map(function(k){ return caches.delete(k); })); }) : null; })
+      .then(function(){ return navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(function(regs){ return Promise.all(regs.map(function(r){ return r.unregister(); })); }) : null; })
+      .then(function(){ localStorage.removeItem('app_bcb_control_pro_v25_mobile_core'); localStorage.removeItem('app_bcb_control_pro_v24_admin_guard'); location.replace('./?v=27'); })
+      .catch(function(){ location.replace('./?v=27'); });
+  }
+})();
+</script>
+
 </head>
 <body>
 <div class="app">
@@ -326,13 +340,13 @@
 
 <div class="modal" id="modal"><div class="modalPanel"><div class="modalHead"><strong id="modalTitle">Detalle</strong><button class="close" onclick="closeModal()">×</button></div><div class="modalBody" id="modalBody"></div></div></div>
 
-<script src="js/assets.js?v=2.2.0-bcb"></script>
-<script src="js/data.js?v=2.2.0-bcb"></script>
-<script src="js/app.js?v=2.2.0-bcb"></script>
+<script src="js/assets.js?v=2.7.0-bcb"></script>
+<script src="js/data.js?v=2.7.0-bcb"></script>
+<script src="js/app.js?v=2.7.0-bcb"></script>
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function () {
-    navigator.serviceWorker.register("./sw.js?v=2.2.0-bcb").catch(function (error) {
+    navigator.serviceWorker.register("./sw.js?v=2.7.0-bcb").catch(function (error) {
       console.warn("Service Worker no registrado:", error);
     });
   });

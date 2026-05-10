@@ -1,15 +1,15 @@
-/* APP-BCB · PWA service worker v2.6 final sync · public endpoint mobile */
-const CACHE_NAME = "app-bcb-pwa-v2-6-0-public-endpoint";
+/* APP-BCB · PWA service worker v2.7 final sync · iframe fallback */
+const CACHE_NAME = "app-bcb-pwa-v2-7-0-iframe-fallback";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./css/styles.css",
-  "./css/admin-guard.css",
-  "./js/assets.js",
-  "./js/data.js",
-  "./js/app.js?v=2.5.0-bcb",
-  "./js/admin-guard.js",
+  "./css/styles.css?v=2.7.0-bcb",
+  "./css/admin-guard.css?v=2.7.0-bcb",
+  "./js/assets.js?v=2.7.0-bcb",
+  "./js/data.js?v=2.7.0-bcb",
+  "./js/app.js?v=2.7.0-bcb",
+  "./js/admin-guard.js?v=2.7.0-bcb",
   "./assets/bcb_logo_main.png",
   "./assets/bcb_home_background.png",
   "./assets/bcb_setlist_base.png",

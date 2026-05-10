@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>APP-BCB diagnóstico móvil</title>
+<style>body{font-family:system-ui;background:#090b10;color:#fff;padding:20px}button{padding:12px 16px;border:0;border-radius:10px;margin:6px;background:#d6b45b;color:#111;font-weight:700}pre{white-space:pre-wrap;background:#111827;padding:12px;border-radius:12px;border:1px solid #333}</style></head>
+<body>
+<h1>APP-BCB diagnóstico móvil</h1>
+<p>Prueba directa de conexión con Apps Script.</p>
+<button onclick="testJsonp()">Probar JSONP</button>
+<button onclick="testIframe()">Probar iframe fallback</button>
+<pre id="out">Pendiente...</pre>
+<script>
+const ENDPOINT='https://script.google.com/macros/s/AKfycbzbddqoQzAwtxY9zpZNjRnWhziFjw6J0oEYqbDEQYpqe37TkTw3f6T6J4kwxokMKBhycg/exec';
+function log(x){document.getElementById('out').textContent=typeof x==='string'?x:JSON.stringify(x,null,2);}
+function url(params){const u=new URL(ENDPOINT); Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v)); u.searchParams.set('ts',Date.now()); return u.toString();}
+function testJsonp(){log('Probando JSONP...'); const cb='DBG_'+Date.now(); window[cb]=p=>{log({ok:true,method:'jsonp',payload:p}); delete window[cb];}; const s=document.createElement('script'); s.onerror=()=>log('ERROR JSONP'); s.src=url({action:'health',callback:cb}); document.head.appendChild(s);}
+function testIframe(){log('Probando iframe...'); const requestId='IFR_'+Date.now(); window.addEventListener('message', function h(ev){ if(!ev.data||ev.data.requestId!==requestId)return; window.removeEventListener('message',h); log({ok:true,method:'iframe',payload:ev.data.payload});}); const f=document.createElement('iframe'); f.style.display='none'; f.src=url({action:'iframe',payloadAction:'health',requestId}); document.body.appendChild(f); setTimeout(()=>log('Si no ha salido OK, el Code.gs v2.7 no está implementado o no está público.'),15000);}
+</script>
+</body></html>

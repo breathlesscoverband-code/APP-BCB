@@ -1,0 +1,12 @@
+{
+  "version": "APP-BCB v2.7 final sync",
+  "date": "2026-05-11",
+  "changes": [
+    "Bump real de todas las referencias JS/CSS/SW a v2.7 para cortar caché antigua",
+    "Fallback iframe para Apps Script cuando el móvil bloquea JSONP/script.googleusercontent",
+    "Code.gs v2.7 con action=iframe y HtmlService ALLOWALL",
+    "Página diagnostico-movil.html para probar JSONP e iframe",
+    "Reset fuerte con ?reset=1 para borrar service worker, caches y localStorage antiguo"
+  ],
+  "endpoint": "https://script.google.com/macros/s/AKfycbzbddqoQzAwtxY9zpZNjRnWhziFjw6J0oEYqbDEQYpqe37TkTw3f6T6J4kwxokMKBhycg/exec"
+}

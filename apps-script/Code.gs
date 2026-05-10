@@ -1,6 +1,6 @@
 /**
  * APP-BCB Bridge — Breathless Cover Band
- * Version: APP-BCB v2.6 final sync · public endpoint mobile
+ * Version: APP-BCB v2.7 final sync · iframe fallback mobile
  *
  * Fuente principal: Google Sheet maestro BCB.
  * App GitHub Pages / PWA.
@@ -19,7 +19,7 @@
  * No usar endpoint ni Sheet de otra banda.
  */
 
-const APP_VERSION = 'APP-BCB v2.6 final sync';
+const APP_VERSION = 'APP-BCB v2.7 final sync';
 const BAND = 'BCB';
 const BAND_NAME = 'Breathless Cover Band';
 const SHEET_ID = '1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q';
@@ -80,6 +80,14 @@ function doGet(e) {
     const params = e && e.parameter ? e.parameter : {};
     const action = String(params.action || 'health').toLowerCase();
 
+    if (action === 'iframe') {
+      try {
+        return iframeBridge_(iframePayload_(params), params);
+      } catch (iframeErr) {
+        return iframeBridge_({ ok: false, error: String(iframeErr && iframeErr.message ? iframeErr.message : iframeErr), version: APP_VERSION }, params);
+      }
+    }
+
     if (action === 'health') return jsonOrJsonp_(health_(), params.callback);
     if (action === 'diagnostic') return jsonOrJsonp_(diagnostic_(), params.callback);
     if (action === 'tabs') return jsonOrJsonp_(getTabs_(), params.callback);
@@ -98,6 +106,41 @@ function doGet(e) {
     return jsonOrJsonp_({ ok: false, error: String(err && err.message ? err.message : err), version: APP_VERSION }, e && e.parameter && e.parameter.callback);
   }
 }
+
+
+function iframePayload_(params) {
+  const action = String(params.payloadAction || params.targetAction || params.dataAction || 'health').toLowerCase();
+
+  if (action === 'health') return health_();
+  if (action === 'diagnostic') return diagnostic_();
+  if (action === 'tabs') return getTabs_();
+  if (action === 'mobile') return getMobilePayload_();
+  if (action === 'rehearsals') return getRehearsalsPayload_();
+  if (action === 'sheet') return getSheetPayload_(params.tab, params.limit);
+
+  if (action === 'upsertconcert') return upsertById_('CONCIERTOS', rowFromParam_(params), params.key);
+  if (action === 'upsertrehearsal') return upsertById_('ENSAYOS', rowFromParam_(params), params.key);
+  if (action === 'upserttask') return upsertById_('TAREAS', rowFromParam_(params), params.key);
+  if (action === 'upsertlocalpayment') return upsertLocalPayment_(rowFromParam_(params), params.key);
+  if (action === 'deleterow') return deleteRowByIdGet_(params.tab, params.id, params.key);
+
+  return { ok: false, error: 'Acción iframe no reconocida: ' + action, version: APP_VERSION };
+}
+
+function iframeBridge_(payload, params) {
+  const requestId = String(params && params.requestId ? params.requestId : '');
+  const body = '<!doctype html><html><head><meta charset="utf-8"></head><body><script>' +
+    '(function(){' +
+    'var msg={source:"APP_BCB_IFRAME",requestId:' + JSON.stringify(requestId) + ',payload:' + JSON.stringify(payload) + '};' +
+    'try{window.parent.postMessage(msg,"*");}catch(e){}' +
+    '})();' +
+    '</' + 'script></body></html>';
+  return HtmlService
+    .createHtmlOutput(body)
+    .setTitle('APP-BCB Bridge')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
 
 function doPost(e) {
   try {

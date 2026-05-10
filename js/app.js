@@ -1,6 +1,6 @@
-const APP_BCB_APP_VERSION = '2.6.0-final-sync-public-endpoint-bcb';
-const STORE_KEY = 'app_bcb_control_pro_v25_mobile_core';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
+const APP_BCB_APP_VERSION = '2.7.0-final-sync-iframe-fallback-bcb';
+const STORE_KEY = 'app_bcb_control_pro_v27_iframe_fallback';
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
 let db = loadData();
 let filteredCRM = [];
 let rehearsalSyncRunning = false;
@@ -489,19 +489,19 @@ function appBcbEndpointUrl(params={}){
   url.searchParams.set('ts', String(Date.now()));
   return url.toString();
 }
-function appsScriptJSONP(params={}){
+function appsScriptJsonpOnly(params={}){
   return new Promise((resolve,reject)=>{
     if(!GOOGLE_SHEET_MASTER.appsScriptUrl) return reject(new Error('No hay URL /exec de Apps Script configurada.'));
     const cb='APP_BCB_JSONP_'+Date.now()+'_'+Math.random().toString(36).slice(2);
     const script=document.createElement('script');
     const timeout=setTimeout(()=>{
       cleanup();
-      reject(new Error('Tiempo agotado leyendo Apps Script.'));
-    }, 45000);
+      reject(new Error('Tiempo agotado leyendo Apps Script por JSONP.'));
+    }, 30000);
     function cleanup(){
       clearTimeout(timeout);
       try{delete window[cb];}catch(e){window[cb]=undefined;}
-      script.remove();
+      if(script && script.parentNode) script.parentNode.removeChild(script);
     }
     window[cb]=function(payload){
       cleanup();
@@ -509,11 +509,58 @@ function appsScriptJSONP(params={}){
     };
     script.onerror=function(){
       cleanup();
-      reject(new Error('No se pudo cargar el endpoint de Apps Script.'));
+      reject(new Error('No se pudo cargar el endpoint de Apps Script por JSONP.'));
     };
     script.src=appBcbEndpointUrl(Object.assign({}, params, {callback:cb}));
     document.head.appendChild(script);
   });
+}
+
+function appsScriptIframe(params={}){
+  return new Promise((resolve,reject)=>{
+    if(!GOOGLE_SHEET_MASTER.appsScriptUrl) return reject(new Error('No hay URL /exec de Apps Script configurada.'));
+    const requestId='APP_BCB_IFRAME_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    const iframe=document.createElement('iframe');
+    iframe.style.display='none';
+    iframe.style.width='0';
+    iframe.style.height='0';
+    iframe.style.border='0';
+    const timeout=setTimeout(()=>{
+      cleanup();
+      reject(new Error('Tiempo agotado leyendo Apps Script por iframe.'));
+    }, 45000);
+    function cleanup(){
+      clearTimeout(timeout);
+      window.removeEventListener('message', handler);
+      if(iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    }
+    function handler(ev){
+      const data=ev && ev.data;
+      if(!data || data.source !== 'APP_BCB_IFRAME' || data.requestId !== requestId) return;
+      cleanup();
+      resolve(data.payload);
+    }
+    window.addEventListener('message', handler);
+    const iframeParams=Object.assign({}, params);
+    iframeParams.payloadAction = params.action || 'health';
+    iframeParams.action = 'iframe';
+    iframeParams.requestId = requestId;
+    iframe.src=appBcbEndpointUrl(iframeParams);
+    document.body.appendChild(iframe);
+  });
+}
+
+async function appsScriptJSONP(params={}){
+  try{
+    const payload = await appsScriptJsonpOnly(params);
+    if(payload && typeof payload === 'object') payload._transport = payload._transport || 'jsonp';
+    return payload;
+  }catch(jsonpErr){
+    console.warn('APP-BCB JSONP falló; probando iframe fallback:', jsonpErr);
+    const payload = await appsScriptIframe(params);
+    if(payload && typeof payload === 'object') payload._transport = payload._transport || 'iframe';
+    return payload;
+  }
 }
 
 function isAdminActive(){
@@ -1127,11 +1174,11 @@ async function diagnosticoMovilBCB(){
     const health = await appsScriptJSONP({action:'health'});
     const crm = await fetchSheetTabViaAppsScript('CRM_GENERAL', 5);
     const ensayos = await fetchSheetTabViaAppsScript('ENSAYOS', 5);
-    const msg = `Diagnóstico OK.\nVersión bridge: ${health.version || '—'}\nSheet: ${health.spreadsheetName || '—'}\nCRM primeras filas: ${crm.length}\nEnsayos primeras filas: ${ensayos.length}`;
+    const msg = `Diagnóstico OK.\nTransporte: ${health._transport || '—'}\nVersión bridge: ${health.version || '—'}\nSheet: ${health.spreadsheetName || '—'}\nCRM primeras filas: ${crm.length}\nEnsayos primeras filas: ${ensayos.length}\nEndpoint: ${GOOGLE_SHEET_MASTER.appsScriptUrl}`;
     sheetStatus(msg.replace(/\n/g,'<br>'), 'ok');
     alert(msg);
   }catch(err){
-    const msg = 'Diagnóstico fallido: '+(err.message||err)+'. Revisa que Apps Script esté implementado como aplicación web para Cualquiera y que hayas creado nueva versión de implementación.';
+    const msg = 'Diagnóstico fallido: '+(err.message||err)+'. Endpoint configurado: '+GOOGLE_SHEET_MASTER.appsScriptUrl+'. Si health directo funciona, sube APP-BCB v2.7 y sustituye también Code.gs v2.7 para activar el iframe fallback.';
     sheetStatus(esc(msg), 'bad');
     alert(msg);
   }
