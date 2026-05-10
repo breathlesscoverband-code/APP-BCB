@@ -43,3 +43,16 @@ Cambios:
 - Cache PWA subida a v2.1 para forzar actualización en GitHub Pages y móvil.
 
 Después de subir esta versión, sustituir también `apps-script/Code.gs` en Apps Script y crear nueva implementación.
+
+
+## APP-BCB v2.2 final sync · playlist Spotify
+
+Cambios:
+- Playlist Spotify general de BCB cargada:
+  https://open.spotify.com/playlist/11xiOaJiHUa7uHxNPxe1OF?si=a73453abe34b4675
+- Visible en el módulo Canciones/Repertorio.
+- Botón para abrir playlist y copiar URL.
+- Campo Playlist Spotify general precargado al crear o editar canciones.
+- Cache PWA subida a v2.2 para forzar actualización.
+
+Subir todo el contenido del ZIP al repo `APP-BCB` y hacer Ctrl+F5. En móvil, si mantiene versión anterior, desinstalar/reinstalar la PWA.

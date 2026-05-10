@@ -1,6 +1,6 @@
-const APP_BCB_APP_VERSION = '2.1.0-final-sync-admin-delete-bcb';
-const STORE_KEY = 'app_bcb_control_pro_v21_mobile_sheet_lite';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
+const APP_BCB_APP_VERSION = '2.2.0-final-sync-spotify-bcb';
+const STORE_KEY = 'app_bcb_control_pro_v22_mobile_sheet_lite';
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
 let db = loadData();
 let filteredCRM = [];
 const tabs = [
@@ -1862,7 +1862,7 @@ function renderRepertoire(){
   const playlistBox = document.getElementById('spotifyPlaylistBox');
   if(playlistBox){
     playlistBox.innerHTML = playlistUrl
-      ? `<p>Playlist de referencia cargada para el repertorio de BCB.</p><div class="actions"><a class="btn gold" target="_blank" rel="noopener" href="${esc(playlistUrl)}">Abrir playlist Spotify</a><button class="btn dark" onclick="copyText('${esc(playlistUrl)}')">Copiar URL</button></div>`
+      ? `<p>Playlist de referencia cargada para el repertorio de BCB.</p><div class="actions"><a class="btn gold" target="_blank" rel="noopener" href="${esc(playlistUrl)}">Abrir playlist Spotify</a><button class="btn dark" onclick="copyText('${esc(playlistUrl)}')">Copiar URL</button></div>${db.createdFrom?.spotifyEmbedUrl ? `<div class="spotifyEmbedWrap"><iframe style="border-radius:12px;margin-top:12px" src="${esc(db.createdFrom.spotifyEmbedUrl)}" width="100%" height="152" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div>` : ``}`
       : `<p>No hay playlist general cargada todavía.</p>`;
   }
 

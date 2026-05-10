@@ -1,5 +1,5 @@
-/* APP-BCB · PWA service worker v2.1 final sync */
-const CACHE_NAME = "app-bcb-pwa-v2-1-0-final-sync";
+/* APP-BCB · PWA service worker v2.2 final sync · Spotify */
+const CACHE_NAME = "app-bcb-pwa-v2-2-0-final-sync-spotify";
 const APP_SHELL = [
   "./",
   "./index.html",

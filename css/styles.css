@@ -399,3 +399,14 @@ code{
 
 
 .vocal-esther{background:rgba(255,107,180,.14);color:#ffd0e8}.vocal-lorenzo{background:rgba(57,185,128,.16);color:#a7ffd5}
+
+/* APP-BCB v2.2 · Spotify playlist */
+.spotifyEmbedWrap{
+  width:100%;
+  max-width:720px;
+}
+.spotifyEmbedWrap iframe{
+  display:block;
+  background:#050505;
+  border:1px solid rgba(212,175,55,.22);
+}

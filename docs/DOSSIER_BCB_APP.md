@@ -10,3 +10,9 @@ Bodas, fiestas privadas, eventos de empresa, celebraciones, hoteles, salas, even
 
 ## Nota técnica
 El equipo de sonido e iluminación se consulta según aforo y formato. No se da por incluido salvo confirmación expresa.
+
+
+## Playlist Spotify BCB
+
+Playlist general de referencia para repertorio y ensayos:
+https://open.spotify.com/playlist/11xiOaJiHUa7uHxNPxe1OF?si=a73453abe34b4675

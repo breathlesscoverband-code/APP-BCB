@@ -1,0 +1,31 @@
+{
+  "release": "v2.2",
+  "source": "APP-ENHE v2.2 final sync structure adapted to BCB",
+  "band": "BCB",
+  "sheetId": "1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q",
+  "endpoint": "https://script.google.com/macros/s/AKfycbx6FfjKaqSvRu9Wc8Ym0yH1y-x4VPryt4J4qVM6EOhRDEhGBGr6RrO51xqaUF36mrD6dg/exec",
+  "repo": "APP-BCB",
+  "adminKey": "1929",
+  "changes": [
+    "Arquitectura completa del módulo APP-ENHE replicada para APP-BCB.",
+    "Datos, miembros, repertorio, logos, endpoint y Sheet exclusivos de BCB.",
+    "Repertorio BCB ampliado a 26 temas del setlist aportado.",
+    "Ensayos con horarios desplegables, local fijo y asistentes BCB.",
+    "Apps Script v2.0 compatible con mobile JSONP y escrituras upsert desde app.",
+    "PWA con nuevos logos BCB y caché v2.0."
+  ],
+  "doNotMix": [
+    "No endpoint de otra banda",
+    "No Sheet de otra banda",
+    "No tarifas de otra banda",
+    "No miembros de otra banda",
+    "No assets de otra banda"
+  ],
+  "version": "APP-BCB v2.2 final sync",
+  "patch": "admin-panel-no-overlay-delete-real",
+  "generatedAt": "2026-05-10T14:55:00",
+  "change": "Playlist Spotify BCB cargada en Canciones/Repertorio",
+  "spotifyPlaylistUrl": "https://open.spotify.com/playlist/11xiOaJiHUa7uHxNPxe1OF?si=a73453abe34b4675",
+  "spotifyEmbedUrl": "https://open.spotify.com/embed/playlist/11xiOaJiHUa7uHxNPxe1OF",
+  "updatedAt": "2026-05-10T15:10:00"
+}
