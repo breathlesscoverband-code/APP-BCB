@@ -1,6 +1,6 @@
-const APP_BCB_APP_VERSION = '2.0.0-final-sync-clon-bcb';
-const STORE_KEY = 'app_bcb_control_pro_v20_mobile_sheet_lite';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
+const APP_BCB_APP_VERSION = '2.1.0-final-sync-admin-delete-bcb';
+const STORE_KEY = 'app_bcb_control_pro_v21_mobile_sheet_lite';
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
 let db = loadData();
 let filteredCRM = [];
 const tabs = [
@@ -1202,10 +1202,57 @@ function saveContact(){
   else {obj.id=nextId(db.crm);obj.sheetRow='';obj.raw={};db.crm.unshift(obj);}
   closeModal();saveData();
 }
+function sheetTabForArray(arrName){
+  return {
+    crm:'CRM_GENERAL',
+    gmailResponses:'RESPUESTAS_GMAIL',
+    concerts:'CONCIERTOS',
+    rehearsals:'ENSAYOS',
+    repertoire:'REPERTORIO',
+    tasks:'TAREAS',
+    localPayments:'PAGOS_LOCAL'
+  }[arrName] || '';
+}
+
+function pushDeleteToSheet(arrName,id){
+  const tab=sheetTabForArray(arrName);
+  if(!tab) return Promise.resolve({ok:true, skipped:true});
+  if(!sheetWriteEnabled()) return Promise.reject(new Error('No hay endpoint Apps Script configurado.'));
+  if(!isAdminActive()) return Promise.reject(new Error('Modo usuario: no se puede borrar en Google Sheet.'));
+  sheetStatus('Borrando en Google Sheet maestro…');
+  return appsScriptJSONP({action:'deleteRow', key:'1929', tab, id:String(id)})
+    .then(payload=>{
+      if(payload && payload.ok===false){
+        const msg=String(payload.error||'');
+        if(msg.includes('ID no encontrado')){
+          sheetStatus('Registro borrado localmente. No existía ya en Google Sheet.', 'ok');
+          return payload;
+        }
+        throw new Error(payload.error || 'No se pudo borrar en Google Sheet.');
+      }
+      sheetStatus('Borrado en Google Sheet maestro. Actualizando vista…','ok');
+      return syncCRMFromGoogleSheet({silent:true, afterWrite:true}).then(()=>payload);
+    });
+}
+
 function deleteRecord(arrName,id){
-  if(!confirm('¿Borrar este registro?'))return;
-  db[arrName]=db[arrName].filter(x=>x.id!==id);
-  closeModal();saveData();
+  if(!confirm('¿Borrar este registro de APP-BCB y del Google Sheet maestro?'))return;
+  const before = Array.isArray(db[arrName]) ? db[arrName].length : 0;
+  db[arrName]=(db[arrName]||[]).filter(x=>String(x.id)!==String(id));
+  const after = Array.isArray(db[arrName]) ? db[arrName].length : 0;
+  closeModal();
+  saveData();
+
+  // Si el registro venía solo de una caché antigua o de una plantilla local,
+  // la app lo retira aunque no exista todavía en Google Sheet.
+  if(before === after){
+    sheetStatus('No se encontró el registro en la caché local. Revisando Google Sheet…');
+  }
+
+  pushDeleteToSheet(arrName,id).catch(err=>{
+    sheetStatus('El registro se ha quitado de esta vista, pero NO se ha podido borrar en Google Sheet: '+esc(err.message||err),'bad');
+    alert('No se ha podido borrar en Google Sheet.\n\nMotivo: '+(err.message||err)+'\n\nActualiza desde Google Sheet para comprobar el estado real.');
+  });
 }
 function listCard(rows, empty='Sin registros.'){
   return rows.slice(0,10).map(x=>`<div class="detailItem"><small>${esc(x.campaign||x.emailDate||'')}</small><div><strong>${esc(x.organization||x.senderEmail)}</strong><br><span style="color:var(--muted)">${esc(compact(x.nextAction||x.responseReceived||x.summary||x.sendStatus||'',130))}</span></div><div class="actions" style="margin-top:8px"><button class="btn small gold" onclick="${x.organization?`viewContact(${x.id})`:`setTab('gmail')`}">Abrir</button>${x.email?`<button class="btn small dark" onclick="composeForContact(${x.id})">Email</button>`:''}</div></div>`).join('') || `<p class="muted">${empty}</p>`;

@@ -1,6 +1,6 @@
 /**
  * APP-BCB Bridge — Breathless Cover Band
- * Version: APP-BCB v2.0 final sync · compatible APP-BCB clon completo
+ * Version: APP-BCB v2.1 final sync · admin UX + delete real
  *
  * Fuente principal: Google Sheet maestro BCB.
  * App GitHub Pages / PWA.
@@ -19,7 +19,7 @@
  * No usar endpoint ni Sheet de otra banda.
  */
 
-const APP_VERSION = 'APP-BCB v2.0 final sync';
+const APP_VERSION = 'APP-BCB v2.1 final sync';
 const BAND = 'BCB';
 const BAND_NAME = 'Breathless Cover Band';
 const SHEET_ID = '1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q';
@@ -89,6 +89,7 @@ function doGet(e) {
     if (action === 'upsertrehearsal') return jsonOrJsonp_(upsertById_('ENSAYOS', rowFromParam_(params), params.key), params.callback);
     if (action === 'upserttask') return jsonOrJsonp_(upsertById_('TAREAS', rowFromParam_(params), params.key), params.callback);
     if (action === 'upsertlocalpayment') return jsonOrJsonp_(upsertLocalPayment_(rowFromParam_(params), params.key), params.callback);
+    if (action === 'deleterow') return jsonOrJsonp_(deleteRowByIdGet_(params.tab, params.id, params.key), params.callback);
 
     return jsonOrJsonp_({ ok: false, error: 'Acción no reconocida: ' + action, version: APP_VERSION }, params.callback);
   } catch (err) {
@@ -349,6 +350,15 @@ function upsertById_(tabName, data, key) {
 function upsertLocalPayment_(data, key) {
   if (!isAdminKey_(key)) return { ok: false, error: 'Clave admin incorrecta', version: APP_VERSION };
   return upsertById_('PAGOS_LOCAL', data, key);
+}
+
+function deleteRowByIdGet_(tabName, id, key) {
+  if (!isAdminKey_(key)) return { ok: false, error: 'Clave admin incorrecta', version: APP_VERSION };
+  try {
+    return deleteRowById_(tabName, id);
+  } catch (err) {
+    return { ok: false, error: String(err && err.message ? err.message : err), tab: tabName, id: String(id || ''), version: APP_VERSION };
+  }
 }
 
 function deleteRowById_(tabName, id) {

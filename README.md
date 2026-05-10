@@ -31,3 +31,15 @@ Incluye `apps-script/Code.gs` compatible con esta versión. Sustituir el Code.gs
 Después de subir:
 - PC: Ctrl + F5
 - móvil: cerrar app, borrar caché o desinstalar/reinstalar PWA si sigue viendo versión antigua.
+
+
+## APP-BCB v2.1 final sync · corrección operativa
+
+Cambios:
+- Panel administrador cerrado por defecto tras entrar con clave para no tapar botones ni tablas.
+- Panel administrador con botón de cierre.
+- Borrado real contra Google Sheet maestro mediante `?action=deleteRow`.
+- Ensayos de plantilla eliminados de datos iniciales para evitar registros fantasma.
+- Cache PWA subida a v2.1 para forzar actualización en GitHub Pages y móvil.
+
+Después de subir esta versión, sustituir también `apps-script/Code.gs` en Apps Script y crear nueva implementación.

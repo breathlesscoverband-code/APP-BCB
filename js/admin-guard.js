@@ -104,7 +104,7 @@
     if(String(code).trim() === ADMIN_CODE){
       setAdmin(true);
       const panel = document.getElementById('adminPanel');
-      if(panel) panel.classList.add('open');
+      if(panel) panel.classList.remove('open');
       return true;
     }
 
@@ -175,6 +175,12 @@
     }
 
     panel.classList.toggle('open');
+    updateAdminUI();
+  }
+
+  function closeAdminPanel(){
+    const panel = document.getElementById('adminPanel');
+    if(panel) panel.classList.remove('open');
     updateAdminUI();
   }
 
@@ -327,9 +333,12 @@
     panel.id = 'adminPanel';
     panel.className = 'adminPanel';
     panel.innerHTML = `
-      <span class="adminState" id="adminState">Modo usuario: solo lectura</span>
+      <div class="adminPanelTop">
+        <span class="adminState" id="adminState">Modo usuario: solo lectura</span>
+        <button type="button" class="adminPanelClose" id="adminPanelClose" title="Cerrar panel">×</button>
+      </div>
       <h4>Panel administrador</h4>
-      <p>Accesos de gestión para APP-BCB. El grupo puede entrar en modo usuario y consultar datos, pero no editar ni exportar.</p>
+      <p>Accesos rápidos. El panel queda cerrado por defecto para no tapar botones ni tablas.</p>
       <div class="adminActions">
         <button type="button" class="primary" id="adminOpenExport">Abrir Exportar</button>
         <button type="button" id="adminBackup">Backup JSON</button>
@@ -344,12 +353,13 @@
     document.body.appendChild(fab);
     document.body.appendChild(panel);
 
-    document.getElementById('adminOpenExport').addEventListener('click', openExportPanel);
-    document.getElementById('adminBackup').addEventListener('click', function(){ callWhenReady('exportJSON'); });
-    document.getElementById('adminExportCRM').addEventListener('click', function(){ callWhenReady('exportCSV', ['crm']); });
-    document.getElementById('adminExportFiltered').addEventListener('click', function(){ callWhenReady('exportFilteredCRM'); });
-    document.getElementById('adminOpenRehearsals').addEventListener('click', function(){ if(typeof window.setTab === 'function') window.setTab('rehearsals'); });
-    document.getElementById('adminLock').addEventListener('click', function(){ setAdmin(false); });
+    document.getElementById('adminPanelClose').addEventListener('click', closeAdminPanel);
+    document.getElementById('adminOpenExport').addEventListener('click', function(){ openExportPanel(); closeAdminPanel(); });
+    document.getElementById('adminBackup').addEventListener('click', function(){ callWhenReady('exportJSON'); closeAdminPanel(); });
+    document.getElementById('adminExportCRM').addEventListener('click', function(){ callWhenReady('exportCSV', ['crm']); closeAdminPanel(); });
+    document.getElementById('adminExportFiltered').addEventListener('click', function(){ callWhenReady('exportFilteredCRM'); closeAdminPanel(); });
+    document.getElementById('adminOpenRehearsals').addEventListener('click', function(){ if(typeof window.setTab === 'function') window.setTab('rehearsals'); closeAdminPanel(); });
+    document.getElementById('adminLock').addEventListener('click', function(){ setAdmin(false); closeAdminPanel(); });
 
     document.addEventListener('click', interceptLockedClick, true);
     document.addEventListener('change', interceptLockedClick, true);
@@ -372,6 +382,7 @@
     login: requestAdminAccess,
     unlock: requestAdminAccess,
     lock: function(){ setAdmin(false); },
+    closePanel: closeAdminPanel,
     isAdmin: isAdmin,
     mode: function(){ return isAdmin() ? 'admin' : 'user'; }
   };

@@ -50,20 +50,46 @@
 .adminPanel {
   position: fixed;
   right: 18px;
-  bottom: 106px;
+  bottom: 74px;
   z-index: 9998;
-  width: min(370px, calc(100vw - 36px));
+  width: min(280px, calc(100vw - 36px));
+  max-height: min(48vh, 330px);
+  overflow: auto;
   border: 1px solid rgba(255,255,255,.14);
   border-radius: 16px;
-  background: rgba(24,18,18,.98);
+  background: rgba(24,18,18,.96);
   color: #fff;
   box-shadow: 0 20px 60px rgba(0,0,0,.55);
-  padding: 14px;
+  padding: 12px;
   display: none;
 }
 
 .adminPanel.open {
   display: block;
+}
+
+.adminPanelTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.adminPanelClose {
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  line-height: 1;
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.adminPanelClose:hover {
+  background: rgba(255,255,255,.18);
 }
 
 .adminPanel h4 {
@@ -162,8 +188,9 @@ body.admin-enabled .adminLockedControl {
 
   .adminPanel {
     right: 12px;
-    bottom: 102px;
-    width: calc(100vw - 24px);
+    bottom: 74px;
+    width: min(300px, calc(100vw - 24px));
+    max-height: 46vh;
   }
 }
 
@@ -189,3 +216,9 @@ body.user-readonly #adminPanel.open {
   display: block;
 }
 
+
+/* v2.1 · Panel admin menos invasivo: no tapa controles de la app al trabajar. */
+.adminPanel .adminActions button {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
