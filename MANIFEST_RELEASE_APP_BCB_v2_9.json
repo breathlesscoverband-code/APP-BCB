@@ -1,0 +1,8 @@
+{
+  "band": "BCB",
+  "app": "APP-BCB",
+  "version": "v2.9 final sync",
+  "date": "2026-05-10T23:46:08.141532",
+  "change": "Lectura automática al abrir la app. Google Sheet directo primero. Botón actualizar solo como respaldo manual.",
+  "sheetId": "1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q"
+}

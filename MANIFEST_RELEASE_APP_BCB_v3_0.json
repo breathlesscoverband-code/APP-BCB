@@ -1,0 +1,14 @@
+{
+  "app": "APP-BCB",
+  "band": "Breathless Cover Band",
+  "version": "3.0 final sync",
+  "release": "instant cache móvil",
+  "changes": [
+    "CRM precargado en la app para apertura inmediata",
+    "Caché persistente entre versiones",
+    "Sincronización silenciosa en segundo plano",
+    "Prioridad de carga móvil: ensayos, CRM, miembros, repertorio",
+    "Actualización completa diferida"
+  ],
+  "source": "Google Sheet maestro BCB + snapshot local temporal"
+}

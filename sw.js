@@ -1,15 +1,15 @@
-/* APP-BCB · PWA service worker v2.8 final sync · sheet direct mobile */
-const CACHE_NAME = "app-bcb-pwa-v2-8-0-sheet-direct";
+/* APP-BCB · PWA service worker v3.0 final sync · instant cache */
+const CACHE_NAME = "app-bcb-pwa-v3-0-0-instant-cache";
 const APP_SHELL = [
   "./",
-  "./index.html?v=2.8.0-bcb",
-  "./manifest.json?v=2.8.0-bcb",
-  "./css/styles.css?v=2.8.0-bcb",
-  "./css/admin-guard.css?v=2.8.0-bcb",
-  "./js/assets.js?v=2.8.0-bcb",
-  "./js/data.js?v=2.8.0-bcb",
-  "./js/app.js?v=2.8.0-bcb",
-  "./js/admin-guard.js?v=2.8.0-bcb",
+  "./index.html?v=3.0.0-bcb",
+  "./manifest.json?v=3.0.0-bcb",
+  "./css/styles.css?v=3.0.0-bcb",
+  "./css/admin-guard.css?v=3.0.0-bcb",
+  "./js/assets.js?v=3.0.0-bcb",
+  "./js/data.js?v=3.0.0-bcb",
+  "./js/app.js?v=3.0.0-bcb",
+  "./js/admin-guard.js?v=3.0.0-bcb",
   "./assets/bcb_logo_main.png",
   "./assets/bcb_home_background.png",
   "./assets/bcb_setlist_base.png",
@@ -60,7 +60,7 @@ self.addEventListener("fetch", event => {
           caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
           return response;
         })
-        .catch(() => caches.match(request).then(cached => cached || caches.match("./index.html?v=2.8.0-bcb") || caches.match("./")))
+        .catch(() => caches.match(request).then(cached => cached || caches.match("./index.html?v=3.0.0-bcb") || caches.match("./")))
     );
     return;
   }

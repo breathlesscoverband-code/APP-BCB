@@ -1,6 +1,7 @@
-const APP_BCB_APP_VERSION = '2.8.0-final-sync-sheet-direct-bcb';
-const STORE_KEY = 'app_bcb_control_pro_v28_sheet_direct';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
+const APP_BCB_APP_VERSION = '3.0.0-final-sync-instant-cache-bcb';
+const STORE_KEY = 'app_bcb_control_pro_v30_instant_cache';
+const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest';
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
 let db = loadData();
 let filteredCRM = [];
 let rehearsalSyncRunning = false;
@@ -22,16 +23,34 @@ function shouldSeedReplace(v){
     x.includes('urls por tema pendientes') ||
     x.includes('provisional · revisar en ensayo');
 }
+function mergeRuntimeData(base, runtime){
+  if(!runtime || typeof runtime !== 'object') return base;
+  const keepArrays = ['crm','rehearsals','concerts','repertoire','setlists','bandMembers','tasks','localPayments','gmailResponses','templates'];
+  keepArrays.forEach(k=>{
+    if(Array.isArray(runtime[k]) && runtime[k].length) base[k]=runtime[k];
+  });
+  ['sheetSync','createdFrom','metricsFromImport'].forEach(k=>{
+    if(runtime[k] && typeof runtime[k] === 'object') base[k]=Object.assign({}, base[k]||{}, runtime[k]);
+  });
+  return base;
+}
 function loadData(){
-  // v1.9: Google Sheet es la fuente principal.
-  // localStorage solo sirve como caché de esta versión, nunca como fuente maestra.
+  // Google Sheet sigue siendo la fuente principal.
+  // La app abre al instante con snapshot local/precargado y actualiza en segundo plano.
   let data=clone(INITIAL_DATA);
+  try{
+    const snapshotRaw=localStorage.getItem(PERSISTENT_SNAPSHOT_KEY);
+    if(snapshotRaw){
+      const snapshot=JSON.parse(snapshotRaw);
+      data=mergeRuntimeData(data, snapshot);
+    }
+  }catch(e){}
   try{
     const raw=localStorage.getItem(STORE_KEY);
     if(raw){
       const cached=JSON.parse(raw);
       if(cached && cached.appCacheVersion === APP_BCB_APP_VERSION){
-        data=Object.assign(clone(INITIAL_DATA), cached);
+        data=mergeRuntimeData(data, cached);
       }
     }
   }catch(e){}
@@ -211,7 +230,31 @@ function migrateData(data){
 
   return data;
 }
-function saveData(){db.appCacheVersion=APP_BCB_APP_VERSION;localStorage.setItem(STORE_KEY, JSON.stringify(db)); refreshAll();}
+function saveData(){
+  db.appCacheVersion=APP_BCB_APP_VERSION;
+  localStorage.setItem(STORE_KEY, JSON.stringify(db));
+  try{
+    const snapshot={
+      appCacheVersion: APP_BCB_APP_VERSION,
+      updatedAt: new Date().toISOString(),
+      crm: db.crm || [],
+      rehearsals: db.rehearsals || [],
+      concerts: db.concerts || [],
+      repertoire: db.repertoire || [],
+      setlists: db.setlists || [],
+      bandMembers: db.bandMembers || [],
+      tasks: db.tasks || [],
+      localPayments: db.localPayments || [],
+      gmailResponses: db.gmailResponses || [],
+      templates: db.templates || [],
+      sheetSync: db.sheetSync || {},
+      createdFrom: db.createdFrom || {},
+      metricsFromImport: db.metricsFromImport || {}
+    };
+    localStorage.setItem(PERSISTENT_SNAPSHOT_KEY, JSON.stringify(snapshot));
+  }catch(e){}
+  refreshAll();
+}
 function resetData(){if(confirm('¿Restaurar los datos iniciales importados del Excel? Se perderán cambios locales de esta app.')){localStorage.removeItem(STORE_KEY);db=clone(INITIAL_DATA);refreshAll();}}
 function esc(v){return String(v??'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
 function norm(v){return String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
@@ -1204,14 +1247,22 @@ async function syncRehearsalsFromGoogleSheet(opts={}){
   if(rehearsalSyncRunning) return false;
   rehearsalSyncRunning = true;
   try{
-    rehearsalSheetStatus('Actualizando ensayos desde Google Sheet…');
-    let payload;
+    rehearsalSheetStatus('Actualizando ensayos automáticamente desde Google Sheet…');
+    // v3.0: en lectura móvil se usa primero Google Sheet directo.
+    // Apps Script queda como respaldo, porque en algunos móviles Google bloquea la carga externa del endpoint.
+    let count = 0;
     try{
-      payload = await appsScriptJSONP({action:'rehearsals'});
-    }catch(firstErr){
-      payload = await appsScriptJSONP({action:'sheet', tab:'ENSAYOS', limit:'300'});
+      const rows = await fetchSheetTabViaGoogleSheetDirect('ENSAYOS', 300);
+      count = applyRehearsalsFromSheet(rows);
+    }catch(directErr){
+      let payload;
+      try{
+        payload = await appsScriptJSONP({action:'rehearsals'});
+      }catch(firstErr){
+        payload = await appsScriptJSONP({action:'sheet', tab:'ENSAYOS', limit:'300'});
+      }
+      count = applyRehearsalsOnlyPayload(payload);
     }
-    const count = applyRehearsalsOnlyPayload(payload);
     rehearsalLastSync = Date.now();
     saveData();
     rehearsalSheetStatus(`Ensayos actualizados desde Google Sheet: ${count}.`, 'ok');
@@ -1237,16 +1288,18 @@ function ensureRehearsalsFreshOnMobile(){
 
 
 async function fetchSheetTabViaAppsScript(tab, limit=500){
+  // v3.0: para lectura pública y móvil se usa primero Google Sheet directo.
+  // Así evitamos esperas largas intentando Apps Script cuando el endpoint no está disponible como recurso externo.
   try{
+    const rows = await fetchSheetTabViaGoogleSheetDirect(tab, limit);
+    rows.forEach(r=>{ if(r && typeof r==='object') r.__source = r.__source || 'Google Sheet directo'; });
+    return rows;
+  }catch(directErr){
+    console.warn('APP-BCB: Google Sheet directo no cargó '+tab+'. Probando Apps Script:', directErr);
     const payload = await appsScriptJSONP({action:'sheet', tab, limit:String(limit)});
     if(!payload || payload.ok===false) throw new Error((payload && payload.error) || ('No se pudo leer '+tab));
     const rows = Array.isArray(payload.rows) ? payload.rows : [];
-    rows.forEach(r=>{ if(r && typeof r==='object') r.__source = r.__source || 'Apps Script'; });
-    return rows;
-  }catch(appsErr){
-    console.warn('APP-BCB: Apps Script no cargó '+tab+'. Probando Google Sheet directo:', appsErr);
-    const rows = await fetchSheetTabViaGoogleSheetDirect(tab, limit);
-    rows.forEach(r=>{ if(r && typeof r==='object') r.__fallbackError = String(appsErr.message||appsErr); });
+    rows.forEach(r=>{ if(r && typeof r==='object') r.__source = r.__source || 'Apps Script'; r.__fallbackError = String(directErr.message||directErr); });
     return rows;
   }
 }
@@ -1273,7 +1326,14 @@ function applyCoreSheetRows(tab, rows){
 
 async function syncCoreSheetsIndividually(opts={}){
   const silent = !!opts.silent;
-  const tabsToRead = [
+  const fast = !!opts.fast || !!opts.startup || opts.reason === 'startup';
+  const criticalTabs = [
+    ['ENSAYOS', 300],
+    ['CRM_GENERAL', 1000],
+    ['MIEMBROS', 100],
+    ['REPERTORIO', 500]
+  ];
+  const fullTabs = [
     ['CRM_GENERAL', 1000],
     ['CONCIERTOS', 500],
     ['ENSAYOS', 500],
@@ -1285,36 +1345,54 @@ async function syncCoreSheetsIndividually(opts={}){
     ['RESPUESTAS_GMAIL', 500],
     ['PLANTILLAS_DOSSIER', 300]
   ];
-  const report = {crm:0, concerts:0, rehearsals:0, songs:0, setlist:0, miembros:0, local:0, errors:[]};
+  const tabsToRead = fast ? criticalTabs : fullTabs;
+  const report = {crm:db.crm.length||0, concerts:(db.concerts||[]).length, rehearsals:(db.rehearsals||[]).length, songs:(db.repertoire||[]).length, setlist:(db.setlists||[]).length, miembros:(db.bandMembers||[]).length, local:(db.localPayments||[]).length, errors:[]};
+  sheetStatus(fast ? 'Datos visibles. Actualizando CRM y ensayos en segundo plano…' : 'Actualizando desde Google Sheet maestro…');
   for(const [tab, limit] of tabsToRead){
     try{
-      sheetStatus('Leyendo '+tab+' desde Google Sheet…');
+      sheetStatus('Actualizando '+tab+' desde Google Sheet…');
       const rows = await fetchSheetTabViaAppsScript(tab, limit);
       const count = applyCoreSheetRows(tab, rows);
-      if(tab==='CRM_GENERAL') report.crm = count;
-      if(tab==='CONCIERTOS') report.concerts = count;
-      if(tab==='ENSAYOS') report.rehearsals = count;
-      if(tab==='REPERTORIO') report.songs = count;
-      if(tab==='SETLISTS') report.setlist = count;
-      if(tab==='MIEMBROS') report.miembros = count;
-      if(tab==='PAGOS_LOCAL') report.local = count;
+      if(tab==='CRM_GENERAL') report.crm = count || report.crm;
+      if(tab==='CONCIERTOS') report.concerts = count || report.concerts;
+      if(tab==='ENSAYOS') report.rehearsals = count || report.rehearsals;
+      if(tab==='REPERTORIO') report.songs = count || report.songs;
+      if(tab==='SETLISTS') report.setlist = count || report.setlist;
+      if(tab==='MIEMBROS') report.miembros = count || report.miembros;
+      if(tab==='PAGOS_LOCAL') report.local = count || report.local;
       if(tab==='TAREAS' && rows.length) { db.tasks = rows.map((r,i)=>taskFromSheetRow ? taskFromSheetRow(r,i+1,i) : r).filter(Boolean); }
       if(tab==='RESPUESTAS_GMAIL' && rows.length && typeof applyGmailResponsesFromSheet === 'function') { try{ applyGmailResponsesFromSheet(rows); }catch(e){} }
+      db.sheetSync = Object.assign({}, db.sheetSync||{}, {
+        status: 'partial',
+        method: fast ? 'instant-cache-fast-background-v30' : 'sheet-direct-full-v30',
+        updatedAt: new Date().toISOString(),
+        endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl,
+        directSheet: GOOGLE_SHEET_MASTER.userUrl,
+        report
+      });
+      saveData(); // guarda snapshot persistente y refresca pantalla sin esperar al resto
     }catch(err){
       report.errors.push(tab+': '+(err.message||err));
     }
   }
   db.sheetSync = Object.assign({}, db.sheetSync||{}, {
     status: report.errors.length ? 'partial' : 'ok',
-    method: 'individual-tabs-mobile-safe-with-sheet-direct-fallback',
+    method: fast ? 'instant-cache-fast-background-v30' : 'sheet-direct-full-v30',
     updatedAt: new Date().toISOString(),
-    endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl, directSheet: GOOGLE_SHEET_MASTER.userUrl,
+    endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl,
+    directSheet: GOOGLE_SHEET_MASTER.userUrl,
     report
   });
   saveData();
-  refreshAll();
-  const msg = `Sincronización por pestañas. CRM: ${report.crm}. Ensayos: ${report.rehearsals}. Canciones: ${report.songs}. Errores: ${report.errors.length}.`;
+  const msg = fast
+    ? `Datos actualizados en segundo plano. CRM: ${report.crm}. Ensayos: ${report.rehearsals}.`
+    : `Actualización completa. CRM: ${report.crm}. Ensayos: ${report.rehearsals}. Canciones: ${report.songs}. Errores: ${report.errors.length}.`;
   sheetStatus(msg + (report.errors.length ? '<br>'+esc(report.errors.join(' | ')) : ''), report.errors.length ? 'bad' : 'ok');
+
+  // Tras arrancar rápido, completamos el resto con calma y sin bloquear la apertura.
+  if(fast && !opts.deferredStarted){
+    setTimeout(()=>syncCoreSheetsIndividually({silent:true, fast:false, deferredStarted:true, reason:'deferred'}), 12000);
+  }
   if(!silent) alert(msg + (report.errors.length ? '\n'+report.errors.join('\n') : ''));
   return report;
 }
@@ -1358,7 +1436,7 @@ async function syncCRMFromGoogleSheet(opts={}){
   const silent = !!opts.silent;
   const forceIndividual = opts.individual || (window.matchMedia && window.matchMedia('(max-width: 900px)').matches);
   try{
-    sheetStatus(forceIndividual ? 'Sincronizando móvil por pestañas…' : 'Sincronizando con Google Sheet maestro…');
+    sheetStatus('Actualizando automáticamente desde Google Sheet maestro…');
 
     if(forceIndividual){
       return await syncCoreSheetsIndividually(opts);
@@ -1453,10 +1531,13 @@ function renderSheetSyncPanel(){
     <div class="detailItem">
       <small>Fuente de datos</small>
       <strong>Google Sheet maestro</strong><br>
-      <span style="color:var(--muted)">Estado: ${esc(status)} · Última lectura: ${esc(updated)} · Endpoint Apps Script activo</span>
+      <span style="color:var(--muted)">Estado: ${esc(status)} · Última lectura: ${esc(updated)} · Lectura móvil directa desde Google Sheet publicado</span>
+    </div>
+    <div class="notice ok" style="display:block;margin-top:10px">
+      La app se actualiza sola al abrirla y al volver a primer plano. Este botón es solo de seguridad si quieres forzar una lectura manual.
     </div>
     <div class="actions" style="margin-top:10px">
-      <button class="btn gold" type="button" onclick="syncCRMFromGoogleSheet()">Actualizar todo desde Google Sheet</button>
+      <button class="btn gold" type="button" onclick="syncCRMFromGoogleSheet()">Forzar actualización ahora</button>
       <a class="btn ghost" href="${esc(GOOGLE_SHEET_MASTER.userUrl)}" target="_blank" rel="noopener">Abrir Google Sheet</a>
     </div>
   `;
@@ -2669,6 +2750,15 @@ function initialTabFromUrl(){
 }
 clearOldLocalCaches();
 renderNav();refreshAll();setTab(initialTabFromUrl(), {scroll:false, updateUrl:false});
-setTimeout(()=>syncCRMFromGoogleSheet({silent:true, startup:true, individual:true}), 300);
-window.addEventListener('focus',()=>syncCRMFromGoogleSheet({silent:true, focus:true}));
-document.addEventListener('visibilitychange',()=>{if(!document.hidden) syncCRMFromGoogleSheet({silent:true, visible:true});});
+// v3.0: sincronización automática. Los miembros no tienen que pulsar actualizar.
+let appBcbLastAutoSync = 0;
+function appBcbAutoSync(reason){
+  const now = Date.now();
+  if(now - appBcbLastAutoSync < 60000 && reason !== 'startup') return;
+  appBcbLastAutoSync = now;
+  syncCRMFromGoogleSheet({silent:true, startup:reason==='startup', individual:true, fast:reason==='startup' || reason==='focus' || reason==='visible', reason});
+}
+setTimeout(()=>appBcbAutoSync('startup'), 250);
+window.addEventListener('focus',()=>appBcbAutoSync('focus'));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden) appBcbAutoSync('visible');});
+setInterval(()=>appBcbAutoSync('interval'), 5*60*1000);
