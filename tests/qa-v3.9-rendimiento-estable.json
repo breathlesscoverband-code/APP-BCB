@@ -1,0 +1,26 @@
+{
+  "version": "APP-BCB v3.9",
+  "checks": [
+    {
+      "check": "saveData no reentra durante refreshAll",
+      "status": "patched"
+    },
+    {
+      "check": "renderLocalPayments no llama saveData con refresh completo",
+      "status": "patched"
+    },
+    {
+      "check": "lectura de pestañas usa Google Sheet directo antes que Apps Script",
+      "status": "patched"
+    },
+    {
+      "check": "timeouts reducidos a 10s",
+      "status": "patched"
+    },
+    {
+      "check": "PAGOS_LOCAL mantiene 6 miembros fijos",
+      "status": "inherited/verified by code"
+    }
+  ],
+  "note": "Validación estática local. La prueba final contra Google Sheet real debe hacerse tras subir GitHub Pages y Apps Script."
+}

@@ -1,13 +1,15 @@
-const APP_BCB_APP_VERSION = '3.8.0-final-sync-local-mensual';
-const STORE_KEY = 'app_bcb_control_pro_v38_local_mensual';
+const APP_BCB_APP_VERSION = '3.9.0-final-sync-rendimiento-estable';
+const STORE_KEY = 'app_bcb_control_pro_v39_rendimiento_estable';
 const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
 let db = loadData();
 let filteredCRM = [];
 let rehearsalSyncRunning = false;
 let rehearsalLastSync = 0;
 let localPaymentLastSync = 0;
 let localSelectedMonth = '';
+let appBcbRendering = false;
+let appBcbSaveQueued = false;
 const tabs = [
   ['dashboard','Panel','●'],['crm','CRM','●'],['followup','Seguimiento','●'],['gmail','Gmail','●'],['concerts','Conciertos','●'],['rehearsals','Ensayos','●'],['local','Local ensayo','●'],
   ['budget','Presupuesto','●'],['repertoire','Canciones','●'],['setlist','Setlist','●'],['dossier','Dossier','●'],['templates','Plantillas','●'],['tasks','Tareas','●'],['importExport','Exportar','●']
@@ -244,7 +246,7 @@ function migrateData(data){
 
   return data;
 }
-function saveData(){
+function persistDataOnly(){
   db.appCacheVersion=APP_BCB_APP_VERSION;
   localStorage.setItem(STORE_KEY, JSON.stringify(db));
   try{
@@ -267,6 +269,15 @@ function saveData(){
     };
     localStorage.setItem(PERSISTENT_SNAPSHOT_KEY, JSON.stringify(snapshot));
   }catch(e){}
+}
+
+function saveData(opts={}){
+  persistDataOnly();
+  if(opts && opts.refresh === false) return;
+  if(appBcbRendering){
+    appBcbSaveQueued = true;
+    return;
+  }
   refreshAll();
 }
 
@@ -300,7 +311,6 @@ async function syncSingleSheetAfterWrite(tab, opts={}){
   const rows = await fetchSheetTabViaAppsScript(tab, limits[tab] || 500);
   const count = applyCoreSheetRows(tab, rows);
   saveData();
-  refreshAll();
   return {ok:true, tab, count};
 }
 
@@ -963,7 +973,7 @@ function fetchSheetTabViaGoogleSheetDirect(tab, limit=500){
     const timeout = setTimeout(()=>{
       cleanup();
       reject(new Error('Tiempo agotado leyendo Google Sheet directo. Publica la hoja en la web o comparte con enlace de lectura.'));
-    }, 30000);
+    }, 10000);
 
     function cleanup(){
       if(done) return;
@@ -1000,6 +1010,24 @@ function fetchSheetTabViaGoogleSheetDirect(tab, limit=500){
     document.head.appendChild(script);
   });
 }
+
+async function fetchSheetTabForRead(tab, limit=500){
+  // Lectura estable: primero Google Sheet directo publicado, después Apps Script como respaldo.
+  // Evita que una implementación de Apps Script lenta o bloqueada deje congelada la app.
+  try{
+    return await fetchSheetTabViaGoogleSheetDirect(tab, limit);
+  }catch(directErr){
+    try{
+      return await fetchSheetTabViaAppsScript(tab, limit);
+    }catch(scriptErr){
+      const err = new Error('No se pudo leer '+tab+' ni por Google Sheet directo ni por Apps Script. Directo: '+(directErr.message||directErr)+' | Apps Script: '+(scriptErr.message||scriptErr));
+      err.directError = directErr;
+      err.scriptError = scriptErr;
+      throw err;
+    }
+  }
+}
+
 function appsScriptJsonpOnly(params={}){
   return new Promise((resolve,reject)=>{
     if(!GOOGLE_SHEET_MASTER.appsScriptUrl) return reject(new Error('No hay URL /exec de Apps Script configurada.'));
@@ -1008,7 +1036,7 @@ function appsScriptJsonpOnly(params={}){
     const timeout=setTimeout(()=>{
       cleanup();
       reject(new Error('Tiempo agotado leyendo Apps Script por JSONP.'));
-    }, 30000);
+    }, 10000);
     function cleanup(){
       clearTimeout(timeout);
       try{delete window[cb];}catch(e){window[cb]=undefined;}
@@ -1842,7 +1870,7 @@ async function syncLocalPaymentsFromGoogleSheet(opts={}){
   if(staleGuard && Date.now() - localPaymentLastSync < 20000) return true;
   try{
     sheetStatus('Actualizando pagos del local desde Google Sheet…');
-    const rows = await fetchSheetTabViaAppsScript('PAGOS_LOCAL', 500);
+    const rows = await fetchSheetTabForRead('PAGOS_LOCAL', 500);
     const count = applyLocalPaymentsFromSheet(rows);
     localPaymentLastSync = Date.now();
     saveData();
@@ -2023,7 +2051,7 @@ async function syncCoreSheetsIndividually(opts={}){
   for(const [tab, limit] of tabsToRead){
     try{
       sheetStatus('Actualizando '+tab+' desde Google Sheet…');
-      const rows = await fetchSheetTabViaAppsScript(tab, limit);
+      const rows = await fetchSheetTabForRead(tab, limit);
       const count = applyCoreSheetRows(tab, rows);
       if(tab==='CRM_GENERAL') report.crm = count || report.crm;
       if(tab==='CONCIERTOS') report.concerts = count || report.concerts;
@@ -2036,20 +2064,20 @@ async function syncCoreSheetsIndividually(opts={}){
       if(tab==='RESPUESTAS_GMAIL') { report.gmail = applyGmailResponsesFromSheet(rows); }
       db.sheetSync = Object.assign({}, db.sheetSync||{}, {
         status: 'partial',
-        method: fast ? 'instant-cache-fast-background-v30' : 'sheet-direct-full-v30',
+        method: fast ? 'instant-cache-fast-background-v39' : 'sheet-direct-full-v39',
         updatedAt: new Date().toISOString(),
         endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl,
         directSheet: GOOGLE_SHEET_MASTER.userUrl,
         report
       });
-      saveData(); // guarda snapshot persistente y refresca pantalla sin esperar al resto
+      saveData({refresh:false}); // guarda snapshot persistente sin re-renderizar toda la app por cada pestaña
     }catch(err){
       report.errors.push(tab+': '+(err.message||err));
     }
   }
   db.sheetSync = Object.assign({}, db.sheetSync||{}, {
     status: report.errors.length ? 'partial' : 'ok',
-    method: fast ? 'instant-cache-fast-background-v30' : 'sheet-direct-full-v30',
+    method: fast ? 'instant-cache-fast-background-v39' : 'sheet-direct-full-v39',
     updatedAt: new Date().toISOString(),
     endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl,
     directSheet: GOOGLE_SHEET_MASTER.userUrl,
@@ -2119,7 +2147,6 @@ async function syncCRMFromGoogleSheet(opts={}){
       payload=await appsScriptJSONP({action:'mobile'});
       const report=applyAllFromGoogleSheetPayload(payload);
       saveData();
-      refreshAll();
       sheetStatus(`Google Sheet sincronizada. CRM: ${report.crm}. Conciertos: ${report.concerts}. Ensayos: ${report.rehearsals}. Canciones: ${report.songs}. Local: ${report.local || 0}.`, 'ok');
       if(!silent) alert(`Datos actualizados desde Google Sheet.\nCRM: ${report.crm}\nConciertos: ${report.concerts}\nEnsayos: ${report.rehearsals}\nCanciones: ${report.songs}\nLocal ensayo: ${report.local || 0}`);
       return true;
@@ -2216,6 +2243,10 @@ function renderSheetSyncPanel(){
 }
 
 function refreshAll(){
+  if(appBcbRendering) return;
+  appBcbRendering = true;
+  try{
+
   renderNav();
   renderSheetSyncPanel();
   document.getElementById('sideLoaded').innerHTML=`${db.crm.length} contactos · ${db.gmailResponses.length} respuestas Gmail<br>Última importación: ${esc(db.createdFrom.lastImport || '—')}`;
@@ -2240,6 +2271,14 @@ function refreshAll(){
   renderTasks();
   document.getElementById('openSheet').href=db.createdFrom.googleSheetUserUrl || '#';
   document.getElementById('driveDossier').href=db.createdFrom.driveDossierUrl || '#';
+
+  }finally{
+    appBcbRendering = false;
+    if(appBcbSaveQueued){
+      appBcbSaveQueued = false;
+      persistDataOnly();
+    }
+  }
 }
 function countBy(arr,key,value){return arr.filter(x=>String(x[key]||'')===value).length;}
 function counts(arr,key){return arr.reduce((a,x)=>{const k=String(x[key]||'Sin dato');a[k]=(a[k]||0)+1;return a;},{});}
@@ -2822,7 +2861,8 @@ function renderLocalPayments(){
   localSelectedMonth = controlMonth;
 
   const baseRows = ensureLocalPaymentsForMonth(controlMonth);
-  saveData();
+  // No llamamos saveData() desde render: evitamos bucles de renderizado y bloqueos del navegador.
+  persistDataOnly();
 
   const monthlyAmount = localTotalAmount();
   const paidRaw = baseRows.filter(r=>isPaymentPaid(r.paid)).reduce((a,r)=>a+(parseEuroValue(r.amount)||0),0);

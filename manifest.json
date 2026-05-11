@@ -2,7 +2,7 @@
   "name": "APP-BCB · Breathless Cover Band",
   "short_name": "APP-BCB",
   "description": "App interna de Breathless Cover Band · v3.8 final sync local mensual estable",
-  "start_url": "./?v=38",
+  "start_url": "./?v=39",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
@@ -34,7 +34,7 @@
       "name": "Canciones",
       "short_name": "Canciones",
       "description": "Abrir repertorio BCB",
-      "url": "./?tab=repertoire&v=38",
+      "url": "./?tab=repertoire&v=39",
       "icons": [
         {
           "src": "icons/icon-192.png",
@@ -46,7 +46,7 @@
       "name": "CRM",
       "short_name": "CRM",
       "description": "Abrir CRM BCB",
-      "url": "./?tab=crm&v=38",
+      "url": "./?tab=crm&v=39",
       "icons": [
         {
           "src": "icons/icon-192.png",
@@ -58,7 +58,7 @@
       "name": "Ensayos",
       "short_name": "Ensayos",
       "description": "Abrir ensayos BCB",
-      "url": "./?tab=rehearsals&v=38",
+      "url": "./?tab=rehearsals&v=39",
       "icons": [
         {
           "src": "icons/icon-192.png",

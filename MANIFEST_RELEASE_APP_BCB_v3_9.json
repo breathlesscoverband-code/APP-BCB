@@ -1,0 +1,12 @@
+{
+  "version": "APP-BCB v3.9 final sync",
+  "band": "BCB",
+  "changes": [
+    "Corrección de bucle de renderizado en Local/Pagos que podía bloquear Windows.",
+    "Lectura de Google Sheet directo antes que Apps Script.",
+    "Local/Pagos mantiene vista mensual completa aunque falle Apps Script.",
+    "Reducción de timeouts remotos a 10 segundos.",
+    "Guardado de snapshot sin repintar toda la app por cada pestaña leída."
+  ],
+  "source": "APP-BCB v3.8 + reparaciones acumuladas"
+}
