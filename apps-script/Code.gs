@@ -1,6 +1,6 @@
 /**
  * APP-BCB Bridge — Breathless Cover Band
- * Version: APP-BCB v3.5 final sync · voces BCB
+ * Version: APP-BCB v3.8 final sync · local mensual estable
  *
  * Fuente principal: Google Sheet maestro BCB.
  * App GitHub Pages / PWA.
@@ -15,11 +15,14 @@
  *   ?action=upsertRehearsal&key=1929&row={...}
  *   ?action=upsertTask&key=1929&row={...}
  *   ?action=upsertLocalPayment&key=1929&row={...}
+ *   ?action=upsertLocalMonth&key=1929&rows=[...]
+ *   ?action=upsertRepertoire&key=1929&row={...}
+ *   ?action=deleteRow&key=1929&tab=REPERTORIO&id=...&rowIndex=...
  *
  * No usar endpoint ni Sheet de otra banda.
  */
 
-const APP_VERSION = 'APP-BCB v3.5 final sync';
+const APP_VERSION = 'APP-BCB v3.8 final sync';
 const BAND = 'BCB';
 const BAND_NAME = 'Breathless Cover Band';
 const SHEET_ID = '1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q';
@@ -95,11 +98,14 @@ function doGet(e) {
     if (action === 'rehearsals') return jsonOrJsonp_(getRehearsalsPayload_(), params.callback);
     if (action === 'sheet') return jsonOrJsonp_(getSheetPayload_(params.tab, params.limit), params.callback);
 
+    if (action === 'upsertcrm' || action === 'upsertcontact') return jsonOrJsonp_(upsertById_('CRM_GENERAL', rowFromParam_(params), params.key), params.callback);
     if (action === 'upsertconcert') return jsonOrJsonp_(upsertById_('CONCIERTOS', rowFromParam_(params), params.key), params.callback);
     if (action === 'upsertrehearsal') return jsonOrJsonp_(upsertById_('ENSAYOS', rowFromParam_(params), params.key), params.callback);
     if (action === 'upserttask') return jsonOrJsonp_(upsertById_('TAREAS', rowFromParam_(params), params.key), params.callback);
     if (action === 'upsertlocalpayment') return jsonOrJsonp_(upsertLocalPayment_(rowFromParam_(params), params.key), params.callback);
-    if (action === 'deleterow') return jsonOrJsonp_(deleteRowByIdGet_(params.tab, params.id, params.key), params.callback);
+    if (action === 'upsertlocalmonth') return jsonOrJsonp_(upsertLocalMonth_(rowsFromParam_(params), params.key), params.callback);
+    if (action === 'upsertrepertoire') return jsonOrJsonp_(upsertRepertoire_(rowFromParam_(params), params.key), params.callback);
+    if (action === 'deleterow') return jsonOrJsonp_(deleteRowByIdGet_(params.tab, params.id, params.key, params.rowIndex), params.callback);
 
     return jsonOrJsonp_({ ok: false, error: 'Acción no reconocida: ' + action, version: APP_VERSION }, params.callback);
   } catch (err) {
@@ -118,11 +124,14 @@ function iframePayload_(params) {
   if (action === 'rehearsals') return getRehearsalsPayload_();
   if (action === 'sheet') return getSheetPayload_(params.tab, params.limit);
 
+  if (action === 'upsertcrm' || action === 'upsertcontact') return upsertById_('CRM_GENERAL', rowFromParam_(params), params.key);
   if (action === 'upsertconcert') return upsertById_('CONCIERTOS', rowFromParam_(params), params.key);
   if (action === 'upsertrehearsal') return upsertById_('ENSAYOS', rowFromParam_(params), params.key);
   if (action === 'upserttask') return upsertById_('TAREAS', rowFromParam_(params), params.key);
   if (action === 'upsertlocalpayment') return upsertLocalPayment_(rowFromParam_(params), params.key);
-  if (action === 'deleterow') return deleteRowByIdGet_(params.tab, params.id, params.key);
+  if (action === 'upsertlocalmonth') return upsertLocalMonth_(rowsFromParam_(params), params.key);
+  if (action === 'upsertrepertoire') return upsertRepertoire_(rowFromParam_(params), params.key);
+  if (action === 'deleterow') return deleteRowByIdGet_(params.tab, params.id, params.key, params.rowIndex);
 
   return { ok: false, error: 'Acción iframe no reconocida: ' + action, version: APP_VERSION };
 }
@@ -165,6 +174,13 @@ function doPost(e) {
 function rowFromParam_(params) {
   if (!params.row) throw new Error('Falta parámetro row');
   return JSON.parse(params.row);
+}
+
+function rowsFromParam_(params) {
+  const raw = params.rows || params.row || '[]';
+  const parsed = JSON.parse(raw);
+  if (!Array.isArray(parsed)) throw new Error('El parámetro rows debe ser un array');
+  return parsed;
 }
 
 function isAdminKey_(key) {
@@ -324,8 +340,15 @@ function readSheetAsObjects_(tabName, limit) {
   const values = sheet.getRange(startRow, 1, dataRowCount, Math.max(info.headers.length, lastColumn)).getDisplayValues();
 
   const rows = values
-    .filter(row => row.some(cell => String(cell).trim() !== ''))
-    .map(row => rowToObject_(info.headers, row));
+    .map((row, idx) => ({ row, sheetRow: startRow + idx }))
+    .filter(item => item.row.some(cell => String(cell).trim() !== ''))
+    .map(item => {
+      const obj = rowToObject_(info.headers, item.row);
+      obj.sheetRow = item.sheetRow;
+      obj.__row = item.sheetRow;
+      obj.Fila = item.sheetRow;
+      return obj;
+    });
 
   return { ok: true, rows, totalReturned: rows.length, totalSheetRows: Math.max(lastRow - info.headerRow, 0), limited: (lastRow - info.headerRow) > rows.length, headerRow: info.headerRow, gid: sheet.getSheetId() };
 }
@@ -466,6 +489,82 @@ function upsertLocalPayment_(data, key) {
   return { ok: true, action: 'upsertLocalPayment', mode: 'append', tab: 'PAGOS_LOCAL', id: String(data.ID), month: month, memberId: memberId, version: APP_VERSION };
 }
 
+
+function upsertLocalMonth_(rows, key) {
+  if (!isAdminKey_(key)) return { ok: false, error: 'Clave admin incorrecta', version: APP_VERSION };
+  if (!Array.isArray(rows)) throw new Error('upsertLocalMonth necesita array de filas');
+
+  const results = [];
+  rows.forEach(function(row) {
+    const r = row || {};
+    // Reutiliza la lógica de upsert por Mes + ID Miembro. No duplica si ya existe.
+    results.push(upsertLocalPayment_(r, key));
+  });
+
+  logAction_('upsertLocalMonth', 'PAGOS_LOCAL', String(results.length));
+  return {
+    ok: true,
+    action: 'upsertLocalMonth',
+    tab: 'PAGOS_LOCAL',
+    count: results.length,
+    results: results,
+    version: APP_VERSION
+  };
+}
+
+
+function upsertRepertoire_(data, key) {
+  if (!isAdminKey_(key)) return { ok: false, error: 'Clave admin incorrecta', version: APP_VERSION };
+  validateTabAndData_('REPERTORIO', data);
+
+  const sheet = getSheetOrCreate_('REPERTORIO');
+  const info = ensureHeaderRow_(sheet, 'REPERTORIO', Object.keys(data));
+
+  const rowIndex = Number(valueForAny_(data, ['sheetRow','Fila','rowIndex','row_index']));
+  if (rowIndex && rowIndex > info.headerRow && rowIndex <= sheet.getLastRow()) {
+    updateRowAt_(sheet, info, rowIndex, data);
+    logAction_('upsertRepertoire-updateRow', 'REPERTORIO', String(valueForAny_(data, ['ID','id']) || rowIndex));
+    return { ok: true, action: 'upsertRepertoire', mode: 'updateRow', tab: 'REPERTORIO', rowIndex: rowIndex, id: String(valueForAny_(data, ['ID','id']) || ''), version: APP_VERSION };
+  }
+
+  const id = valueForAny_(data, ['ID','id','Id']);
+  if (id) {
+    const found = findRowById_(sheet, info, id);
+    if (found.found) {
+      updateRowAt_(sheet, info, found.rowIndex, data);
+      logAction_('upsertRepertoire-updateId', 'REPERTORIO', String(id));
+      return { ok: true, action: 'upsertRepertoire', mode: 'updateId', tab: 'REPERTORIO', id: String(id), rowIndex: found.rowIndex, version: APP_VERSION };
+    }
+  }
+
+  const title = valueForAny_(data, ['Canción','Cancion','Tema','title','titulo']);
+  const foundByTitle = title ? findRepertoireRowByTitle_(sheet, info, title) : { found: false };
+  if (foundByTitle.found) {
+    updateRowAt_(sheet, info, foundByTitle.rowIndex, data);
+    logAction_('upsertRepertoire-updateTitle', 'REPERTORIO', String(title));
+    return { ok: true, action: 'upsertRepertoire', mode: 'updateTitle', tab: 'REPERTORIO', title: String(title), rowIndex: foundByTitle.rowIndex, version: APP_VERSION };
+  }
+
+  if (!id) data.ID = new Date().getTime();
+  const row = info.headers.map(header => valueForHeader_(data, header));
+  sheet.getRange(sheet.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+  logAction_('upsertRepertoire-append', 'REPERTORIO', String(data.ID || title || ''));
+  return { ok: true, action: 'upsertRepertoire', mode: 'append', tab: 'REPERTORIO', id: String(data.ID || ''), version: APP_VERSION };
+}
+
+function findRepertoireRowByTitle_(sheet, info, title) {
+  const headers = info.headers || [];
+  const titleIndex = headers.findIndex(h => ['cancion','canción','tema','titulo','título','song'].indexOf(normalize_(h)) !== -1);
+  if (titleIndex === -1) return { found: false };
+  const startRow = info.headerRow + 1;
+  const lastRow = sheet.getLastRow();
+  if (startRow > lastRow) return { found: false };
+  const values = sheet.getRange(startRow, titleIndex + 1, lastRow - info.headerRow, 1).getDisplayValues().flat();
+  const target = normalize_(title);
+  const offset = values.findIndex(v => normalize_(v) === target);
+  return offset === -1 ? { found: false } : { found: true, rowIndex: startRow + offset };
+}
+
 function updateRowAt_(sheet, info, rowIndex, data) {
   const rowValues = sheet.getRange(rowIndex, 1, 1, info.headers.length).getValues()[0];
   info.headers.forEach((header, index) => {
@@ -538,13 +637,27 @@ function displayMemberForKey_(memberId) {
   return map[memberId] || memberId;
 }
 
-function deleteRowByIdGet_(tabName, id, key) {
+function deleteRowByIdGet_(tabName, id, key, rowIndex) {
   if (!isAdminKey_(key)) return { ok: false, error: 'Clave admin incorrecta', version: APP_VERSION };
   try {
+    const idx = Number(rowIndex || 0);
+    if (idx && tabName) return deleteRowByIndex_(tabName, idx, id);
     return deleteRowById_(tabName, id);
   } catch (err) {
-    return { ok: false, error: String(err && err.message ? err.message : err), tab: tabName, id: String(id || ''), version: APP_VERSION };
+    return { ok: false, error: String(err && err.message ? err.message : err), tab: tabName, id: String(id || ''), rowIndex: String(rowIndex || ''), version: APP_VERSION };
   }
+}
+
+function deleteRowByIndex_(tabName, rowIndex, idForLog) {
+  if (!tabName) throw new Error('Falta tab');
+  const sheet = getSheet_(tabName);
+  if (!sheet) throw new Error('Pestaña no encontrada: ' + tabName);
+  const info = detectHeaderInfo_(sheet);
+  const idx = Number(rowIndex || 0);
+  if (!idx || idx <= info.headerRow || idx > sheet.getLastRow()) throw new Error('Fila no válida para borrar: ' + rowIndex);
+  sheet.deleteRow(idx);
+  logAction_('deleteRowIndex', tabName, String(idForLog || idx));
+  return { ok: true, action: 'delete', mode: 'rowIndex', tab: tabName, rowIndex: idx, id: String(idForLog || ''), version: APP_VERSION };
 }
 
 function deleteRowById_(tabName, id) {
@@ -594,6 +707,59 @@ function logAction_(action, tab, id) {
   } catch (err) {
     // No bloquear operaciones por fallo de log.
   }
+}
+
+
+function previewLimpiarRepertorioBCB() {
+  return limpiarRepertorioBCB_(false);
+}
+
+function limpiarRepertorioBCB() {
+  return limpiarRepertorioBCB_(true);
+}
+
+function limpiarRepertorioBCB_(write) {
+  const sheet = getSheet_('REPERTORIO');
+  if (!sheet) throw new Error('Pestaña no encontrada: REPERTORIO');
+  const info = detectHeaderInfo_(sheet);
+  const headers = info.headers || [];
+  const lastRow = sheet.getLastRow();
+  const lastCol = Math.max(sheet.getLastColumn(), headers.length);
+  const titleIndex = headers.findIndex(h => ['cancion','canción','tema','titulo','título','song'].indexOf(normalize_(h)) !== -1);
+  const idIndex = headers.findIndex(h => normalize_(h) === 'id');
+  const orderIndex = headers.findIndex(h => ['orden','ordenbase','order'].indexOf(normalize_(h)) !== -1);
+  if (titleIndex === -1) throw new Error('No encuentro columna Canción/Tema en REPERTORIO.');
+
+  const rowsToDelete = [];
+  if (info.headerRow + 1 <= lastRow) {
+    const values = sheet.getRange(info.headerRow + 1, 1, lastRow - info.headerRow, lastCol).getDisplayValues();
+    values.forEach((row, i) => {
+      const sheetRow = info.headerRow + 1 + i;
+      const title = normalize_(row[titleIndex] || '');
+      const id = idIndex >= 0 ? normalize_(row[idIndex] || '') : '';
+      const order = orderIndex >= 0 ? normalize_(row[orderIndex] || '') : '';
+      const nonEmpty = row.filter(v => String(v || '').trim() !== '').length;
+      const looksLikeHeader =
+        ['cancion','canción','tema','titulo','título','song'].indexOf(title) !== -1 ||
+        (id === 'id' && (order.indexOf('orden') !== -1 || title.indexOf('cancion') !== -1 || title.indexOf('tema') !== -1)) ||
+        (nonEmpty <= 3 && (title === 'titulo' || title === 'título'));
+      if (looksLikeHeader) rowsToDelete.push(sheetRow);
+    });
+  }
+
+  if (write && rowsToDelete.length) {
+    rowsToDelete.sort((a,b)=>b-a).forEach(r => sheet.deleteRow(r));
+    logAction_('limpiarRepertorio', 'REPERTORIO', rowsToDelete.join(','));
+  }
+
+  return {
+    ok: true,
+    write: !!write,
+    headerRow: info.headerRow,
+    rowsDetected: rowsToDelete.length,
+    rows: rowsToDelete,
+    version: APP_VERSION
+  };
 }
 
 

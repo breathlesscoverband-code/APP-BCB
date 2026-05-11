@@ -1,0 +1,17 @@
+{
+  "app": "APP-BCB",
+  "band": "Breathless Cover Band",
+  "version": "APP-BCB v3.7 final sync",
+  "type": "auditoría estable",
+  "sheetId": "1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q",
+  "appsScriptUrl": "https://script.google.com/macros/s/AKfycbzbddqoQzAwtxY9zpZNjRnWhziFjw6J0oEYqbDEQYpqe37TkTw3f6T6J4kwxokMKBhycg/exec",
+  "githubPages": "https://breathlesscoverband-code.github.io/APP-BCB/?v=37",
+  "mainFixes": [
+    "CRM write-through",
+    "transactional deletes",
+    "task/gmail mappers",
+    "sheetRow returned by Apps Script",
+    "v3.7 PWA cache"
+  ],
+  "qaReport": "tests/qa-v3.7-report.json"
+}

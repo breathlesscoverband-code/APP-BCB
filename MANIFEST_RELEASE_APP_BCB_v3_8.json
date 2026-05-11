@@ -1,0 +1,13 @@
+{
+  "release": "APP-BCB v3.8 FINAL SYNC · local mensual estable",
+  "date": "2026-05-11",
+  "includes_previous_repairs": true,
+  "main_changes": [
+    "calendario mensual local",
+    "auto mes día 1",
+    "apertura automática mes siguiente al completar pagos",
+    "upsert batch local"
+  ],
+  "sheet_source": "Google Sheet maestro BCB",
+  "apps_script_version": "APP-BCB v3.8 final sync"
+}

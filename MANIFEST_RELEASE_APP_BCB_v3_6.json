@@ -1,0 +1,20 @@
+{
+  "version": "APP-BCB v3.6 final sync",
+  "band": "BCB",
+  "scope": "Corrección edición/borrado de REPERTORIO contra Google Sheet",
+  "sheetId": "1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q",
+  "changes": [
+    "saveSong escribe en Google Sheet con upsertRepertoire",
+    "deleteRecord borra en Google Sheet usando sheetRow cuando existe",
+    "se conserva sheetRow en mapSongRow",
+    "syncRepertoireFromGoogleSheet tras escribir/borrar",
+    "bug opts undefined corregido en pushDeleteToSheet",
+    "funciones previewLimpiarRepertorioBCB y limpiarRepertorioBCB"
+  ],
+  "tests": [
+    "node --check js/app.js OK",
+    "node --check js/data.js OK",
+    "node --check sw.js OK",
+    "node --check apps-script/Code.gs OK como JS"
+  ]
+}

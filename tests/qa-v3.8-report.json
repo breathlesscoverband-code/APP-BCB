@@ -1,0 +1,37 @@
+{
+  "version": "APP-BCB v3.8 final sync",
+  "scope": "Auditoría + local mensual",
+  "checks": [
+    {
+      "module": "Local/Pagos",
+      "case": "Mes actual con pagos parciales",
+      "expected": "muestra 6 miembros y cantidades correctas",
+      "status": "simulado_ok"
+    },
+    {
+      "module": "Local/Pagos",
+      "case": "Al marcar último pago",
+      "expected": "abre mes siguiente y crea 6 pendientes",
+      "status": "simulado_ok"
+    },
+    {
+      "module": "Local/Pagos",
+      "case": "Cambio día 1",
+      "expected": "currentYYYYMM determina mes activo automáticamente",
+      "status": "simulado_ok"
+    },
+    {
+      "module": "PAGOS_LOCAL",
+      "case": "Upsert por Mes + ID Miembro",
+      "expected": "no duplica filas",
+      "status": "codigo_ok"
+    },
+    {
+      "module": "Versionado",
+      "case": "PWA cache v3.8",
+      "expected": "evita restos v3.7",
+      "status": "codigo_ok"
+    }
+  ],
+  "limits": "No se ha ejecutado contra la cuenta real de Google; la prueba final requiere subir Code.gs y repo."
+}

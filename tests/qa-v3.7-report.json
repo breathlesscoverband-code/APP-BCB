@@ -1,0 +1,118 @@
+{
+  "version": "APP-BCB v3.7 final sync",
+  "generated": "2026-05-11",
+  "scope": "static audit + logic consistency checks; no live Google account access from sandbox",
+  "checks": [
+    {
+      "check": "syntax js/app.js",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "syntax js/data.js",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "syntax js/admin-guard.js",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "syntax sw.js",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "syntax apps-script/Code.gs",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "all onclick/change handlers exist",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "saveContact writes CRM_GENERAL",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "saveConcert writes CONCIERTOS",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "saveRehearsal writes ENSAYOS",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "saveSong writes REPERTORIO",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "saveTask writes TAREAS",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "markLocalPayment writes PAGOS_LOCAL",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "delete waits for Google Sheet confirmation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Tasks have mapper",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Gmail has mapper",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Apps Script upsert CRM action",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Apps Script returns sheetRow for rows",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Manifest version 3.7",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Service worker cache 3.7",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "Initial CRM snapshot present",
+      "ok": true,
+      "detail": "144 CRM"
+    },
+    {
+      "check": "Initial repertoire snapshot present",
+      "ok": true,
+      "detail": "26 songs"
+    },
+    {
+      "check": "BCB fixed members only",
+      "ok": true,
+      "detail": "['Miguel', 'Carmen', 'Teo', 'Álvaro', 'Nataly', 'Lord Enzo']"
+    }
+  ],
+  "ok": true
+}

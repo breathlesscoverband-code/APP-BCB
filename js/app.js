@@ -1,12 +1,13 @@
-const APP_BCB_APP_VERSION = '3.5.0-final-sync-voces-bcb';
-const STORE_KEY = 'app_bcb_control_pro_v35_voces_bcb';
+const APP_BCB_APP_VERSION = '3.8.0-final-sync-local-mensual';
+const STORE_KEY = 'app_bcb_control_pro_v38_local_mensual';
 const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
 let db = loadData();
 let filteredCRM = [];
 let rehearsalSyncRunning = false;
 let rehearsalLastSync = 0;
 let localPaymentLastSync = 0;
+let localSelectedMonth = '';
 const tabs = [
   ['dashboard','Panel','●'],['crm','CRM','●'],['followup','Seguimiento','●'],['gmail','Gmail','●'],['concerts','Conciertos','●'],['rehearsals','Ensayos','●'],['local','Local ensayo','●'],
   ['budget','Presupuesto','●'],['repertoire','Canciones','●'],['setlist','Setlist','●'],['dossier','Dossier','●'],['templates','Plantillas','●'],['tasks','Tareas','●'],['importExport','Exportar','●']
@@ -268,6 +269,41 @@ function saveData(){
   }catch(e){}
   refreshAll();
 }
+
+function upsertLocalArrayItem(arrName, item, opts={}){
+  if(!item || typeof item !== 'object') return;
+  const list = Array.isArray(db[arrName]) ? db[arrName].slice() : [];
+  const idx = list.findIndex(x => String(x.id) === String(item.id));
+  if(idx >= 0) list[idx] = Object.assign({}, list[idx], item);
+  else if(opts.prepend) list.unshift(item);
+  else list.push(item);
+  db[arrName] = list;
+}
+
+function removeLocalArrayItem(arrName, id){
+  const list = Array.isArray(db[arrName]) ? db[arrName] : [];
+  db[arrName] = list.filter(x => String(x.id) !== String(id));
+}
+
+async function syncSingleSheetAfterWrite(tab, opts={}){
+  const limits = {
+    CRM_GENERAL: 1000,
+    CONCIERTOS: 500,
+    ENSAYOS: 500,
+    REPERTORIO: 800,
+    TAREAS: 500,
+    PAGOS_LOCAL: 500,
+    RESPUESTAS_GMAIL: 500,
+    SETLISTS: 500,
+    MIEMBROS: 100
+  };
+  const rows = await fetchSheetTabViaAppsScript(tab, limits[tab] || 500);
+  const count = applyCoreSheetRows(tab, rows);
+  saveData();
+  refreshAll();
+  return {ok:true, tab, count};
+}
+
 function resetData(){if(confirm('¿Restaurar los datos iniciales importados del Excel? Se perderán cambios locales de esta app.')){localStorage.removeItem(STORE_KEY);db=clone(INITIAL_DATA);refreshAll();}}
 function esc(v){return String(v??'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
 function norm(v){return String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
@@ -415,6 +451,23 @@ function localMemberAmount(){
   if(!members.length) return 36.17;
   return Math.round((total / members.length) * 100) / 100;
 }
+function currentYYYYMM(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function addMonthsToYYYYMM(month, offset){
+  const m=normalizeMonthValue(month) || currentYYYYMM();
+  const parts=m.match(/^(\d{4})-(\d{2})$/);
+  const d=parts ? new Date(Number(parts[1]), Number(parts[2])-1 + Number(offset||0), 1) : new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function monthLabel(month){
+  const m=normalizeMonthValue(month);
+  const parts=m.match(/^(\d{4})-(\d{2})$/);
+  if(!parts) return month || '—';
+  const d=new Date(Number(parts[1]), Number(parts[2])-1, 1);
+  return d.toLocaleDateString('es-ES',{month:'long', year:'numeric'});
+}
 function consolidateLocalPaymentRows(items){
   const allowed=localPaymentMemberDefinitions().map(m=>m.id);
   const byKey=new Map();
@@ -440,7 +493,6 @@ function consolidateLocalPaymentRows(items){
       raw:item.raw || item
     };
 
-    // En caso de duplicados, manda el registro más reciente / último leído.
     if(!byKey.has(key)){
       byKey.set(key, clean);
     }else{
@@ -502,7 +554,7 @@ function localPaymentSeedRow(month, memberId){
   const id=normalizeMemberKey(memberId);
   return {
     id: normalizeMonthValue(month)+'|'+id,
-    month: normalizeMonthValue(month) || new Date().toISOString().slice(0,7),
+    month: normalizeMonthValue(month) || currentYYYYMM(),
     memberId:id,
     name:memberDisplayName(id),
     amount:localMemberAmount(),
@@ -513,7 +565,7 @@ function localPaymentSeedRow(month, memberId){
   };
 }
 function completeLocalPaymentMonth(items, month){
-  const controlMonth=normalizeMonthValue(month) || new Date().toISOString().slice(0,7);
+  const controlMonth=normalizeMonthValue(month) || currentYYYYMM();
   const rows=consolidateLocalPaymentRows(items).filter(r=>normalizeMonthValue(r.month)===controlMonth);
   const byMember=new Map(rows.map(r=>[normalizeMemberKey(r.memberId||r.name), r]));
   localPaymentMemberDefinitions().forEach(m=>{
@@ -522,12 +574,158 @@ function completeLocalPaymentMonth(items, month){
   return consolidateLocalPaymentRows([...byMember.values()]);
 }
 function ensureLocalPaymentsForMonth(month){
-  const controlMonth=normalizeMonthValue(month) || new Date().toISOString().slice(0,7);
+  const controlMonth=normalizeMonthValue(month) || currentYYYYMM();
   const all=consolidateLocalPaymentRows(db.localPayments || []);
   const others=all.filter(r=>normalizeMonthValue(r.month)!==controlMonth);
   const monthRows=completeLocalPaymentMonth(all, controlMonth);
   db.localPayments=mergeLocalPaymentRows(others, monthRows);
   return monthRows;
+}
+function localMonthRows(month){
+  return completeLocalPaymentMonth(db.localPayments || [], normalizeMonthValue(month) || currentYYYYMM());
+}
+function localMonthStatus(month){
+  const rows=localMonthRows(month);
+  const total=rows.length;
+  const paidCount=rows.filter(r=>isPaymentPaid(r.paid)).length;
+  const amount=localTotalAmount();
+  const paidAmount=Math.min(amount, rows.filter(r=>isPaymentPaid(r.paid)).reduce((a,r)=>a+(parseEuroValue(r.amount)||0),0));
+  return {
+    month:normalizeMonthValue(month) || currentYYYYMM(),
+    total,
+    paidCount,
+    pendingCount:Math.max(0,total-paidCount),
+    paidAmount,
+    pendingAmount:Math.max(0, amount-paidAmount),
+    complete: total>0 && paidCount===total
+  };
+}
+function isLocalMonthFullyPaid(month){
+  return localMonthStatus(month).complete;
+}
+function localDefaultControlMonth(){
+  const current=currentYYYYMM();
+  // Día 1: el mes activo cambia solo porque currentYYYYMM cambia.
+  // Si el mes actual ya está completo, se abre automáticamente el siguiente.
+  return isLocalMonthFullyPaid(current) ? addMonthsToYYYYMM(current,1) : current;
+}
+function localAvailableMonths(){
+  const current=currentYYYYMM();
+  const set=new Set([
+    addMonthsToYYYYMM(current,-2),
+    addMonthsToYYYYMM(current,-1),
+    current,
+    addMonthsToYYYYMM(current,1),
+    addMonthsToYYYYMM(current,2)
+  ]);
+  (db.localPayments||[]).forEach(r=>{ const m=normalizeMonthValue(r.month); if(m) set.add(m); });
+  if(localSelectedMonth) set.add(normalizeMonthValue(localSelectedMonth));
+  return [...set].filter(Boolean).sort().reverse();
+}
+function setLocalPaymentMonth(month){
+  localSelectedMonth=normalizeMonthValue(month) || localDefaultControlMonth();
+  ensureLocalPaymentsForMonth(localSelectedMonth);
+  saveData();
+  renderLocalPayments();
+}
+function resetLocalPaymentMonthAuto(){
+  localSelectedMonth='';
+  renderLocalPayments();
+}
+function ensureLocalPaymentControls(section, months, controlMonth){
+  let controls=document.getElementById('localMonthControls');
+  if(!controls){
+    controls=document.createElement('div');
+    controls.id='localMonthControls';
+    const kpis=document.getElementById('localKpis');
+    if(kpis && kpis.parentNode) kpis.parentNode.insertBefore(controls, kpis);
+    else section.prepend(controls);
+  }
+  const status=localMonthStatus(controlMonth);
+  const autoMonth=localDefaultControlMonth();
+  const calendarMonths=[...new Set([
+    addMonthsToYYYYMM(controlMonth,-2),
+    addMonthsToYYYYMM(controlMonth,-1),
+    controlMonth,
+    addMonthsToYYYYMM(controlMonth,1),
+    addMonthsToYYYYMM(controlMonth,2)
+  ].concat(months))].filter(Boolean).sort().slice(-8).reverse();
+
+  controls.innerHTML=`
+    <div class="card local-month-panel">
+      <div class="local-month-head">
+        <div>
+          <h4>Calendario mensual del local</h4>
+          <p class="muted">El día 1 cambia solo al mes en curso. Cuando un mes queda pagado por todos, la app abre el mes siguiente como pendiente.</p>
+        </div>
+        <div class="local-month-actions">
+          <label>Mes visible
+            <select id="localMonthSelect" onchange="setLocalPaymentMonth(this.value)">
+              ${months.map(m=>`<option value="${esc(m)}" ${m===controlMonth?'selected':''}>${esc(monthLabel(m))}</option>`).join('')}
+            </select>
+          </label>
+          <button class="mini" onclick="resetLocalPaymentMonthAuto()">Mes automático: ${esc(monthLabel(autoMonth))}</button>
+        </div>
+      </div>
+      <div class="local-month-grid">
+        ${calendarMonths.map(m=>{
+          const s=localMonthStatus(m);
+          const cls=s.complete?'complete':(m===controlMonth?'active':'');
+          return `<button class="local-month-card ${cls}" onclick="setLocalPaymentMonth('${esc(m)}')">
+            <strong>${esc(monthLabel(m))}</strong>
+            <span>${s.paidCount}/${s.total} pagados</span>
+            <small>${s.complete?'Cerrado':`${money2(s.pendingAmount)} pendiente`}</small>
+          </button>`;
+        }).join('')}
+      </div>
+      <div class="notice ${status.complete?'ok':''}" style="margin-top:10px">
+        ${status.complete
+          ? `Mes ${esc(monthLabel(controlMonth))} cerrado. La pantalla activa puede pasar al mes siguiente.`
+          : `Mes ${esc(monthLabel(controlMonth))} abierto: ${status.paidCount}/${status.total} pagados · ${money2(status.pendingAmount)} pendiente.`}
+      </div>
+    </div>`;
+}
+async function pushLocalMonthToSheet(rows, opts={}){
+  if(!sheetWriteEnabled()) return Promise.reject(new Error('No hay endpoint Apps Script configurado.'));
+  if(!isAdminActive() && !opts.allowUser) return Promise.reject(new Error('Modo usuario: no se puede escribir en Google Sheet.'));
+  const normalized=(rows||[]).map(r=>localPaymentToSheetRow(r));
+  if(!normalized.length) return {ok:true, count:0};
+  sheetStatus('Creando mes de local en Google Sheet…');
+  try{
+    const payload=await appsScriptJSONP({action:'upsertLocalMonth', key:'1929', rows:JSON.stringify(normalized)});
+    if(!payload || payload.ok===false) throw new Error(payload?.error || 'No se pudo crear el mes en Google Sheet.');
+    return payload;
+  }catch(err){
+    // Respaldo si el endpoint antiguo aún no tiene upsertLocalMonth.
+    await Promise.all(rows.map(r=>pushLocalPaymentToSheet(r,{afterWrite:'none'})));
+    return {ok:true, mode:'fallback-individual', count:rows.length};
+  }
+}
+async function openNextLocalMonthAfterCompletion(closedMonth){
+  const month=normalizeMonthValue(closedMonth);
+  if(!month || !isLocalMonthFullyPaid(month)) return false;
+  const next=addMonthsToYYYYMM(month,1);
+  const rows=ensureLocalPaymentsForMonth(next);
+  localSelectedMonth=next;
+  saveData();
+  renderLocalPayments();
+
+  const flag='app_bcb_local_month_opened_'+next;
+  if(!localStorage.getItem(flag)){
+    try{
+      await pushLocalMonthToSheet(rows,{afterWrite:'none'});
+      localStorage.setItem(flag,'1');
+      await syncLocalPaymentsFromGoogleSheet({silent:true});
+      sheetStatus(`Mes ${monthLabel(month)} cerrado. Abierto ${monthLabel(next)} con todos los miembros pendientes.`, 'ok');
+    }catch(err){
+      sheetStatus(`Mes ${monthLabel(month)} cerrado. ${monthLabel(next)} abierto en la app, pero no se pudo crear completo en Google Sheet: ${esc(err.message||err)}`, 'bad');
+      throw err;
+    }
+  }else{
+    sheetStatus(`Mes ${monthLabel(month)} cerrado. Mes activo: ${monthLabel(next)}.`, 'ok');
+  }
+  renderLocalPayments();
+  return true;
 }
 
 const GOOGLE_SHEET_MASTER = {
@@ -904,6 +1102,64 @@ function attendanceToSheetFields(attendance){
   return out;
 }
 
+function contactToSheetRow(c){
+  const notes = [c.followNotes, c.dossierNotes, c.originNotes].filter(Boolean).join(' | ');
+  return {
+    id: c.id,
+    ID: c.id,
+    sheetRow: c.sheetRow || '',
+    'Estado': c.sendStatus || c.status || 'Lead nuevo',
+    estado: c.sendStatus || c.status || 'Lead nuevo',
+    'Siguiente paso': c.nextAction || '',
+    siguiente_paso: c.nextAction || '',
+    'Fecha siguiente paso': c.nextActionDate || '',
+    fecha_siguiente_paso: c.nextActionDate || '',
+    'Contacto': c.contactPerson || '',
+    contacto: c.contactPerson || '',
+    'Empresa / entidad': c.organization || '',
+    empresa_entidad: c.organization || '',
+    'Organización / Local': c.organization || '',
+    organization: c.organization || '',
+    'Tipo evento': c.opportunityType || '',
+    tipo_evento: c.opportunityType || '',
+    'Fecha / ventana': c.availability || '',
+    ventana_fecha: c.availability || '',
+    Ciudad: c.municipality || '',
+    ciudad: c.municipality || '',
+    'Municipio / Provincia': c.municipality || '',
+    Dirección: c.address || '',
+    Email: c.email || '',
+    email: c.email || '',
+    'Email CC': c.emailCc || '',
+    Teléfono: c.phone || c.contactPhone || '',
+    telefono: c.phone || c.contactPhone || '',
+    Web: c.web || '',
+    Campaña: c.campaign || 'CRM BCB',
+    Prioridad: c.priority || 'Media',
+    Enviar: c.send || '',
+    'Estado envío': c.sendStatus || 'Lead nuevo',
+    'Respuesta recibida': c.responseReceived || '',
+    'Fecha respuesta': c.responseDate || '',
+    'Persona contacto': c.contactPerson || '',
+    'Teléfono contacto': c.contactPhone || '',
+    Interés: c.interest || '',
+    Disponibilidad: c.availability || '',
+    Condiciones: c.conditions || '',
+    'Caché / presupuesto': c.budget || '',
+    'Importe o rango': c.budget || '',
+    'Requisitos técnicos': c.technicalRequirements || '',
+    'Próxima acción': c.nextAction || '',
+    'Fecha próxima acción': c.nextActionDate || '',
+    'Notas seguimiento': c.followNotes || '',
+    Notas: notes,
+    'Enviar dossier': c.sendDossier || '',
+    'Estado dossier': c.dossierStatus || '',
+    'Notas dossier': c.dossierNotes || '',
+    actualizado_en: new Date().toISOString()
+  };
+}
+
+
 function concertToSheetRow(c){
   return Object.assign({
     id:c.id,
@@ -1018,6 +1274,75 @@ function localPaymentToSheetRow(patch){
     'Última actualización':new Date().toISOString()
   };
 }
+function songToSheetRow(s){
+  const voice = s.leadVocal || s.singer || '';
+  const row = {
+    id:s.id,
+    ID:s.id,
+    sheetRow:s.sheetRow || '',
+    Orden:s.order || s.id || '',
+    Canción:s.title || '',
+    'Artista / referencia':s.artist || '',
+    Idioma:s.language || '',
+    'Voz principal':voice,
+    'Voz asignada':voice,
+    Duración:s.durationLive || s.duration || '',
+    'Duración directo':s.durationLive || s.duration || '',
+    'Duración original':s.durationOriginal || '',
+    'Estado duración':s.durationStatus || '',
+    Tonalidad:s.currentKey || s.tone || '',
+    'Tono visible':s.currentKey || s.tone || '',
+    'Tono original':s.originalKey || '',
+    'Tono actual banda':s.currentKey || s.tone || '',
+    'Tono propuesto ensayo':s.rehearsalKey || '',
+    'Estado tonalidad':s.keyStatus || '',
+    'Tono Miguel':s.keyMiguel || '',
+    'Tono Carmen':s.keyCarmen || '',
+    'Tono guitarra / referencia':s.guitarKey || '',
+    'Notas transporte':s.transposeNotes || '',
+    'Cejilla / capo':s.capo || '',
+    BPM:s.bpm || '',
+    Estado:s.status || '',
+    'Bloque sugerido':s.block || '',
+    'Referencia concreta':s.versionReference || '',
+    'Playlist Spotify':s.spotifyPlaylistUrl || db.createdFrom?.spotifyPlaylistUrl || '',
+    'Spotify tema':s.spotifyUrl || '',
+    YouTube:s.youtubeUrl || '',
+    'Enlace acordes/letra':s.chordsUrl || '',
+    Estructura:s.structure || '',
+    'Letra/acordes/tablatura':s.chordsText || '',
+    'Notas interpretación/letra':s.lyricsNotes || '',
+    'Fuente / validación':s.sourceNotes || '',
+    'Notas internas':s.notes || '',
+    Fuente:s.source || 'APP-BCB',
+    Notas:s.notes || '',
+    actualizado_en:new Date().toISOString()
+  };
+  return row;
+}
+
+async function syncRepertoireFromGoogleSheet(opts={}){
+  const silent=!!opts.silent;
+  try{
+    sheetStatus('Actualizando repertorio desde Google Sheet…');
+    const rows = await fetchSheetTabViaAppsScript('REPERTORIO', 800);
+    const count = applySongsFromSheet(rows);
+    saveData();
+    refreshAll();
+    sheetStatus('Repertorio actualizado desde Google Sheet: '+count+' canciones.', 'ok');
+    if(!silent) alert('Repertorio actualizado desde Google Sheet: '+count+' canciones.');
+    return true;
+  }catch(err){
+    sheetStatus('No se pudo actualizar REPERTORIO desde Google Sheet: '+esc(err.message||err), 'bad');
+    if(!silent) alert('No se pudo actualizar REPERTORIO: '+(err.message||err));
+    return false;
+  }
+}
+
+function pushSongToSheet(s, opts={}){
+  return pushSheetRow('upsertRepertoire', songToSheetRow(s), Object.assign({afterWrite:'repertoire'}, opts));
+}
+
 
 function pushSheetRow(action,row,opts={}){
   if(!sheetWriteEnabled()) return Promise.reject(new Error('No hay endpoint Apps Script configurado.'));
@@ -1027,7 +1352,15 @@ function pushSheetRow(action,row,opts={}){
     .then(payload=>{
       if(!payload || payload.ok===false) throw new Error(payload?.error || 'No se pudo guardar en Google Sheet.');
       sheetStatus('Guardado en Google Sheet maestro. Actualizando vista…','ok');
-      const afterWrite = opts.afterWrite === 'local' ? syncLocalPaymentsFromGoogleSheet({silent:true, reason:'afterLocalWrite'}) : syncCRMFromGoogleSheet({silent:true, afterWrite:true});
+      let afterWrite;
+      if(opts.afterWrite === 'local') afterWrite = syncLocalPaymentsFromGoogleSheet({silent:true, reason:'afterLocalWrite'});
+      else if(opts.afterWrite === 'repertoire') afterWrite = syncRepertoireFromGoogleSheet({silent:true, reason:'afterRepertoireWrite'});
+      else if(opts.afterWrite === 'crm') afterWrite = syncSingleSheetAfterWrite('CRM_GENERAL');
+      else if(opts.afterWrite === 'concerts') afterWrite = syncSingleSheetAfterWrite('CONCIERTOS');
+      else if(opts.afterWrite === 'rehearsals') afterWrite = syncRehearsalsFromGoogleSheet({silent:true, reason:'afterRehearsalWrite'});
+      else if(opts.afterWrite === 'tasks') afterWrite = syncSingleSheetAfterWrite('TAREAS');
+      else if(opts.afterWrite === 'none') afterWrite = true;
+      else afterWrite = syncCRMFromGoogleSheet({silent:true, afterWrite:true});
       return Promise.resolve(afterWrite).then(()=>payload);
     })
     .catch(err=>{
@@ -1036,20 +1369,25 @@ function pushSheetRow(action,row,opts={}){
     });
 }
 
+function pushContactToSheet(c){
+  return pushSheetRow('upsertCRM', contactToSheetRow(c), {afterWrite:'crm'});
+}
+
 function pushConcertToSheet(c){
-  return pushSheetRow('upsertConcert', concertToSheetRow(c));
+  return pushSheetRow('upsertConcert', concertToSheetRow(c), {afterWrite:'concerts'});
 }
 
 function pushRehearsalToSheet(r){
-  return pushSheetRow('upsertRehearsal', rehearsalToSheetRow(r));
+  return pushSheetRow('upsertRehearsal', rehearsalToSheetRow(r), {afterWrite:'rehearsals'});
 }
 
 function pushTaskToSheet(t){
-  return pushSheetRow('upsertTask', taskToSheetRow(t));
+  return pushSheetRow('upsertTask', taskToSheetRow(t), {afterWrite:'tasks'});
 }
 
-function pushLocalPaymentToSheet(p){
-  return pushSheetRow('upsertLocalPayment', localPaymentToSheetRow(p), {afterWrite:'local'});
+function pushLocalPaymentToSheet(p, opts={}){
+  const options = Object.assign({afterWrite:'local'}, opts || {});
+  return pushSheetRow('upsertLocalPayment', localPaymentToSheetRow(p), options);
 }
 
 function alertSheetWriteError(err){
@@ -1243,6 +1581,7 @@ function applyRehearsalsFromSheet(rows){
 }
 function mapSongRow(row,i){
   const title = pick(row,['titulo','Título','title','Tema','Canción','Cancion','cancion','Song']) || 'Tema sin título';
+  const sheetRow = Number(row.sheetRow || row.__row || row.Fila || row['Nº fila'] || row['Nº Fila']) || '';
   const toneVisible = pick(row,['tono_actual_banda','Tono actual banda','Tono BCB recomendado','Tonalidad','tone','tono','Tono','Tono recomendado']);
   const originalKey = pick(row,['tono_original','Tono original','Tono original orientativo','originalKey']);
   const rehearsalKey = pick(row,['tono_propuesto_ensayo','Tono propuesto ensayo','Tono BCB recomendado','Tono recomendado','rehearsalKey']);
@@ -1250,6 +1589,7 @@ function mapSongRow(row,i){
   const transposeNotes = pick(row,['notas_transporte','Notas transporte','Nota de ensayo / criterio','Criterio','transposeNotes','Ajuste']);
   return {
     id: Number(pick(row,['id','ID'])) || i+1,
+    sheetRow,
     order: Number(pick(row,['orden','Orden','order','#'])) || i+1,
     title,
     titleCanonical: norm(title).toUpperCase(),
@@ -1302,7 +1642,17 @@ function mergeSongWithExisting(item){
   return merged;
 }
 function applySongsFromSheet(rows){
-  const items=rows.map(mapSongRow).filter(x=>x.title && x.title!=='Tema sin título').map(mergeSongWithExisting);
+  const items=rows.map(mapSongRow)
+    .filter(x=>{
+      const t=norm(x.title||'');
+      const a=norm(x.artist||'');
+      // Evita que una cabecera mal desplazada se convierta en canción.
+      if(!t || x.title==='Tema sin título') return false;
+      if(['cancion','canción','tema','titulo','título','song'].includes(t)) return false;
+      if(t==='insurreccion' && a==='artista referencia') return false;
+      return true;
+    })
+    .map(mergeSongWithExisting);
   if(items.length) db.repertoire=items;
   return items.length;
 }
@@ -1577,6 +1927,49 @@ async function fetchSheetTabViaAppsScript(tab, limit=500){
   }
 }
 
+
+function mapTaskRow(row,i){
+  return {
+    id: Number(pick(row,['id','ID'])) || i+1,
+    title: pick(row,['titulo','Título','Tarea','tarea','title']) || 'Tarea sin título',
+    owner: pick(row,['responsable','Responsable','owner']),
+    due: normalizeSheetDateToISO(pick(row,['fecha','Fecha','due'])),
+    status: pick(row,['estado','Estado','status']) || 'Pendiente',
+    priority: pick(row,['prioridad','Prioridad','priority']) || 'Media',
+    area: pick(row,['area','Área','area','Modulo','Módulo']) || '',
+    notes: pick(row,['notas','Notas','notes']),
+    sheetRow: Number(row.sheetRow || row.__row || row.Fila || row['Nº fila']) || '',
+    raw: row
+  };
+}
+
+function applyTasksFromSheet(rows){
+  const items=(rows||[]).map(mapTaskRow).filter(x=>x.title || x.owner || x.due);
+  if(items.length) db.tasks=items;
+  return items.length;
+}
+
+function mapGmailResponseRow(row,i){
+  return {
+    id: Number(pick(row,['id','ID'])) || i+1,
+    date: normalizeSheetDateToISO(pick(row,['fecha','Fecha','date'])),
+    from: pick(row,['remitente','Remitente','from','De']),
+    subject: pick(row,['asunto','Asunto','subject']),
+    summary: pick(row,['resumen','Resumen','summary']),
+    status: pick(row,['estado','Estado','status']) || '',
+    crmId: pick(row,['CRM ID','crmId','contacto_id']),
+    notes: pick(row,['notas','Notas','notes']),
+    sheetRow: Number(row.sheetRow || row.__row || row.Fila || row['Nº fila']) || '',
+    raw: row
+  };
+}
+
+function applyGmailResponsesFromSheet(rows){
+  const items=(rows||[]).map(mapGmailResponseRow).filter(x=>x.from || x.subject || x.summary);
+  if(items.length) db.gmailResponses=items;
+  return items.length;
+}
+
 function applyCoreSheetRows(tab, rows){
   const safeRows = Array.isArray(rows) ? rows : [];
   let count = 0;
@@ -1586,6 +1979,8 @@ function applyCoreSheetRows(tab, rows){
   if(tab === 'REPERTORIO') count = applySongsFromSheet(safeRows);
   if(tab === 'SETLISTS') count = applySetlistFromSheet(safeRows);
   if(tab === 'PAGOS_LOCAL') count = applyLocalPaymentsFromSheet(safeRows);
+  if(tab === 'TAREAS') count = applyTasksFromSheet(safeRows);
+  if(tab === 'RESPUESTAS_GMAIL') count = applyGmailResponsesFromSheet(safeRows);
   if(tab === 'MIEMBROS' && safeRows.length){
     db.bandMembers = safeRows.map(m=>{
       const name = m.nombre || m.Nombre || m.name || m.Miembro || m['Usuario app'] || '';
@@ -1607,7 +2002,8 @@ async function syncCoreSheetsIndividually(opts={}){
     ['ENSAYOS', 300],
     ['CRM_GENERAL', 1000],
     ['MIEMBROS', 100],
-    ['REPERTORIO', 500]
+    ['REPERTORIO', 500],
+    ['PAGOS_LOCAL', 500]
   ];
   const fullTabs = [
     ['CRM_GENERAL', 1000],
@@ -1636,8 +2032,8 @@ async function syncCoreSheetsIndividually(opts={}){
       if(tab==='SETLISTS') report.setlist = count || report.setlist;
       if(tab==='MIEMBROS') report.miembros = count || report.miembros;
       if(tab==='PAGOS_LOCAL') report.local = count || report.local;
-      if(tab==='TAREAS' && rows.length) { db.tasks = rows.map((r,i)=>taskFromSheetRow ? taskFromSheetRow(r,i+1,i) : r).filter(Boolean); }
-      if(tab==='RESPUESTAS_GMAIL' && rows.length && typeof applyGmailResponsesFromSheet === 'function') { try{ applyGmailResponsesFromSheet(rows); }catch(e){} }
+      if(tab==='TAREAS') { report.tasks = applyTasksFromSheet(rows); }
+      if(tab==='RESPUESTAS_GMAIL') { report.gmail = applyGmailResponsesFromSheet(rows); }
       db.sheetSync = Object.assign({}, db.sheetSync||{}, {
         status: 'partial',
         method: fast ? 'instant-cache-fast-background-v30' : 'sheet-direct-full-v30',
@@ -1983,9 +2379,23 @@ function openContactModal(id=null){
 }
 function saveContact(){
   const obj=readForm(contactFields());
-  if(modalContext.id){const idx=db.crm.findIndex(x=>x.id===modalContext.id);db.crm[idx]=Object.assign({},db.crm[idx],obj);}
-  else {obj.id=nextId(db.crm);obj.sheetRow='';obj.raw={};db.crm.unshift(obj);}
-  closeModal();saveData();
+  let item;
+  if(modalContext.id){
+    const idx=db.crm.findIndex(x=>String(x.id)===String(modalContext.id));
+    if(idx === -1){ alert('No se ha encontrado el contacto en la app. Actualiza CRM y vuelve a intentarlo.'); return; }
+    item=Object.assign({}, db.crm[idx], obj);
+  }else{
+    item=Object.assign({id:nextId(db.crm), sheetRow:'', raw:{}}, obj);
+  }
+
+  pushContactToSheet(item)
+    .then(()=>{
+      upsertLocalArrayItem('crm', item, {prepend:!modalContext.id});
+      closeModal();
+      saveData();
+      sheetStatus('Contacto guardado en Google Sheet maestro.','ok');
+    })
+    .catch(alertSheetWriteError);
 }
 function sheetTabForArray(arrName){
   return {
@@ -1999,46 +2409,57 @@ function sheetTabForArray(arrName){
   }[arrName] || '';
 }
 
-function pushDeleteToSheet(arrName,id){
+function pushDeleteToSheet(arrName,id,record={}){
   const tab=sheetTabForArray(arrName);
   if(!tab) return Promise.resolve({ok:true, skipped:true});
   if(!sheetWriteEnabled()) return Promise.reject(new Error('No hay endpoint Apps Script configurado.'));
   if(!isAdminActive()) return Promise.reject(new Error('Modo usuario: no se puede borrar en Google Sheet.'));
   sheetStatus('Borrando en Google Sheet maestro…');
-  return appsScriptJSONP({action:'deleteRow', key:'1929', tab, id:String(id)})
+  const params={action:'deleteRow', key:'1929', tab, id:String(id)};
+  if(record && record.sheetRow) params.rowIndex=String(record.sheetRow);
+  return appsScriptJSONP(params)
     .then(payload=>{
       if(payload && payload.ok===false){
         const msg=String(payload.error||'');
-        if(msg.includes('ID no encontrado')){
-          sheetStatus('Registro borrado localmente. No existía ya en Google Sheet.', 'ok');
+        if(msg.includes('ID no encontrado') || msg.includes('Fila no válida')){
+          sheetStatus('El registro se quitó de esta vista, pero no se encontró en Google Sheet con esa clave. Actualiza para revisar.', 'bad');
           return payload;
         }
         throw new Error(payload.error || 'No se pudo borrar en Google Sheet.');
       }
       sheetStatus('Borrado en Google Sheet maestro. Actualizando vista…','ok');
-      const afterWrite = opts.afterWrite === 'local' ? syncLocalPaymentsFromGoogleSheet({silent:true, reason:'afterLocalWrite'}) : syncCRMFromGoogleSheet({silent:true, afterWrite:true});
+      let afterWrite=true;
+      if(arrName === 'localPayments') afterWrite = syncLocalPaymentsFromGoogleSheet({silent:true, reason:'afterLocalDelete'});
+      else if(arrName === 'repertoire') afterWrite = syncRepertoireFromGoogleSheet({silent:true, reason:'afterRepertoireDelete'});
+      else if(arrName === 'crm') afterWrite = syncSingleSheetAfterWrite('CRM_GENERAL');
+      else if(arrName === 'concerts') afterWrite = syncSingleSheetAfterWrite('CONCIERTOS');
+      else if(arrName === 'rehearsals') afterWrite = syncRehearsalsFromGoogleSheet({silent:true, reason:'afterRehearsalDelete'});
+      else if(arrName === 'tasks') afterWrite = syncSingleSheetAfterWrite('TAREAS');
+      else afterWrite = syncCRMFromGoogleSheet({silent:true, afterWrite:true});
       return Promise.resolve(afterWrite).then(()=>payload);
     });
 }
 
 function deleteRecord(arrName,id){
   if(!confirm('¿Borrar este registro de APP-BCB y del Google Sheet maestro?'))return;
-  const before = Array.isArray(db[arrName]) ? db[arrName].length : 0;
-  db[arrName]=(db[arrName]||[]).filter(x=>String(x.id)!==String(id));
-  const after = Array.isArray(db[arrName]) ? db[arrName].length : 0;
-  closeModal();
-  saveData();
-
-  // Si el registro venía solo de una caché antigua o de una plantilla local,
-  // la app lo retira aunque no exista todavía en Google Sheet.
-  if(before === after){
-    sheetStatus('No se encontró el registro en la caché local. Revisando Google Sheet…');
+  const list=Array.isArray(db[arrName]) ? db[arrName] : [];
+  const record=list.find(x=>String(x.id)===String(id)) || {};
+  if(!record || !Object.keys(record).length){
+    alert('No se ha encontrado el registro en la app. Actualiza desde Google Sheet y vuelve a intentarlo.');
+    return;
   }
 
-  pushDeleteToSheet(arrName,id).catch(err=>{
-    sheetStatus('El registro se ha quitado de esta vista, pero NO se ha podido borrar en Google Sheet: '+esc(err.message||err),'bad');
-    alert('No se ha podido borrar en Google Sheet.\n\nMotivo: '+(err.message||err)+'\n\nActualiza desde Google Sheet para comprobar el estado real.');
-  });
+  pushDeleteToSheet(arrName,id,record)
+    .then(()=>{
+      removeLocalArrayItem(arrName,id);
+      closeModal();
+      saveData();
+      sheetStatus('Registro borrado en Google Sheet maestro y retirado de la app.','ok');
+    })
+    .catch(err=>{
+      sheetStatus('NO se ha borrado. Google Sheet no confirmó el borrado: '+esc(err.message||err),'bad');
+      alert('No se ha podido borrar en Google Sheet.\n\nMotivo: '+(err.message||err)+'\n\nNo lo he quitado de la app para no dejar datos falsos.');
+    });
 }
 function listCard(rows, empty='Sin registros.'){
   return rows.slice(0,10).map(x=>`<div class="detailItem"><small>${esc(x.campaign||x.emailDate||'')}</small><div><strong>${esc(x.organization||x.senderEmail)}</strong><br><span style="color:var(--muted)">${esc(compact(x.nextAction||x.responseReceived||x.summary||x.sendStatus||'',130))}</span></div><div class="actions" style="margin-top:8px"><button class="btn small gold" onclick="${x.organization?`viewContact(${x.id})`:`setTab('gmail')`}">Abrir</button>${x.email?`<button class="btn small dark" onclick="composeForContact(${x.id})">Email</button>`:''}</div></div>`).join('') || `<p class="muted">${empty}</p>`;
@@ -2169,17 +2590,21 @@ function saveConcert(){
   ['fee','deposit','paid','contactId'].forEach(k=>obj[k]=Number(obj[k]||0));
   let item;
   if(modalContext.id){
-    const idx=db.concerts.findIndex(x=>x.id===modalContext.id);
-    item=Object.assign({},db.concerts[idx],obj);
-    db.concerts[idx]=item;
+    const idx=db.concerts.findIndex(x=>String(x.id)===String(modalContext.id));
+    if(idx === -1){ alert('No se ha encontrado el concierto. Actualiza y vuelve a intentarlo.'); return; }
+    item=Object.assign({}, db.concerts[idx], obj);
   }else{
-    obj.id=nextId(db.concerts);
-    item=obj;
-    db.concerts.push(item);
+    item=Object.assign({id:nextId(db.concerts)}, obj);
   }
-  closeModal();
-  saveData();
-  pushConcertToSheet(item).catch(alertSheetWriteError);
+
+  pushConcertToSheet(item)
+    .then(()=>{
+      upsertLocalArrayItem('concerts', item);
+      closeModal();
+      saveData();
+      sheetStatus('Concierto guardado en Google Sheet maestro.','ok');
+    })
+    .catch(alertSheetWriteError);
 }
 
 function bandMembers(){
@@ -2304,17 +2729,21 @@ function saveRehearsal(){
   });
   let item;
   if(modalContext.id){
-    const idx=db.rehearsals.findIndex(x=>x.id===modalContext.id);
-    item=Object.assign({},db.rehearsals[idx],obj);
-    db.rehearsals[idx]=item;
+    const idx=db.rehearsals.findIndex(x=>String(x.id)===String(modalContext.id));
+    if(idx === -1){ alert('No se ha encontrado el ensayo. Actualiza y vuelve a intentarlo.'); return; }
+    item=Object.assign({}, db.rehearsals[idx], obj);
   }else{
-    obj.id=nextId(db.rehearsals||[]);
-    item=obj;
-    db.rehearsals.push(item);
+    item=Object.assign({id:nextId(db.rehearsals||[])}, obj);
   }
-  closeModal();
-  saveData();
-  pushRehearsalToSheet(item).catch(alertSheetWriteError);
+
+  pushRehearsalToSheet(item)
+    .then(()=>{
+      upsertLocalArrayItem('rehearsals', item);
+      closeModal();
+      saveData();
+      rehearsalSheetStatus('Ensayo guardado en Google Sheet maestro.','ok');
+    })
+    .catch(alertSheetWriteError);
 }
 function viewRehearsalModal(id){
   const r=(db.rehearsals||[]).find(x=>x.id===id);
@@ -2386,21 +2815,26 @@ function renderLocalPayments(){
   const section=document.getElementById('local');
   if(!section)return;
 
-  const currentMonth = new Date().toISOString().slice(0,7);
   db.localPayments = consolidateLocalPaymentRows(Array.isArray(db.localPayments) ? db.localPayments : []);
-  const months=[...new Set([currentMonth].concat((db.localPayments||[]).map(r=>normalizeMonthValue(r.month)).filter(Boolean)))].sort().reverse();
-  const controlMonth = months.includes(currentMonth) ? currentMonth : (months[0] || currentMonth);
+  const months=localAvailableMonths();
+  const autoMonth=localDefaultControlMonth();
+  const controlMonth = normalizeMonthValue(localSelectedMonth) || autoMonth;
+  localSelectedMonth = controlMonth;
 
   const baseRows = ensureLocalPaymentsForMonth(controlMonth);
+  saveData();
 
   const monthlyAmount = localTotalAmount();
   const paidRaw = baseRows.filter(r=>isPaymentPaid(r.paid)).reduce((a,r)=>a+(parseEuroValue(r.amount)||0),0);
   const paid = Math.min(monthlyAmount, paidRaw);
   const pending = Math.max(0, monthlyAmount - paid);
+  const status = localMonthStatus(controlMonth);
+
+  ensureLocalPaymentControls(section, months, controlMonth);
 
   const kpis=document.getElementById('localKpis');
   if(kpis) kpis.innerHTML=[
-    ['Mes control', controlMonth],
+    ['Mes control', monthLabel(controlMonth)],
     ['Miembros', baseRows.length],
     ['Total local', money2(monthlyAmount)],
     ['Pagado', money2(paid)],
@@ -2412,8 +2846,8 @@ function renderLocalPayments(){
     const st=isPaymentPaid(r.paid)?'Pagado':'Pendiente';
     const memberId=normalizeMemberKey(r.memberId||r.name);
     return `<tr>
-      <td>${esc(normalizeMonthValue(r.month)||'—')}</td>
-      <td><strong>${esc(memberDisplayName(memberId)||r.name||'—')}</strong><br><small>${esc(memberId||'')}</small></td>
+      <td>${esc(monthLabel(normalizeMonthValue(r.month)||controlMonth))}<br><small>${esc(normalizeMonthValue(r.month)||controlMonth)}</small></td>
+      <td><strong>${esc(normalizeMemberKey(r.memberId||r.name)==='miguel'?'Miguel':memberDisplayName(memberId)||r.name||'—')}</strong><br><small>${esc(memberId||'')}</small></td>
       <td>${esc(money2(parseEuroValue(r.amount)).replace(' €',''))} €</td>
       <td>${badge(st)}</td>
       <td>${esc(r.paidDate||'—')}</td>
@@ -2421,10 +2855,15 @@ function renderLocalPayments(){
       <td class="admin-only"><button class="mini" onclick="markLocalPayment('${esc(normalizeMonthValue(r.month)||controlMonth)}','${esc(memberId)}','SI')">Pagado</button> <button class="mini danger" onclick="markLocalPayment('${esc(normalizeMonthValue(r.month)||controlMonth)}','${esc(memberId)}','NO')">Pendiente</button></td>
     </tr>`;
   }).join('') || '<tr><td colspan="7" class="muted">No hay cuotas del local cargadas.</td></tr>';
+
+  if(status.complete && controlMonth===currentYYYYMM()){
+    // No se escriben datos aquí para evitar cambios automáticos sin acción del admin.
+    // El salto y creación de mes se ejecutan al marcar el último pago o al pulsar Mes automático.
+  }
 }
 
-function markLocalPayment(month, memberId, paid){
-  const controlMonth=normalizeMonthValue(month)||new Date().toISOString().slice(0,7);
+async function markLocalPayment(month, memberId, paid){
+  const controlMonth=normalizeMonthValue(month)||currentYYYYMM();
   const id=normalizeMemberKey(memberId);
   ensureLocalPaymentsForMonth(controlMonth);
 
@@ -2445,11 +2884,24 @@ function markLocalPayment(month, memberId, paid){
   item.notes=mergeTextNotes(item.notes, paid==='SI'?'Marcado pagado desde APP-BCB':'Marcado pendiente desde APP-BCB');
 
   db.localPayments=mergeLocalPaymentRows(db.localPayments||[], [item]);
+  localSelectedMonth=controlMonth;
   saveData();
+  renderLocalPayments();
 
-  pushLocalPaymentToSheet(item)
-    .then(()=>sheetStatus('Pago local actualizado en Google Sheet. La vista mantiene todos los miembros del mes.','ok'))
-    .catch(alertSheetWriteError);
+  try{
+    await pushLocalPaymentToSheet(item,{afterWrite:'none'});
+    await syncLocalPaymentsFromGoogleSheet({silent:true});
+    const closed=isLocalMonthFullyPaid(controlMonth);
+    if(closed && paid==='SI'){
+      await openNextLocalMonthAfterCompletion(controlMonth);
+    }else{
+      localSelectedMonth=controlMonth;
+      renderLocalPayments();
+      sheetStatus('Pago local actualizado en Google Sheet. La vista mantiene todos los miembros del mes.','ok');
+    }
+  }catch(err){
+    alertSheetWriteError(err);
+  }
 }
 
 
@@ -2745,16 +3197,23 @@ function saveSong(){
   obj.duration = obj.durationLive || obj.duration || '';
   obj.tone = obj.currentKey || obj.tone || '';
   obj.leadVocal = obj.leadVocal || obj.singer || '';
+  let saved;
   if(modalContext.id){
-    const idx=db.repertoire.findIndex(x=>x.id===modalContext.id);
-    db.repertoire[idx]=Object.assign({},db.repertoire[idx],obj);
+    const idx=db.repertoire.findIndex(x=>String(x.id)===String(modalContext.id));
+    if(idx === -1){ alert('No se ha encontrado la canción en la app. Actualiza el repertorio y vuelve a intentarlo.'); return; }
+    saved=Object.assign({}, db.repertoire[idx], obj);
   }else{
-    obj.id=nextId(db.repertoire);
-    obj.order=obj.order||obj.id;
-    db.repertoire.push(obj);
+    saved=Object.assign({id:nextId(db.repertoire), order:nextId(db.repertoire)}, obj);
   }
-  closeModal();
-  saveData();
+
+  pushSongToSheet(saved)
+    .then(()=>{
+      upsertLocalArrayItem('repertoire', saved);
+      closeModal();
+      saveData();
+      sheetStatus('Canción guardada en Google Sheet maestro.','ok');
+    })
+    .catch(alertSheetWriteError);
 }
 function repertoireHeaders(){return [
   {label:'ID',key:'id'},
@@ -2867,17 +3326,21 @@ function saveTask(){
   const obj=readForm(taskFields());
   let item;
   if(modalContext.id){
-    const idx=db.tasks.findIndex(x=>x.id===modalContext.id);
-    item=Object.assign({},db.tasks[idx],obj);
-    db.tasks[idx]=item;
+    const idx=db.tasks.findIndex(x=>String(x.id)===String(modalContext.id));
+    if(idx === -1){ alert('No se ha encontrado la tarea. Actualiza y vuelve a intentarlo.'); return; }
+    item=Object.assign({}, db.tasks[idx], obj);
   }else{
-    obj.id=nextId(db.tasks);
-    item=obj;
-    db.tasks.push(item);
+    item=Object.assign({id:nextId(db.tasks)}, obj);
   }
-  closeModal();
-  saveData();
-  pushTaskToSheet(item).catch(alertSheetWriteError);
+
+  pushTaskToSheet(item)
+    .then(()=>{
+      upsertLocalArrayItem('tasks', item);
+      closeModal();
+      saveData();
+      sheetStatus('Tarea guardada en Google Sheet maestro.','ok');
+    })
+    .catch(alertSheetWriteError);
 }
 function downloadBlob(filename, blob){
   const url=URL.createObjectURL(blob);
