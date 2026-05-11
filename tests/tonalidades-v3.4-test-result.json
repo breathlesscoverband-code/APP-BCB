@@ -1,0 +1,16 @@
+{
+  "version": "APP-BCB v3.4 final sync",
+  "checks": {
+    "xlsx_sheets": [
+      "Tonalidades BCB",
+      "Resumen ensayo",
+      "IMPORT_REPERTORIO_TONALIDADES_BCB"
+    ],
+    "repertoire_items_updated": 26,
+    "all_have_current_key": true,
+    "all_have_original_key": true,
+    "import_rows": 26,
+    "app_map_accepts_tono_bcb_recomendado": true,
+    "sheet_import_script_included": true
+  }
+}

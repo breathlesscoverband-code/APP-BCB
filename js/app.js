@@ -1,7 +1,7 @@
-const APP_BCB_APP_VERSION = '3.3.0-final-sync-rehearsal-songs-stable-bcb';
-const STORE_KEY = 'app_bcb_control_pro_v33_rehearsal_songs_stable';
+const APP_BCB_APP_VERSION = '3.4.0-final-sync-tonalidades-bcb';
+const STORE_KEY = 'app_bcb_control_pro_v34_tonalidades_bcb';
 const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
 let db = loadData();
 let filteredCRM = [];
 let rehearsalSyncRunning = false;
@@ -28,6 +28,7 @@ function shouldSeedReplace(v){
   if(v === undefined || v === null || v === '') return true;
   const x = String(v).toLowerCase().trim();
   return x === '—' ||
+    x === 'por confirmar' ||
     x.includes('pendiente validar') ||
     x.includes('pendiente de reconstrucción') ||
     x.includes('campo preparado para recuperar') ||
@@ -1231,46 +1232,68 @@ function applyRehearsalsFromSheet(rows){
   return items.length;
 }
 function mapSongRow(row,i){
+  const title = pick(row,['titulo','Título','title','Tema','Canción','Cancion','cancion','Song']) || 'Tema sin título';
+  const toneVisible = pick(row,['tono_actual_banda','Tono actual banda','Tono BCB recomendado','Tonalidad','tone','tono','Tono','Tono recomendado']);
+  const originalKey = pick(row,['tono_original','Tono original','Tono original orientativo','originalKey']);
+  const rehearsalKey = pick(row,['tono_propuesto_ensayo','Tono propuesto ensayo','Tono BCB recomendado','Tono recomendado','rehearsalKey']);
+  const currentKey = pick(row,['tono_actual_banda','Tono actual banda','Tono BCB recomendado','Tonalidad','currentKey','tone','Tono recomendado']);
+  const transposeNotes = pick(row,['notas_transporte','Notas transporte','Nota de ensayo / criterio','Criterio','transposeNotes','Ajuste']);
   return {
     id: Number(pick(row,['id','ID'])) || i+1,
-    order: Number(pick(row,['orden','Orden','order'])) || i+1,
-    title: pick(row,['titulo','Título','title','Tema','Canción','Cancion','cancion','Song']) || 'Tema sin título',
-    titleCanonical: norm(pick(row,['titulo','Título','title','Tema','Canción','Cancion','cancion','Song'])).toUpperCase(),
-    artist: pick(row,['artista','Artista','artist','Artista / referencia','Referencia','reference']),
-    versionReference: pick(row,['versionReference','referencia','Referencia']),
+    order: Number(pick(row,['orden','Orden','order','#'])) || i+1,
+    title,
+    titleCanonical: norm(title).toUpperCase(),
+    artist: pick(row,['artista','Artista','artist','Artista / referencia','Artista / versión','Referencia','reference']),
+    versionReference: pick(row,['versionReference','referencia','Referencia','Referencia concreta']),
     singer: pick(row,['voz_principal','Voz principal','voz','Voz','singer','Voz principal']),
     leadVocal: pick(row,['voz_asignada','Voz asignada','voz_principal','Voz principal','leadVocal','voz','Voz']),
     duration: pick(row,['duracion_directo','Duración directo','duration','duracion','Duración']),
-    durationLive: pick(row,['duracion_directo','Duración directo','durationLive','duration']),
+    durationLive: pick(row,['duracion_directo','Duración directo','durationLive','duration','Duración directo']),
     durationOriginal: pick(row,['duracion_original','Duración original','durationOriginal']),
     durationStatus: pick(row,['durationStatus','estado_duracion','Estado duración']) || 'Google Sheet',
-    tone: pick(row,['tono_actual_banda','Tono actual banda','tone','tono','Tono']),
-    originalKey: pick(row,['tono_original','Tono original','originalKey']),
-    currentKey: pick(row,['tono_actual_banda','Tono actual banda','currentKey','tone']),
-    rehearsalKey: pick(row,['tono_propuesto_ensayo','Tono propuesto ensayo','rehearsalKey']),
-    keyStatus: pick(row,['keyStatus','estado_tono','Estado tono']) || 'Google Sheet',
-    keyMiguel: pick(row,['tono_propuesto_miguel','Tono propuesto Miguel','keyMiguel']),
-    keyCarmen: pick(row,['tono_propuesto_carmen','Tono propuesto Carmen','keyCarmen']),
-    keyTeo: pick(row,['tono_propuesto_teo','Tono propuesto Teo','tono_guitarra','Tono guitarra','keyTeo']),
-    transposeNotes: pick(row,['notas_transporte','Notas transporte','transposeNotes']),
-    capo: pick(row,['capo','Capo','cejilla','Cejilla']),
+    tone: toneVisible,
+    originalKey,
+    currentKey,
+    rehearsalKey,
+    keyStatus: pick(row,['keyStatus','estado_tono','Estado tono','Estado tonalidad']) || 'Google Sheet',
+    keyMiguel: pick(row,['tono_propuesto_miguel','Tono propuesto Miguel','Tono Miguel','keyMiguel']),
+    keyCarmen: pick(row,['tono_propuesto_carmen','Tono propuesto Carmen','Tono Carmen','keyCarmen']),
+    keyTeo: pick(row,['tono_propuesto_teo','Tono propuesto Teo','Tono Teo','tono_guitarra','Tono guitarra','keyTeo']),
+    transposeNotes,
+    capo: pick(row,['capo','Capo','cejilla','Cejilla','Cejilla / capo']),
     bpm: pick(row,['bpm','BPM']),
     block: pick(row,['bloque','Bloque','block']),
     status: pick(row,['estado','Estado','status']) || 'Activo',
-    spotifyUrl: pick(row,['spotify_url','Spotify','spotifyUrl']),
-    spotifyPlaylistUrl: db.createdFrom?.spotifyPlaylistUrl || '',
+    spotifyUrl: pick(row,['spotify_url','Spotify','spotifyUrl','Spotify tema']),
+    spotifyPlaylistUrl: pick(row,['Playlist Spotify','spotifyPlaylistUrl']) || db.createdFrom?.spotifyPlaylistUrl || '',
     youtubeUrl: pick(row,['youtube_url','YouTube','youtubeUrl']),
-    chordsUrl: pick(row,['acordes_url','Acordes URL','chordsUrl']),
+    chordsUrl: pick(row,['acordes_url','Acordes URL','Enlace acordes/letra','chordsUrl']),
     structure: pick(row,['estructura','Estructura','structure']),
-    chordsText: pick(row,['tablatura','Tabla','letra_acordes','Letra acordes','chordsText']),
-    notes: pick(row,['notas_interpretacion','Notas interpretación','notes']),
+    chordsText: pick(row,['tablatura','Tabla','letra_acordes','Letra acordes','Letra/acordes/tablatura','chordsText']),
+    lyricsNotes: pick(row,['notas_interpretacion','Notas interpretación','Notas interpretación/letra','lyricsNotes']),
+    notes: pick(row,['notas_internas','Notas internas','notas','Notas','notes']),
     internalNotes: pick(row,['notas_internas','Notas internas','internalNotes']),
+    sourceNotes: pick(row,['Fuente / validación','sourceNotes']),
     validatedAt: pick(row,['validado_en_ensayo','Validado en ensayo','validatedAt']),
     raw: row
   };
 }
+function mergeSongWithExisting(item){
+  const sources = []
+    .concat(Array.isArray(INITIAL_DATA.repertoire) ? INITIAL_DATA.repertoire : [])
+    .concat(Array.isArray(db.repertoire) ? db.repertoire : []);
+  const match = sources.find(s => String(s.id) === String(item.id) || norm(s.titleCanonical||s.title) === norm(item.titleCanonical||item.title));
+  if(!match) return item;
+  const merged = Object.assign({}, match, item);
+  Object.keys(match).forEach(key=>{
+    if(shouldSeedReplace(merged[key]) && !shouldSeedReplace(match[key])){
+      merged[key] = match[key];
+    }
+  });
+  return merged;
+}
 function applySongsFromSheet(rows){
-  const items=rows.map(mapSongRow).filter(x=>x.title && x.title!=='Tema sin título');
+  const items=rows.map(mapSongRow).filter(x=>x.title && x.title!=='Tema sin título').map(mergeSongWithExisting);
   if(items.length) db.repertoire=items;
   return items.length;
 }

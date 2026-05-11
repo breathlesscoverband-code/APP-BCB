@@ -6,3 +6,5 @@ const SETLIST_PDF_URL = "assets/bcb_setlist_base.png";
 const HERO_BG_URL = "assets/bcb_home_background.png";
 const DEFAULT_CONCERT_POSTER_URL = "assets/bcb_home_background.png";
 const DEFAULT_CONCERT_POSTER_THUMB_URL = "assets/bcb_home_background.png";
+
+const TONALIDADES_XLSX_URL = "assets/BCB_Tonalidades_Setlist_v1.xlsx";

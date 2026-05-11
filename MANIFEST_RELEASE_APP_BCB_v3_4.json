@@ -1,0 +1,15 @@
+{
+  "app": "APP-BCB",
+  "band": "Breathless Cover Band",
+  "version": "APP-BCB v3.4 final sync",
+  "date": "2026-05-11",
+  "changes": [
+    "Añadido BCB_Tonalidades_Setlist_v1.xlsx basado en estructura del archivo de Ñ.",
+    "Repertorio inicial actualizado con tonalidades BCB.",
+    "App mapSongRow ampliado para leer Tono BCB recomendado, Tono original y Nota de ensayo / criterio desde Google Sheet.",
+    "Apps Script incluye importador previewTonalidadesBCB/aplicarTonalidadesBCB con backup."
+  ],
+  "source": "N_Mayuscula_Tonalidades_Setlist_v1.xlsx + repertorio APP-BCB v3.3",
+  "sheet": "1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q",
+  "note": "Tonalidades de trabajo. Validar en ensayo antes de cerrar."
+}
