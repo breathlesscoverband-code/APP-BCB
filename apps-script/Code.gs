@@ -1,6 +1,6 @@
 /**
  * APP-BCB Bridge — Breathless Cover Band
- * Version: APP-BCB v3.2 final sync · local payments stable QA
+ * Version: APP-BCB v3.3 final sync · rehearsal songs stable
  *
  * Fuente principal: Google Sheet maestro BCB.
  * App GitHub Pages / PWA.
@@ -19,7 +19,7 @@
  * No usar endpoint ni Sheet de otra banda.
  */
 
-const APP_VERSION = 'APP-BCB v3.2 final sync';
+const APP_VERSION = 'APP-BCB v3.3 final sync';
 const BAND = 'BCB';
 const BAND_NAME = 'Breathless Cover Band';
 const SHEET_ID = '1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q';
@@ -63,7 +63,7 @@ const SCHEMA = {
   CRM_GENERAL: ['ID','Estado','Siguiente paso','Fecha siguiente paso','Contacto','Empresa / entidad','Tipo evento','Fecha / ventana','Ciudad','Email','Teléfono','Notas','Importe o rango'],
   RESPUESTAS_GMAIL: ['ID','Fecha','Remitente','Asunto','Resumen','Estado','CRM ID','Notas'],
   CONCIERTOS: ['ID','Fecha','Hora','Sala / Evento','sala_lugar','ciudad','tipo','estado','Caché','anticipo','cobrado','sonido','contacto_id','cartel_url','cartel_thumb_url','cartel_titulo','notas_publicas','notas_produccion','asistencia_miguel','asistencia_carmen','asistencia_teo','asistencia_alvaro','asistencia_nataly','asistencia_lord_enzo','actualizado_en'],
-  ENSAYOS: ['ID','Fecha','hora_inicio','hora_fin','Lugar','estado','objetivo','temas_ids','temas_texto','Notas','asistencia_miguel','asistencia_carmen','asistencia_teo','asistencia_alvaro','asistencia_nataly','asistencia_lord_enzo','actualizado_en'],
+  ENSAYOS: ['ID','Fecha','hora_inicio','hora_fin','Lugar','estado','objetivo','todos_los_temas','temas_ids','temas_texto','Notas','asistencia_miguel','asistencia_carmen','asistencia_teo','asistencia_alvaro','asistencia_nataly','asistencia_lord_enzo','actualizado_en'],
   REPERTORIO: ['ID','Orden','Canción','Artista / referencia','Idioma','Voz principal','Duración','Tempo / Energía','Tonalidad','Estado','Bloque sugerido','Fuente','Notas'],
   SETLISTS: ['ID','Setlist ID','Orden','Título','Voz','Tono','Duración','Bloque','Notas'],
   MIEMBROS: ['ID','Nombre','Rol','Email','Teléfono','Estado','Notas'],

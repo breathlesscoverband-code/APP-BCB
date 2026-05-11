@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "tests": 7,
+  "row": {
+    "temas_ids": "1,2,3,4,5",
+    "temas_texto": "Insurrección | Zombie | Wicked Game | Ticket To Ride | Stand By Me",
+    "Temas": "Insurrección | Zombie | Wicked Game | Ticket To Ride | Stand By Me"
+  }
+}

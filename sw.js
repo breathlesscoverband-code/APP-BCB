@@ -1,15 +1,15 @@
-/* APP-BCB · PWA service worker v3.2 final sync · local pagos estable QA */
-const CACHE_NAME = "app-bcb-pwa-v3-2-0-local-payments-stable";
+/* APP-BCB · PWA service worker v3.3 final sync · ensayos temas estable */
+const CACHE_NAME = "app-bcb-pwa-v3-3-0-rehearsal-songs-stable";
 const APP_SHELL = [
   "./",
-  "./index.html?v=3.2.0-bcb",
-  "./manifest.json?v=3.2.0-bcb",
-  "./css/styles.css?v=3.2.0-bcb",
-  "./css/admin-guard.css?v=3.2.0-bcb",
-  "./js/assets.js?v=3.2.0-bcb",
-  "./js/data.js?v=3.2.0-bcb",
-  "./js/app.js?v=3.2.0-bcb",
-  "./js/admin-guard.js?v=3.2.0-bcb",
+  "./index.html?v=3.3.0-bcb",
+  "./manifest.json?v=3.3.0-bcb",
+  "./css/styles.css?v=3.3.0-bcb",
+  "./css/admin-guard.css?v=3.3.0-bcb",
+  "./js/assets.js?v=3.3.0-bcb",
+  "./js/data.js?v=3.3.0-bcb",
+  "./js/app.js?v=3.3.0-bcb",
+  "./js/admin-guard.js?v=3.3.0-bcb",
   "./assets/bcb_logo_main.png",
   "./assets/bcb_home_background.png",
   "./assets/bcb_setlist_base.png",
@@ -60,7 +60,7 @@ self.addEventListener("fetch", event => {
           caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
           return response;
         })
-        .catch(() => caches.match(request).then(cached => cached || caches.match("./index.html?v=3.2.0-bcb") || caches.match("./")))
+        .catch(() => caches.match(request).then(cached => cached || caches.match("./index.html?v=3.3.0-bcb") || caches.match("./")))
     );
     return;
   }

@@ -1,7 +1,7 @@
-const APP_BCB_APP_VERSION = '3.2.0-final-sync-local-payments-stable-bcb';
-const STORE_KEY = 'app_bcb_control_pro_v32_local_payments_stable';
+const APP_BCB_APP_VERSION = '3.3.0-final-sync-rehearsal-songs-stable-bcb';
+const STORE_KEY = 'app_bcb_control_pro_v33_rehearsal_songs_stable';
 const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
 let db = loadData();
 let filteredCRM = [];
 let rehearsalSyncRunning = false;
@@ -918,7 +918,24 @@ function concertToSheetRow(c){
   }, attendanceToSheetFields(c.attendance||{}));
 }
 
+function rehearsalSongIdsForSave(r){
+  if(!r || r.allSongs) return [];
+  return unique((r.songIds || [])
+    .map(x=>Number(x))
+    .filter(n=>Number.isFinite(n) && n>0));
+}
+
+function rehearsalSongTitlesForSave(ids){
+  const byId = new Map((db.repertoire || []).map(s=>[Number(s.id), s]));
+  return (ids || [])
+    .map(id=>byId.get(Number(id))?.title || '')
+    .filter(Boolean)
+    .join(' | ');
+}
+
 function rehearsalToSheetRow(r){
+  const ids = rehearsalSongIdsForSave(r);
+  const titles = r.allSongs ? 'Todos los temas' : rehearsalSongTitlesForSave(ids);
   return Object.assign({
     id:r.id,
     ID:r.id,
@@ -932,9 +949,14 @@ function rehearsalToSheetRow(r){
     estado:r.status || '',
     Estado:r.status || '',
     objetivo:r.objective || '',
-    temas_ids:r.allSongs ? 'TODOS' : JSON.stringify(r.songIds || []),
-    temas_texto:r.allSongs ? 'Todos los temas' : (r.songTitles || ''),
-    Temas:r.allSongs ? 'Todos los temas' : (r.songTitles || ''),
+    todos_los_temas:r.allSongs ? 'SI' : 'NO',
+    'Todos los temas':r.allSongs ? 'SI' : 'NO',
+    // No guardar JSON tipo [1,2,3]. Google Sheet y la app lo leen más estable como CSV.
+    temas_ids:r.allSongs ? 'TODOS' : ids.join(','),
+    'Temas IDs':r.allSongs ? 'TODOS' : ids.join(','),
+    temas_texto:titles,
+    'Temas texto':titles,
+    Temas:titles,
     notas:r.notes || '',
     Notas:r.notes || '',
     actualizado_en:new Date().toISOString()
@@ -1129,12 +1151,64 @@ function applyConcertsFromSheet(rows){
   return items.length;
 }
 function parseSongIds(value){
+  if(Array.isArray(value)){
+    return unique(value.map(x=>Number(x)).filter(n=>Number.isFinite(n) && n>0));
+  }
+  const raw=String(value||'').trim();
+  if(!raw) return [];
+  if(norm(raw).includes('todos')) return [];
+  // Compatibilidad con versiones anteriores que guardaban JSON: [1,2,3] o ["1","2"].
+  try{
+    const parsed=JSON.parse(raw);
+    if(Array.isArray(parsed)){
+      return unique(parsed.map(x=>Number(x)).filter(n=>Number.isFinite(n) && n>0));
+    }
+  }catch(e){}
+  const cleaned=raw
+    .replace(/[\[\]\(\){}]/g, ' ')
+    .replace(/["']/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const ids=cleaned
+    .split(/[;,|\n\t ]+/)
+    .map(x=>Number(String(x).trim()))
+    .filter(n=>Number.isFinite(n) && n>0);
+  return unique(ids);
+}
+
+function songIdsFromTitlesText(value){
   const text=String(value||'').trim();
-  if(!text) return [];
-  return text.split(/[;,|]/).map(x=>Number(String(x).trim())).filter(Boolean);
+  if(!text || !(db.repertoire||[]).length) return [];
+  const byNorm=new Map();
+  (db.repertoire||[]).forEach(song=>{
+    const key=norm(song.title||song.titleCanonical);
+    if(key) byNorm.set(key, Number(song.id));
+  });
+  const parts=text
+    .split(/[|;\n]+|\s+-\s+/)
+    .map(x=>norm(x))
+    .filter(Boolean);
+  const ids=[];
+  parts.forEach(part=>{
+    if(byNorm.has(part)) ids.push(byNorm.get(part));
+    else{
+      const match=(db.repertoire||[]).find(song=>{
+        const title=norm(song.title||song.titleCanonical);
+        return title && (part.includes(title) || title.includes(part));
+      });
+      if(match) ids.push(Number(match.id));
+    }
+  });
+  return unique(ids.filter(n=>Number.isFinite(n) && n>0));
 }
 function mapRehearsalRow(row,i){
-  const allSongs=norm(pick(row,['todos_los_temas','Todos los temas','allSongs'])).includes('si') || norm(pick(row,['temas_ids','temas_ids'])).includes('todos');
+  const idsRaw=pick(row,['temas_ids','Temas IDs','songIds','Temas ids','IDs temas']);
+  const titlesRaw=pick(row,['temas_texto','Temas texto','Temas','songs','Canciones','Temas previstos']);
+  const allSongs=norm(pick(row,['todos_los_temas','Todos los temas','allSongs'])).includes('si') || norm(idsRaw).includes('todos') || norm(titlesRaw).includes('todos los temas');
+  let songIds = allSongs ? [] : parseSongIds(idsRaw);
+  if(!allSongs && !songIds.length && titlesRaw){
+    songIds = songIdsFromTitlesText(titlesRaw);
+  }
   return {
     id: Number(pick(row,['id','ID'])) || i+1,
     date: normalizeSheetDateToISO(pick(row,['fecha','Fecha','date'])),
@@ -1145,8 +1219,8 @@ function mapRehearsalRow(row,i){
     objective: pick(row,['objetivo','Objetivo','objective']),
     notes: pick(row,['notas','Notas','notes']),
     allSongs,
-    songIds: allSongs ? [] : parseSongIds(pick(row,['temas_ids','Temas IDs','songIds'])),
-    songTitles: pick(row,['temas_texto','Temas texto','Temas','songs']),
+    songIds,
+    songTitles: titlesRaw,
     attendance: memberAttendanceFromRow(row),
     raw: row
   };
@@ -1160,9 +1234,9 @@ function mapSongRow(row,i){
   return {
     id: Number(pick(row,['id','ID'])) || i+1,
     order: Number(pick(row,['orden','Orden','order'])) || i+1,
-    title: pick(row,['titulo','Título','title','Tema']) || 'Tema sin título',
-    titleCanonical: norm(pick(row,['titulo','Título','title','Tema'])).toUpperCase(),
-    artist: pick(row,['artista','Artista','artist']),
+    title: pick(row,['titulo','Título','title','Tema','Canción','Cancion','cancion','Song']) || 'Tema sin título',
+    titleCanonical: norm(pick(row,['titulo','Título','title','Tema','Canción','Cancion','cancion','Song'])).toUpperCase(),
+    artist: pick(row,['artista','Artista','artist','Artista / referencia','Referencia','reference']),
     versionReference: pick(row,['versionReference','referencia','Referencia']),
     singer: pick(row,['voz_principal','Voz principal','voz','Voz','singer','Voz principal']),
     leadVocal: pick(row,['voz_asignada','Voz asignada','voz_principal','Voz principal','leadVocal','voz','Voz']),
@@ -2188,7 +2262,8 @@ function openRehearsalModal(id=null){
 function saveRehearsal(){
   const obj=readForm(rehearsalFields());
   obj.allSongs=!!document.getElementById('rehearsalAllSongs')?.checked;
-  obj.songIds=obj.allSongs?[]:[...document.querySelectorAll('[data-rehearsal-song]:checked')].map(x=>Number(x.value)).filter(Boolean);
+  obj.songIds=obj.allSongs?[]:unique([...document.querySelectorAll('[data-rehearsal-song]:checked')].map(x=>Number(x.value)).filter(n=>Number.isFinite(n) && n>0));
+  obj.songTitles=obj.allSongs?'Todos los temas':rehearsalSongTitlesForSave(obj.songIds);
   obj.attendance={};
   bandMembers().forEach(m=>{
     const st=document.querySelector(`[data-rehearsal-attendance="${m.id}"]`)?.value||'Pendiente';
