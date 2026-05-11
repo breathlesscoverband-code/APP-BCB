@@ -1,0 +1,18 @@
+{
+  "version": "4.0.0",
+  "date": "2026-05-11T22:28:51.502898Z",
+  "checks": [
+    "node --check app.js",
+    "node --check data.js",
+    "node --check admin-guard.js",
+    "node --check sw.js"
+  ],
+  "performance_fixes": [
+    "lazy render active tab only",
+    "serialized Google Sheet gviz reads",
+    "new snapshot key ignores corrupted v3.8/v3.9 cache",
+    "no deferred full sync on startup",
+    "non blocking local/rehearsals sync"
+  ],
+  "known_limit": "No se puede ejecutar la app contra la cuenta Google del usuario desde este entorno; validación final debe hacerse en navegador tras publicar."
+}
