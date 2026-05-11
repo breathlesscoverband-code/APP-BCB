@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "case": "Local payments preserve all BCB members",
+  "resultRows": [
+    {
+      "memberId": "miguel",
+      "paid": "SI"
+    },
+    {
+      "memberId": "carmen",
+      "paid": "SI"
+    },
+    {
+      "memberId": "teo",
+      "paid": "NO"
+    },
+    {
+      "memberId": "alvaro",
+      "paid": "NO"
+    },
+    {
+      "memberId": "nataly",
+      "paid": "NO"
+    },
+    {
+      "memberId": "lord_enzo",
+      "paid": "NO"
+    }
+  ]
+}

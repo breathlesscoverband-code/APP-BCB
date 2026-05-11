@@ -1,0 +1,14 @@
+{
+  "name": "APP-BCB v3.1 FINAL SYNC · Local pagos estable",
+  "band": "BCB",
+  "bandName": "Breathless Cover Band",
+  "version": "3.1.0",
+  "changes": [
+    "Módulo Local/Pagos estable",
+    "Vista mensual completa con 6 miembros aunque Google Sheet solo tenga pagados",
+    "Upsert Apps Script por Mes + ID Miembro",
+    "No desaparecen pendientes tras marcar un pago",
+    "Cache PWA v3.1"
+  ],
+  "sheetId": "1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q"
+}

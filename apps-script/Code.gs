@@ -1,6 +1,6 @@
 /**
  * APP-BCB Bridge — Breathless Cover Band
- * Version: APP-BCB v2.7 final sync · iframe fallback mobile
+ * Version: APP-BCB v3.2 final sync · local payments stable QA
  *
  * Fuente principal: Google Sheet maestro BCB.
  * App GitHub Pages / PWA.
@@ -19,7 +19,7 @@
  * No usar endpoint ni Sheet de otra banda.
  */
 
-const APP_VERSION = 'APP-BCB v2.7 final sync';
+const APP_VERSION = 'APP-BCB v3.2 final sync';
 const BAND = 'BCB';
 const BAND_NAME = 'Breathless Cover Band';
 const SHEET_ID = '1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q';
@@ -70,7 +70,7 @@ const SCHEMA = {
   TAREAS: ['ID','Tarea','Responsable','Fecha','Estado','Prioridad','Área','Notas','actualizado_en'],
   PLANTILLAS_DOSSIER: ['ID','Tipo','Uso','Texto','Estado'],
   CONFIG_GRUPO: ['Campo','Valor','Notas'],
-  PAGOS_LOCAL: ['ID','Mes','ID Miembro','Nombre','Cuota','Pagado','Fecha pago','Notas','Última actualización'],
+  PAGOS_LOCAL: ['ID','Mes','Concepto','Importe total','Moneda','Participantes','Pagado por','Reparto por persona','Estado','Fecha vencimiento','Fecha pago','Notas','ID Miembro','Nombre','Cuota','Pagado','Última actualización'],
   DASHBOARD: ['Indicador','Valor','Notas'],
   LOG_APP_BCB: ['Fecha','Acción','Pestaña','ID','Detalle']
 };
@@ -436,7 +436,106 @@ function upsertById_(tabName, data, key) {
 
 function upsertLocalPayment_(data, key) {
   if (!isAdminKey_(key)) return { ok: false, error: 'Clave admin incorrecta', version: APP_VERSION };
-  return upsertById_('PAGOS_LOCAL', data, key);
+  validateTabAndData_('PAGOS_LOCAL', data);
+
+  const month = normalizeMonthForKey_(valueForAny_(data, ['Mes','mes','month']));
+  const memberId = normalizeMemberForKey_(valueForAny_(data, ['ID Miembro','id_miembro','memberId','member_id','Nombre','nombre']));
+  if (!month) throw new Error('Falta Mes para PAGOS_LOCAL');
+  if (!memberId) throw new Error('Falta ID Miembro para PAGOS_LOCAL');
+
+  data.ID = data.ID || data.id || (month + '|' + memberId);
+  data.Mes = data.Mes || data.mes || month;
+  data['ID Miembro'] = data['ID Miembro'] || data.id_miembro || data.memberId || memberId;
+  data.Nombre = data.Nombre || data.nombre || displayMemberForKey_(memberId);
+  data.Cuota = data.Cuota || data.cuota || data.amount || 36.17;
+  data.Pagado = data.Pagado || data.pagado || data.paid || 'NO';
+  data['Última actualización'] = data['Última actualización'] || data.actualizado_en || new Date().toISOString();
+
+  const sheet = getSheetOrCreate_('PAGOS_LOCAL');
+  const info = ensureHeaderRow_(sheet, 'PAGOS_LOCAL', Object.keys(data));
+  const found = findLocalPaymentRow_(sheet, info, month, memberId);
+  if (found.found) {
+    updateRowAt_(sheet, info, found.rowIndex, data);
+    logAction_('upsertLocalPayment-update', 'PAGOS_LOCAL', data.ID);
+    return { ok: true, action: 'upsertLocalPayment', mode: 'update', tab: 'PAGOS_LOCAL', id: String(data.ID), month: month, memberId: memberId, version: APP_VERSION };
+  }
+
+  const row = info.headers.map(header => valueForHeader_(data, header));
+  sheet.getRange(sheet.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+  logAction_('upsertLocalPayment-append', 'PAGOS_LOCAL', data.ID);
+  return { ok: true, action: 'upsertLocalPayment', mode: 'append', tab: 'PAGOS_LOCAL', id: String(data.ID), month: month, memberId: memberId, version: APP_VERSION };
+}
+
+function updateRowAt_(sheet, info, rowIndex, data) {
+  const rowValues = sheet.getRange(rowIndex, 1, 1, info.headers.length).getValues()[0];
+  info.headers.forEach((header, index) => {
+    const v = valueForHeader_(data, header);
+    // En pagos de local sí queremos poder limpiar Fecha pago cuando se marca pendiente.
+    if (v !== '' || ['Fecha pago','fecha_pago','Pagado','pagado','Última actualización','actualizado_en'].indexOf(String(header)) !== -1) {
+      rowValues[index] = v;
+    }
+  });
+  sheet.getRange(rowIndex, 1, 1, info.headers.length).setValues([rowValues]);
+}
+
+function findLocalPaymentRow_(sheet, info, month, memberId) {
+  const headers = info.headers || [];
+  const mesIndex = headers.findIndex(h => ['mes','month'].indexOf(normalize_(h)) !== -1);
+  const memberIndex = headers.findIndex(h => ['idmiembro','miembroid','memberid','member_id'].indexOf(normalize_(h)) !== -1);
+  if (mesIndex === -1 || memberIndex === -1) return { found: false };
+
+  const startRow = info.headerRow + 1;
+  const lastRow = sheet.getLastRow();
+  if (startRow > lastRow) return { found: false };
+
+  const values = sheet.getRange(startRow, 1, lastRow - info.headerRow, Math.max(sheet.getLastColumn(), headers.length)).getDisplayValues();
+  for (let i = 0; i < values.length; i++) {
+    const rowMonth = normalizeMonthForKey_(values[i][mesIndex]);
+    const rowMember = normalizeMemberForKey_(values[i][memberIndex]);
+    if (rowMonth === month && rowMember === memberId) {
+      return { found: true, rowIndex: startRow + i };
+    }
+  }
+  return { found: false };
+}
+
+function valueForAny_(data, names) {
+  const keys = Object.keys(data || {});
+  for (const name of names) {
+    const target = normalize_(name);
+    const found = keys.find(k => normalize_(k) === target);
+    if (found !== undefined) return data[found];
+  }
+  return '';
+}
+
+function normalizeMonthForKey_(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const iso = raw.match(/^(\d{4})-(\d{2})/);
+  if (iso) return iso[1] + '-' + iso[2];
+  const slash = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (slash) return slash[3] + '-' + String(slash[2]).padStart(2, '0');
+  const ym = raw.match(/(\d{4})\D+(\d{1,2})/);
+  if (ym) return ym[1] + '-' + String(ym[2]).padStart(2, '0');
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? raw.slice(0, 7) : Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM');
+}
+
+function normalizeMemberForKey_(value) {
+  const s = normalize_(value).replace(/[^a-z0-9]/g, '');
+  if (s.indexOf('miguel') !== -1) return 'miguel';
+  if (s.indexOf('carmen') !== -1) return 'carmen';
+  if (s.indexOf('teo') !== -1) return 'teo';
+  if (s.indexOf('alvaro') !== -1) return 'alvaro';
+  if (s.indexOf('nataly') !== -1 || s.indexOf('natalia') !== -1) return 'nataly';
+  if (s.indexOf('lordenzo') !== -1 || s.indexOf('lord') !== -1 || s.indexOf('enzo') !== -1 || s.indexOf('lorenzo') !== -1) return 'lord_enzo';
+  return s;
+}
+
+function displayMemberForKey_(memberId) {
+  const map = { miguel: 'Miguel', carmen: 'Carmen', teo: 'Teo', alvaro: 'Álvaro', nataly: 'Nataly', lord_enzo: 'Lord Enzo' };
+  return map[memberId] || memberId;
 }
 
 function deleteRowByIdGet_(tabName, id, key) {

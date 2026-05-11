@@ -1,15 +1,27 @@
-const APP_BCB_APP_VERSION = '3.0.0-final-sync-instant-cache-bcb';
-const STORE_KEY = 'app_bcb_control_pro_v30_instant_cache';
+const APP_BCB_APP_VERSION = '3.2.0-final-sync-local-payments-stable-bcb';
+const STORE_KEY = 'app_bcb_control_pro_v32_local_payments_stable';
 const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
 let db = loadData();
 let filteredCRM = [];
 let rehearsalSyncRunning = false;
 let rehearsalLastSync = 0;
+let localPaymentLastSync = 0;
 const tabs = [
   ['dashboard','Panel','●'],['crm','CRM','●'],['followup','Seguimiento','●'],['gmail','Gmail','●'],['concerts','Conciertos','●'],['rehearsals','Ensayos','●'],['local','Local ensayo','●'],
   ['budget','Presupuesto','●'],['repertoire','Canciones','●'],['setlist','Setlist','●'],['dossier','Dossier','●'],['templates','Plantillas','●'],['tasks','Tareas','●'],['importExport','Exportar','●']
 ];
+
+const BCB_FIXED_MEMBERS = Object.freeze([
+  {id:'miguel',name:'Miguel',role:'Voz / administrador'},
+  {id:'carmen',name:'Carmen',role:'Voz'},
+  {id:'teo',name:'Teo',role:'Guitarra solista'},
+  {id:'alvaro',name:'Álvaro',role:'Guitarra rítmica'},
+  {id:'nataly',name:'Nataly',role:'Bajista'},
+  {id:'lord_enzo',name:'Lord Enzo',role:'Batería'}
+]);
+const BCB_FIXED_MEMBER_IDS = BCB_FIXED_MEMBERS.map(m=>m.id);
+
 
 function clone(o){return JSON.parse(JSON.stringify(o));}
 function shouldSeedReplace(v){
@@ -144,6 +156,7 @@ function migrateData(data){
   data.concerts = Array.isArray(data.concerts) ? data.concerts : [];
   data.localPayments = Array.isArray(data.localPayments) ? data.localPayments : [];
   data.localConfig = Object.assign({monthlyAmount:217, source:'CONFIG_GRUPO / Google Sheet'}, data.localConfig || {});
+  try{ data.localPayments = mergeLocalPaymentRows(data.localPayments || [], completeLocalPaymentMonth(data.localPayments || [], new Date().toISOString().slice(0,7))); }catch(e){}
   const defaultConcert = {
     id: 0,
     date: '',
@@ -357,50 +370,154 @@ function mergeTextNotes(a,b){
   [a,b].forEach(v=>String(v??'').split('|').map(x=>x.trim()).filter(Boolean).forEach(x=>{if(!out.includes(x)) out.push(x);}));
   return out.join(' | ');
 }
+function localPaymentMemberDefinitions(){
+  // APP-BCB v3.2:
+  // Los pagos del local NO dependen de lo que venga en MIEMBROS desde Google Sheet,
+  // porque allí los ID pueden ser M-001, M-002... y eso rompía la vista mensual.
+  // Para el local, la base fija son siempre los 6 miembros actuales de BCB.
+  const fixed = BCB_FIXED_MEMBERS.map(m=>Object.assign({}, m));
+  try{
+    const source = Array.isArray(db && db.bandMembers) ? db.bandMembers : [];
+    fixed.forEach(member=>{
+      const match = source.find(x=>normalizeMemberKey(x.name || x.Nombre || x.nombre || x.Miembro || x.id || x.ID) === member.id);
+      if(match && (match.role || match.Rol || match.rol || match['Rol artístico'] || match['Instrumento/voz'])){
+        member.role = match.role || match.Rol || match.rol || match['Rol artístico'] || match['Instrumento/voz'] || member.role;
+      }
+    });
+  }catch(e){}
+  return fixed;
+}
+function localMemberOrder(){
+  return {miguel:1,carmen:2,teo:3,alvaro:4,nataly:5,lord_enzo:6};
+}
+function localTotalAmount(){
+  try{
+    const n=parseEuroValue(db && db.localConfig ? db.localConfig.monthlyAmount : 217);
+    return n || 217;
+  }catch(e){
+    return 217;
+  }
+}
+function localMemberAmount(){
+  const members=localPaymentMemberDefinitions();
+  const total=localTotalAmount();
+  if(!members.length) return 36.17;
+  return Math.round((total / members.length) * 100) / 100;
+}
 function consolidateLocalPaymentRows(items){
-  const allowed=['miguel','carmen','teo','alvaro','nataly','lord_enzo'];
+  const allowed=localPaymentMemberDefinitions().map(m=>m.id);
   const byKey=new Map();
 
   (items||[]).forEach((item,idx)=>{
-    const month=normalizeMonthValue(item.month || item.Mes || item.mes);
-    const memberId=normalizeMemberKey(item.memberId || item['ID Miembro'] || item.id_miembro || item.name || item.Nombre);
+    const month=normalizeMonthValue(item.month || item.Mes || item.mes || item.Month);
+    const memberId=normalizeMemberKey(item.memberId || item['ID Miembro'] || item.id_miembro || item.member_id || item.name || item.Nombre || item.nombre || item.Miembro);
     if(!month || !allowed.includes(memberId)) return;
 
     const key=month+'|'+memberId;
-    const amount=parseEuroValue(item.amount ?? item.Cuota ?? item.cuota ?? item.importe);
-    const paidValue=item.paid ?? item.Pagado ?? item.pagado ?? '';
+    const amount=parseEuroValue(item.amount ?? item.Cuota ?? item.cuota ?? item.importe ?? item.Importe);
+    const paidValue=item.paid ?? item.Pagado ?? item.pagado ?? item.estado_pago ?? item['Estado pago'] ?? '';
     const clean={
-      id:item.id || idx+1,
+      id:item.id || item.ID || key,
       month,
       memberId,
-      name:memberDisplayName(memberId, item.name || item.Nombre),
-      amount: amount || 36.17,
+      name:memberDisplayName(memberId, item.name || item.Nombre || item.nombre || item.Miembro),
+      amount: amount || localMemberAmount(),
       paid:isPaymentPaid(paidValue)?'SI':'NO',
-      paidDate:item.paidDate || item['Fecha pago'] || item.fecha_pago || '',
-      updatedAt:item.updatedAt || item['Última actualización'] || item.actualizado_en || '',
+      paidDate:item.paidDate || item['Fecha pago'] || item.fecha_pago || item.paid_date || '',
+      updatedAt:item.updatedAt || item['Última actualización'] || item.actualizado_en || item.updated_at || '',
       notes:item.notes || item.Notas || item.notas || '',
       raw:item.raw || item
     };
 
+    // En caso de duplicados, manda el registro más reciente / último leído.
     if(!byKey.has(key)){
       byKey.set(key, clean);
     }else{
       const prev=byKey.get(key);
-      prev.amount=prev.amount || clean.amount;
-      prev.paid=(isPaymentPaid(prev.paid)||isPaymentPaid(clean.paid))?'SI':'NO';
-      prev.paidDate=prev.paidDate || clean.paidDate;
-      prev.updatedAt=clean.updatedAt || prev.updatedAt;
-      prev.notes=mergeTextNotes(prev.notes, clean.notes);
-      byKey.set(key, prev);
+      const incomingIsNewer = String(clean.updatedAt||clean.paidDate||'') >= String(prev.updatedAt||prev.paidDate||'');
+      if(incomingIsNewer){
+        clean.notes=mergeTextNotes(prev.notes, clean.notes);
+        byKey.set(key, Object.assign({}, prev, clean));
+      }else{
+        prev.notes=mergeTextNotes(prev.notes, clean.notes);
+        byKey.set(key, prev);
+      }
     }
   });
 
-  const order={miguel:1,carmen:2,teo:3,alvaro:4,nataly:5,lord_enzo:6};
+  const order=localMemberOrder();
   return [...byKey.values()].sort((a,b)=>
     String(b.month).localeCompare(String(a.month)) || (order[a.memberId]||99)-(order[b.memberId]||99)
   );
 }
+function localPaymentTimestamp(row){
+  const candidates=[row && row.updatedAt, row && row['Última actualización'], row && row.actualizado_en, row && row.paidDate, row && row['Fecha pago']];
+  for(const c of candidates){
+    const t=Date.parse(c);
+    if(Number.isFinite(t)) return t;
+  }
+  return 0;
+}
 
+function chooseLocalPaymentRecord(existing, incoming){
+  if(!existing) return incoming;
+  if(!incoming) return existing;
+  const a=localPaymentTimestamp(existing);
+  const b=localPaymentTimestamp(incoming);
+  if(b > a) return Object.assign({}, existing, incoming, {notes:mergeTextNotes(existing.notes, incoming.notes)});
+  if(a > b) return Object.assign({}, incoming, existing, {notes:mergeTextNotes(existing.notes, incoming.notes)});
+  const paid = (isPaymentPaid(existing.paid) || isPaymentPaid(incoming.paid)) ? 'SI' : 'NO';
+  return Object.assign({}, existing, incoming, {
+    paid,
+    paidDate: incoming.paidDate || existing.paidDate || '',
+    updatedAt: incoming.updatedAt || existing.updatedAt || '',
+    notes: mergeTextNotes(existing.notes, incoming.notes)
+  });
+}
+
+function mergeLocalPaymentRows(existing=[], incoming=[]){
+  const byKey=new Map();
+  consolidateLocalPaymentRows(existing).forEach(r=>{
+    const key=normalizeMonthValue(r.month)+'|'+normalizeMemberKey(r.memberId||r.name);
+    byKey.set(key, r);
+  });
+  consolidateLocalPaymentRows(incoming).forEach(r=>{
+    const key=normalizeMonthValue(r.month)+'|'+normalizeMemberKey(r.memberId||r.name);
+    byKey.set(key, chooseLocalPaymentRecord(byKey.get(key), r));
+  });
+  return consolidateLocalPaymentRows([...byKey.values()]);
+}
+function localPaymentSeedRow(month, memberId){
+  const id=normalizeMemberKey(memberId);
+  return {
+    id: normalizeMonthValue(month)+'|'+id,
+    month: normalizeMonthValue(month) || new Date().toISOString().slice(0,7),
+    memberId:id,
+    name:memberDisplayName(id),
+    amount:localMemberAmount(),
+    paid:'NO',
+    paidDate:'',
+    updatedAt:'',
+    notes:'Cuota local pendiente de confirmar'
+  };
+}
+function completeLocalPaymentMonth(items, month){
+  const controlMonth=normalizeMonthValue(month) || new Date().toISOString().slice(0,7);
+  const rows=consolidateLocalPaymentRows(items).filter(r=>normalizeMonthValue(r.month)===controlMonth);
+  const byMember=new Map(rows.map(r=>[normalizeMemberKey(r.memberId||r.name), r]));
+  localPaymentMemberDefinitions().forEach(m=>{
+    if(!byMember.has(m.id)) byMember.set(m.id, localPaymentSeedRow(controlMonth, m.id));
+  });
+  return consolidateLocalPaymentRows([...byMember.values()]);
+}
+function ensureLocalPaymentsForMonth(month){
+  const controlMonth=normalizeMonthValue(month) || new Date().toISOString().slice(0,7);
+  const all=consolidateLocalPaymentRows(db.localPayments || []);
+  const others=all.filter(r=>normalizeMonthValue(r.month)!==controlMonth);
+  const monthRows=completeLocalPaymentMonth(all, controlMonth);
+  db.localPayments=mergeLocalPaymentRows(others, monthRows);
+  return monthRows;
+}
 
 const GOOGLE_SHEET_MASTER = {
   spreadsheetId: '1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q',
@@ -877,7 +994,8 @@ function pushSheetRow(action,row,opts={}){
     .then(payload=>{
       if(!payload || payload.ok===false) throw new Error(payload?.error || 'No se pudo guardar en Google Sheet.');
       sheetStatus('Guardado en Google Sheet maestro. Actualizando vista…','ok');
-      return syncCRMFromGoogleSheet({silent:true, afterWrite:true}).then(()=>payload);
+      const afterWrite = opts.afterWrite === 'local' ? syncLocalPaymentsFromGoogleSheet({silent:true, reason:'afterLocalWrite'}) : syncCRMFromGoogleSheet({silent:true, afterWrite:true});
+      return Promise.resolve(afterWrite).then(()=>payload);
     })
     .catch(err=>{
       sheetStatus('Guardado solo en este navegador. Falló Google Sheet: '+esc(err.message||err),'bad');
@@ -898,7 +1016,7 @@ function pushTaskToSheet(t){
 }
 
 function pushLocalPaymentToSheet(p){
-  return pushSheetRow('upsertLocalPayment', localPaymentToSheetRow(p));
+  return pushSheetRow('upsertLocalPayment', localPaymentToSheetRow(p), {afterWrite:'local'});
 }
 
 function alertSheetWriteError(err){
@@ -1116,15 +1234,20 @@ function applySetlistFromSheet(rows){
 }
 
 function mapLocalPaymentRow(row,i){
-  const memberRaw = pick(row,['ID Miembro','id_miembro','miembro_id','memberId','member_id']) || pick(row,['Nombre','nombre','miembro','name']);
-  const cuotaRaw = pick(row,['Cuota','cuota','importe','amount']);
-  const pagadoRaw = pick(row,['Pagado','pagado','paid','estado_pago','Estado pago']);
+  const memberRaw = pick(row,['ID Miembro','id_miembro','miembro_id','memberId','member_id']) || pick(row,['Nombre','nombre','miembro','name','Pagado por','pagado_por']);
+  const cuotaRaw = pick(row,['Cuota','cuota','importe','amount','Reparto por persona','reparto_por_persona']);
+  const totalRaw = pick(row,['Importe total','importe_total','Total','total']);
+  const participantesRaw = pick(row,['Participantes','participantes']);
+  const total = parseEuroValue(totalRaw);
+  const participantes = parseEuroValue(participantesRaw);
+  const pagadoRaw = pick(row,['Pagado','pagado','paid','estado_pago','Estado pago','Estado']);
+  const memberId = normalizeMemberKey(memberRaw);
   return {
-    id: Number(pick(row,['id','ID'])) || i+1,
+    id: pick(row,['ID','id']) || (normalizeMonthValue(pick(row,['Mes','mes','month']))+'|'+memberId) || (i+1),
     month: normalizeMonthValue(pick(row,['Mes','mes','month'])),
-    memberId: normalizeMemberKey(memberRaw),
-    name: memberDisplayName(memberRaw, pick(row,['Nombre','nombre','miembro','name'])),
-    amount: parseEuroValue(cuotaRaw),
+    memberId,
+    name: memberDisplayName(memberRaw, pick(row,['Nombre','nombre','miembro','name','Pagado por'])),
+    amount: parseEuroValue(cuotaRaw) || (total && participantes ? Math.round((total/participantes)*100)/100 : 0),
     paid: isPaymentPaid(pagadoRaw) ? 'SI' : 'NO',
     paidDate: pick(row,['Fecha pago','fecha_pago','paidDate']),
     updatedAt: pick(row,['Última actualización','actualizado_en','updatedAt']),
@@ -1133,10 +1256,22 @@ function mapLocalPaymentRow(row,i){
   };
 }
 function applyLocalPaymentsFromSheet(rows){
-  const mapped=rows.map(mapLocalPaymentRow);
-  const items=consolidateLocalPaymentRows(mapped);
-  if(items.length) db.localPayments=items;
-  return items.length;
+  const mapped=(rows||[]).map(mapLocalPaymentRow);
+  const incoming=consolidateLocalPaymentRows(mapped);
+  const currentMonth=new Date().toISOString().slice(0,7);
+  const months=[...new Set([currentMonth]
+    .concat((db.localPayments||[]).map(r=>normalizeMonthValue(r.month)).filter(Boolean))
+    .concat(incoming.map(r=>normalizeMonthValue(r.month)).filter(Boolean)))];
+
+  let merged=mergeLocalPaymentRows(db.localPayments || [], incoming);
+  months.forEach(month=>{
+    const others=merged.filter(r=>normalizeMonthValue(r.month)!==month);
+    const completed=completeLocalPaymentMonth(merged, month);
+    merged=mergeLocalPaymentRows(others, completed);
+  });
+
+  db.localPayments=merged;
+  return incoming.length || (db.localPayments||[]).filter(r=>normalizeMonthValue(r.month)===currentMonth).length;
 }
 function applyAllFromGoogleSheetPayload(payload){
   if(!payload || payload.ok===false) throw new Error(payload?.error || 'Respuesta no válida de Apps Script.');
@@ -1175,11 +1310,14 @@ function applyAllFromGoogleSheetPayload(payload){
 
   const formacionPayload = Array.isArray(payload?.data?.miembros) ? payload.data.miembros : (Array.isArray(payload?.data?.MIEMBROS?.rows) ? payload.data.MIEMBROS.rows : payload.formacion);
   if(Array.isArray(formacionPayload) && formacionPayload.length){
-    db.bandMembers=formacionPayload.map(m=>({
-      id: normalizeMemberKey(m.id || m.nombre || m.name || m.Miembro || m.Nombre),
-      name: m.nombre || m.name || '',
-      role: m.rol || m.role || m.instrumento || ''
-    })).filter(x=>x.name);
+    db.bandMembers=formacionPayload.map(m=>{
+      const name = m.nombre || m.Nombre || m.name || m.Miembro || m['Usuario app'] || '';
+      return {
+        id: normalizeMemberKey(name || m.id || m.ID),
+        name,
+        role: m.rol || m.Rol || m.role || m.instrumento || m['Rol artístico'] || m['Instrumento/voz'] || ''
+      };
+    }).filter(x=>x.name && BCB_FIXED_MEMBER_IDS.includes(normalizeMemberKey(x.name || x.id)));
   }
 
   if(false && Array.isArray(payload.formacion) && payload.formacion.length){
@@ -1240,6 +1378,35 @@ function applyRehearsalsOnlyPayload(payload){
     version: payload.version || db.sheetSync?.version || ''
   });
   return count;
+}
+
+async function syncLocalPaymentsFromGoogleSheet(opts={}){
+  const silent = !!opts.silent;
+  const staleGuard = !!opts.guard;
+  if(staleGuard && Date.now() - localPaymentLastSync < 20000) return true;
+  try{
+    sheetStatus('Actualizando pagos del local desde Google Sheet…');
+    const rows = await fetchSheetTabViaAppsScript('PAGOS_LOCAL', 500);
+    const count = applyLocalPaymentsFromSheet(rows);
+    localPaymentLastSync = Date.now();
+    saveData();
+    sheetStatus(`Pagos del local actualizados. Registros reales: ${count}. Vista mensual completa: ${localPaymentMemberDefinitions().length} miembros.`, 'ok');
+    if(!silent) alert(`Pagos del local actualizados. Vista mensual completa.`);
+    return true;
+  }catch(err){
+    localPaymentLastSync = Date.now();
+    ensureLocalPaymentsForMonth(new Date().toISOString().slice(0,7));
+    saveData();
+    sheetStatus('No se pudo actualizar PAGOS_LOCAL desde Google Sheet. Se mantiene la vista mensual completa en caché: '+esc(err.message||err), 'bad');
+    if(!silent) alert('No se pudo actualizar PAGOS_LOCAL: '+(err.message||err));
+    return false;
+  }
+}
+function ensureLocalPaymentsFreshOnOpen(){
+  const stale = Date.now() - localPaymentLastSync > 30000;
+  if(stale){
+    syncLocalPaymentsFromGoogleSheet({silent:true, guard:true});
+  }
 }
 
 async function syncRehearsalsFromGoogleSheet(opts={}){
@@ -1314,11 +1481,14 @@ function applyCoreSheetRows(tab, rows){
   if(tab === 'SETLISTS') count = applySetlistFromSheet(safeRows);
   if(tab === 'PAGOS_LOCAL') count = applyLocalPaymentsFromSheet(safeRows);
   if(tab === 'MIEMBROS' && safeRows.length){
-    db.bandMembers = safeRows.map(m=>({
-      id: normalizeMemberKey(m.id || m.ID || m.nombre || m.Nombre || m.name || m.Miembro),
-      name: m.nombre || m.Nombre || m.name || m.Miembro || '',
-      role: m.rol || m.Rol || m.role || m.instrumento || ''
-    })).filter(x=>x.name);
+    db.bandMembers = safeRows.map(m=>{
+      const name = m.nombre || m.Nombre || m.name || m.Miembro || m['Usuario app'] || '';
+      return {
+        id: normalizeMemberKey(name || m.id || m.ID),
+        name,
+        role: m.rol || m.Rol || m.role || m.instrumento || m['Rol artístico'] || m['Instrumento/voz'] || ''
+      };
+    }).filter(x=>x.name && BCB_FIXED_MEMBER_IDS.includes(normalizeMemberKey(x.name || x.id)));
     count = db.bandMembers.length;
   }
   return count || 0;
@@ -1484,7 +1654,7 @@ function setTab(id, opts={}){
   if(id==='followup') renderFollowup();
   if(id==='concerts') renderConcerts();
   if(id==='rehearsals') { renderRehearsals(); ensureRehearsalsFreshOnMobile(); }
-  if(id==='local') renderLocalPayments();
+  if(id==='local') { renderLocalPayments(); ensureLocalPaymentsFreshOnOpen(); }
   if(id==='budget') calcBudget();
   if(id==='repertoire') renderRepertoire();
   if(id==='setlist') renderSetlist();
@@ -1740,7 +1910,8 @@ function pushDeleteToSheet(arrName,id){
         throw new Error(payload.error || 'No se pudo borrar en Google Sheet.');
       }
       sheetStatus('Borrado en Google Sheet maestro. Actualizando vista…','ok');
-      return syncCRMFromGoogleSheet({silent:true, afterWrite:true}).then(()=>payload);
+      const afterWrite = opts.afterWrite === 'local' ? syncLocalPaymentsFromGoogleSheet({silent:true, reason:'afterLocalWrite'}) : syncCRMFromGoogleSheet({silent:true, afterWrite:true});
+      return Promise.resolve(afterWrite).then(()=>payload);
     });
 }
 
@@ -2108,32 +2279,14 @@ function renderLocalPayments(){
   const section=document.getElementById('local');
   if(!section)return;
 
-  db.localPayments = consolidateLocalPaymentRows(Array.isArray(db.localPayments) ? db.localPayments : []);
-  const rows=db.localPayments.slice();
   const currentMonth = new Date().toISOString().slice(0,7);
-  const months=[...new Set(rows.map(r=>normalizeMonthValue(r.month)).filter(Boolean))].sort().reverse();
+  db.localPayments = consolidateLocalPaymentRows(Array.isArray(db.localPayments) ? db.localPayments : []);
+  const months=[...new Set([currentMonth].concat((db.localPayments||[]).map(r=>normalizeMonthValue(r.month)).filter(Boolean)))].sort().reverse();
   const controlMonth = months.includes(currentMonth) ? currentMonth : (months[0] || currentMonth);
-  const allowed=['miguel','carmen','teo','alvaro','nataly','lord_enzo'];
 
-  let baseRows = consolidateLocalPaymentRows(rows.filter(r=>normalizeMonthValue(r.month)===controlMonth))
-    .filter(r=>allowed.includes(normalizeMemberKey(r.memberId || r.name)));
+  const baseRows = ensureLocalPaymentsForMonth(controlMonth);
 
-  const byMember=new Map();
-  baseRows.forEach(r=>{
-    const id=normalizeMemberKey(r.memberId || r.name);
-    if(!byMember.has(id)) byMember.set(id,r);
-    else{
-      const prev=byMember.get(id);
-      prev.paid=(isPaymentPaid(prev.paid)||isPaymentPaid(r.paid))?'SI':'NO';
-      prev.amount=prev.amount || r.amount;
-      prev.paidDate=prev.paidDate || r.paidDate;
-      prev.notes=mergeTextNotes(prev.notes,r.notes);
-    }
-  });
-  baseRows=[...byMember.values()];
-
-  const configAmount=parseEuroValue(db.localConfig?.monthlyAmount);
-  const monthlyAmount = configAmount || 217;
+  const monthlyAmount = localTotalAmount();
   const paidRaw = baseRows.filter(r=>isPaymentPaid(r.paid)).reduce((a,r)=>a+(parseEuroValue(r.amount)||0),0);
   const paid = Math.min(monthlyAmount, paidRaw);
   const pending = Math.max(0, monthlyAmount - paid);
@@ -2141,15 +2294,14 @@ function renderLocalPayments(){
   const kpis=document.getElementById('localKpis');
   if(kpis) kpis.innerHTML=[
     ['Mes control', controlMonth],
-    ['Cuotas', baseRows.length],
+    ['Miembros', baseRows.length],
     ['Total local', money2(monthlyAmount)],
     ['Pagado', money2(paid)],
     ['Pendiente', money2(pending)]
   ].map(k=>`<div class="card kpi"><strong>${esc(k[1])}</strong><span>${esc(k[0])}</span></div>`).join('');
 
   const tbody=document.querySelector('#localTable tbody');
-  const shownRows=baseRows.length ? baseRows : rows;
-  if(tbody) tbody.innerHTML=shownRows.map(r=>{
+  if(tbody) tbody.innerHTML=baseRows.map(r=>{
     const st=isPaymentPaid(r.paid)?'Pagado':'Pendiente';
     const memberId=normalizeMemberKey(r.memberId||r.name);
     return `<tr>
@@ -2161,23 +2313,35 @@ function renderLocalPayments(){
       <td>${esc(compact(r.notes||'',120))}</td>
       <td class="admin-only"><button class="mini" onclick="markLocalPayment('${esc(normalizeMonthValue(r.month)||controlMonth)}','${esc(memberId)}','SI')">Pagado</button> <button class="mini danger" onclick="markLocalPayment('${esc(normalizeMonthValue(r.month)||controlMonth)}','${esc(memberId)}','NO')">Pendiente</button></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="7" class="muted">No hay cuotas del local cargadas en PAGOS_LOCAL.</td></tr>';
+  }).join('') || '<tr><td colspan="7" class="muted">No hay cuotas del local cargadas.</td></tr>';
 }
 
 function markLocalPayment(month, memberId, paid){
+  const controlMonth=normalizeMonthValue(month)||new Date().toISOString().slice(0,7);
   const id=normalizeMemberKey(memberId);
-  const rows=consolidateLocalPaymentRows(db.localPayments||[]);
-  let item=rows.find(r=>normalizeMonthValue(r.month)===normalizeMonthValue(month) && normalizeMemberKey(r.memberId||r.name)===id);
+  ensureLocalPaymentsForMonth(controlMonth);
+
+  let item=(db.localPayments||[]).find(r=>normalizeMonthValue(r.month)===controlMonth && normalizeMemberKey(r.memberId||r.name)===id);
   if(!item){
-    item={month:normalizeMonthValue(month)||new Date().toISOString().slice(0,7), memberId:id, name:memberDisplayName(id), amount:36.17, paid:'NO', notes:''};
+    item=localPaymentSeedRow(controlMonth, id);
     db.localPayments.push(item);
   }
+
+  item.id = item.id || (controlMonth+'|'+id);
+  item.month=controlMonth;
+  item.memberId=id;
+  item.name=memberDisplayName(id);
+  item.amount=parseEuroValue(item.amount)||localMemberAmount();
   item.paid=paid==='SI'?'SI':'NO';
   item.paidDate=paid==='SI'?new Date().toISOString().slice(0,10):'';
+  item.updatedAt=new Date().toISOString();
   item.notes=mergeTextNotes(item.notes, paid==='SI'?'Marcado pagado desde APP-BCB':'Marcado pendiente desde APP-BCB');
+
+  db.localPayments=mergeLocalPaymentRows(db.localPayments||[], [item]);
   saveData();
+
   pushLocalPaymentToSheet(item)
-    .then(()=>sheetStatus('Pago local actualizado en Google Sheet.','ok'))
+    .then(()=>sheetStatus('Pago local actualizado en Google Sheet. La vista mantiene todos los miembros del mes.','ok'))
     .catch(alertSheetWriteError);
 }
 

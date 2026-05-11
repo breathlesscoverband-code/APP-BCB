@@ -1,0 +1,16 @@
+{
+  "version": "APP-BCB v3.2 final sync",
+  "band": "BCB",
+  "focus": "local payments stable, operational review",
+  "createdAt": "2026-05-11T09:56:37.718777+00:00",
+  "tests": [
+    "node --check js/app.js",
+    "node --check js/data.js",
+    "node --check js/admin-guard.js",
+    "node --check js/assets.js",
+    "node --check sw.js",
+    "local payment simulation: MIEMBROS M-001..M-006 -> fixed BCB roster",
+    "local payment simulation: one paid row -> six visible rows",
+    "local payment simulation: mark second member paid -> six visible rows retained"
+  ]
+}
