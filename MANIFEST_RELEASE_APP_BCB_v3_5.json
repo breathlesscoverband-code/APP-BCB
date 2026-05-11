@@ -1,0 +1,16 @@
+{
+  "app": "APP-BCB",
+  "band": "Breathless Cover Band",
+  "version": "APP-BCB v3.5 final sync",
+  "date": "2026-05-11",
+  "changes": [
+    "Corrección vocal: solo Miguel y Carmen cantan en BCB.",
+    "Teo queda como guitarra solista, no como cantante.",
+    "El módulo Canciones/Repertorio ya no muestra Tono Teo ni Propuesta Teo.",
+    "Los desplegables de voz quedan limitados a Miguel, Carmen, Ambos y Por decidir.",
+    "Se incluye script repararVocesBCB para limpiar Google Sheet si quedó Tono Teo o Teo en columnas de voz.",
+    "Se incluye BCB_Tonalidades_Setlist_v2_SOLO_MIGUEL_CARMEN.xlsx sin columna Tono Teo."
+  ],
+  "sheet": "1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q",
+  "note": "No inventar nuevos cantantes. Si una canción no está asignada a Miguel o Carmen, usar Por decidir."
+}

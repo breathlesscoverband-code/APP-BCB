@@ -1,6 +1,6 @@
 /**
  * APP-BCB Bridge — Breathless Cover Band
- * Version: APP-BCB v3.4 final sync · tonalidades BCB
+ * Version: APP-BCB v3.5 final sync · voces BCB
  *
  * Fuente principal: Google Sheet maestro BCB.
  * App GitHub Pages / PWA.
@@ -19,7 +19,7 @@
  * No usar endpoint ni Sheet de otra banda.
  */
 
-const APP_VERSION = 'APP-BCB v3.4 final sync';
+const APP_VERSION = 'APP-BCB v3.5 final sync';
 const BAND = 'BCB';
 const BAND_NAME = 'Breathless Cover Band';
 const SHEET_ID = '1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q';
@@ -64,7 +64,7 @@ const SCHEMA = {
   RESPUESTAS_GMAIL: ['ID','Fecha','Remitente','Asunto','Resumen','Estado','CRM ID','Notas'],
   CONCIERTOS: ['ID','Fecha','Hora','Sala / Evento','sala_lugar','ciudad','tipo','estado','Caché','anticipo','cobrado','sonido','contacto_id','cartel_url','cartel_thumb_url','cartel_titulo','notas_publicas','notas_produccion','asistencia_miguel','asistencia_carmen','asistencia_teo','asistencia_alvaro','asistencia_nataly','asistencia_lord_enzo','actualizado_en'],
   ENSAYOS: ['ID','Fecha','hora_inicio','hora_fin','Lugar','estado','objetivo','todos_los_temas','temas_ids','temas_texto','Notas','asistencia_miguel','asistencia_carmen','asistencia_teo','asistencia_alvaro','asistencia_nataly','asistencia_lord_enzo','actualizado_en'],
-  REPERTORIO: ['ID','Orden','Canción','Artista / referencia','Idioma','Voz principal','Duración','Tempo / Energía','Tonalidad','Estado','Bloque sugerido','Fuente','Notas','Referencia concreta','Voz asignada','Duración directo','Duración original','Estado duración','Tono visible','Tono original','Tono actual banda','Tono propuesto ensayo','Estado tonalidad','Tono Miguel','Tono Carmen','Tono Teo','Notas transporte','Cejilla / capo','BPM','Playlist Spotify','Spotify tema','YouTube','Enlace acordes/letra','Estructura','Letra/acordes/tablatura','Notas interpretación/letra','Fuente / validación','Notas internas'],
+  REPERTORIO: ['ID','Orden','Canción','Artista / referencia','Idioma','Voz principal','Duración','Tempo / Energía','Tonalidad','Estado','Bloque sugerido','Fuente','Notas','Referencia concreta','Voz asignada','Duración directo','Duración original','Estado duración','Tono visible','Tono original','Tono actual banda','Tono propuesto ensayo','Estado tonalidad','Tono Miguel','Tono Carmen','Tono guitarra / referencia','Notas transporte','Cejilla / capo','BPM','Playlist Spotify','Spotify tema','YouTube','Enlace acordes/letra','Estructura','Letra/acordes/tablatura','Notas interpretación/letra','Fuente / validación','Notas internas'],
   SETLISTS: ['ID','Setlist ID','Orden','Título','Voz','Tono','Duración','Bloque','Notas'],
   MIEMBROS: ['ID','Nombre','Rol','Email','Teléfono','Estado','Notas'],
   TAREAS: ['ID','Tarea','Responsable','Fecha','Estado','Prioridad','Área','Notas','actualizado_en'],
@@ -627,7 +627,7 @@ function importarTonalidadesBCB_(write) {
   const headersToEnsure = [
     'ID','Orden','Canción','Artista / referencia','Voz principal','Duración','Tonalidad','Estado','Bloque sugerido','Notas',
     'Referencia concreta','Voz asignada','Duración directo','Duración original','Estado duración','Tono visible',
-    'Tono original','Tono actual banda','Tono propuesto ensayo','Estado tonalidad','Tono Miguel','Tono Carmen','Tono Teo',
+    'Tono original','Tono actual banda','Tono propuesto ensayo','Estado tonalidad','Tono Miguel','Tono Carmen','Tono guitarra / referencia',
     'Notas transporte','Cejilla / capo','BPM','Playlist Spotify','Spotify tema','YouTube','Enlace acordes/letra',
     'Estructura','Letra/acordes/tablatura','Notas interpretación/letra','Fuente / validación','Notas internas'
   ];
@@ -678,7 +678,7 @@ function importarTonalidadesBCB_(write) {
     'Estado tonalidad':'Estado tonalidad',
     'Tono Miguel':'Tono Miguel',
     'Tono Carmen':'Tono Carmen',
-    'Tono Teo':'Tono Teo',
+    'Tono guitarra / referencia':'Tono guitarra / referencia',
     'Notas transporte':'Notas transporte',
     'Cejilla / capo':'Cejilla / capo',
     'BPM':'BPM',
@@ -746,3 +746,143 @@ function backupSheet_(ss, sheet, baseName) {
   ss.setActiveSheet(sheet);
   return name;
 }
+
+
+
+/**
+ * APP-BCB v3.5 — Reparación de voces.
+ * Regla real BCB: solo cantan Miguel y Carmen. Teo no canta; Teo = guitarra solista.
+ * Ejecutar una vez si el Sheet tiene columnas o valores heredados de una importación anterior.
+ */
+function previewRepararVocesBCB() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const report = {
+    band: BAND,
+    version: APP_VERSION,
+    rule: 'Solo cantan Miguel y Carmen. Teo no canta.',
+    checkedTabs: [],
+    teoVoiceCells: 0,
+    teoToneHeaders: 0,
+    membersChecked: 0
+  };
+
+  ['REPERTORIO','IMPORT_REPERTORIO_TONALIDADES_BCB'].forEach(function(tabName){
+    const sh = ss.getSheetByName(tabName);
+    if (!sh) return;
+    const values = sh.getDataRange().getValues();
+    if (!values.length) return;
+    const headers = values[0].map(String);
+    const voiceCols = [];
+    headers.forEach(function(h, idx){
+      const n = String(h).toLowerCase();
+      if (n.includes('voz') || n.includes('cantante')) voiceCols.push(idx);
+      if (String(h).trim().toLowerCase() === 'tono teo') report.teoToneHeaders++;
+    });
+    for (let r=1; r<values.length; r++){
+      voiceCols.forEach(function(c){
+        if (String(values[r][c] || '').toLowerCase().includes('teo')) report.teoVoiceCells++;
+      });
+    }
+    report.checkedTabs.push({tab: tabName, rows: Math.max(values.length-1,0), voiceColumns: voiceCols.length});
+  });
+
+  const miembros = ss.getSheetByName('MIEMBROS');
+  if (miembros) report.membersChecked = Math.max(miembros.getLastRow()-1,0);
+
+  return report;
+}
+
+function repararVocesBCB() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd_HHmmss');
+  const log = {
+    band: BAND,
+    version: APP_VERSION,
+    action: 'repararVocesBCB',
+    timestamp: new Date().toISOString(),
+    renamedHeaders: [],
+    correctedVoiceCells: [],
+    correctedMembers: []
+  };
+
+  ['REPERTORIO','IMPORT_REPERTORIO_TONALIDADES_BCB'].forEach(function(tabName){
+    const sh = ss.getSheetByName(tabName);
+    if (!sh) return;
+
+    // Backup visual de la pestaña antes de tocarla.
+    sh.copyTo(ss).setName('BACKUP_' + tabName.substring(0, 18) + '_VOCES_' + stamp);
+
+    const range = sh.getDataRange();
+    const values = range.getValues();
+    if (!values.length) return;
+
+    const headers = values[0].map(String);
+    const voiceCols = [];
+    headers.forEach(function(h, idx){
+      const normalized = String(h).trim().toLowerCase();
+      if (normalized === 'tono teo') {
+        values[0][idx] = 'Tono guitarra / referencia';
+        log.renamedHeaders.push({tab: tabName, from: 'Tono Teo', to: 'Tono guitarra / referencia', column: idx + 1});
+      }
+      const voiceName = normalized.includes('voz') || normalized.includes('cantante');
+      if (voiceName) voiceCols.push(idx);
+    });
+
+    for (let r=1; r<values.length; r++){
+      voiceCols.forEach(function(c){
+        const current = String(values[r][c] || '').trim();
+        if (current.toLowerCase().includes('teo')) {
+          values[r][c] = 'Por decidir';
+          log.correctedVoiceCells.push({tab: tabName, row: r + 1, column: c + 1, old: current, new: 'Por decidir'});
+        }
+      });
+    }
+
+    range.setValues(values);
+
+    // Validaciones de voz si existen columnas de voz.
+    const rule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['Miguel','Carmen','Ambos','Por decidir'], true)
+      .setAllowInvalid(false)
+      .build();
+    voiceCols.forEach(function(c){
+      if (sh.getLastRow() > 1) sh.getRange(2, c + 1, sh.getLastRow() - 1, 1).setDataValidation(rule);
+    });
+  });
+
+  const miembros = ss.getSheetByName('MIEMBROS');
+  if (miembros) {
+    const range = miembros.getDataRange();
+    const values = range.getValues();
+    if (values.length) {
+      const headers = values[0].map(function(h){ return String(h).trim().toLowerCase(); });
+      const nameCol = Math.max(headers.indexOf('nombre'), headers.indexOf('name'));
+      const roleCol = Math.max(headers.indexOf('rol'), headers.indexOf('role'), headers.indexOf('instrumento'));
+      if (nameCol >= 0 && roleCol >= 0) {
+        for (let r=1; r<values.length; r++){
+          const name = String(values[r][nameCol] || '').trim().toLowerCase();
+          let target = '';
+          if (name === 'miguel') target = 'Voz / administrador';
+          if (name === 'carmen') target = 'Voz';
+          if (name === 'teo') target = 'Guitarra solista';
+          if (name === 'álvaro' || name === 'alvaro') target = 'Guitarra rítmica';
+          if (name === 'nataly') target = 'Bajista';
+          if (name === 'lord enzo' || name === 'lorenzo') target = 'Batería';
+          if (target && values[r][roleCol] !== target) {
+            log.correctedMembers.push({row: r + 1, name: values[r][nameCol], old: values[r][roleCol], new: target});
+            values[r][roleCol] = target;
+          }
+        }
+        range.setValues(values);
+      }
+    }
+  }
+
+  try {
+    const logSh = ss.getSheetByName('LOG_APP_BCB') || ss.insertSheet('LOG_APP_BCB');
+    logSh.appendRow([new Date(), 'repararVocesBCB', JSON.stringify(log)]);
+  } catch (e) {}
+
+  return log;
+}
+

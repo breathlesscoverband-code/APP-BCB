@@ -1,7 +1,7 @@
-const APP_BCB_APP_VERSION = '3.4.0-final-sync-tonalidades-bcb';
-const STORE_KEY = 'app_bcb_control_pro_v34_tonalidades_bcb';
+const APP_BCB_APP_VERSION = '3.5.0-final-sync-voces-bcb';
+const STORE_KEY = 'app_bcb_control_pro_v35_voces_bcb';
 const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_mobile_sheet_lite','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro','app_bcb_control_pro_v8_mobile_sheet_lite','app_bcb_control_pro_v7_mobile_sheet_jsonp','app_bcb_control_pro_v6_sheet_master_v20','app_bcb_control_pro_v5_sheet_master','app_bcb_control_pro_v4_sheet_first','app_bcb_control_pro_v3','app_bcb_control_pro_v2','app_bcb_control_pro'];
 let db = loadData();
 let filteredCRM = [];
 let rehearsalSyncRunning = false;
@@ -111,7 +111,6 @@ function migrateData(data){
     keyStatus: '',
     keyMiguel: '',
     keyCarmen: '',
-    keyTeo: '',
     transposeNotes: '',
     capo: '',
     bpm: '',
@@ -359,6 +358,17 @@ function memberDisplayName(id, fallback=''){
   const key=normalizeMemberKey(id||fallback);
   const map={miguel:'Miguel',carmen:'Carmen',teo:'Teo',alvaro:'Álvaro',nataly:'Nataly',lord_enzo:'Lord Enzo'};
   return map[key] || fallback || id || '';
+}
+function cleanBCBLeadVocal(v){
+  const s=String(v||'').trim();
+  const n=norm(s);
+  if(!s) return 'Por decidir';
+  if(n.includes('teo')) return 'Por decidir';
+  if(n.includes('miguel')&&n.includes('carmen')) return 'Ambos';
+  if(n.includes('ambos')) return 'Ambos';
+  if(n.includes('miguel')) return 'Miguel';
+  if(n.includes('carmen')) return 'Carmen';
+  return s;
 }
 function isPaymentPaid(v){
   const x=norm(v).replace(/\./g,'').trim();
@@ -1258,7 +1268,6 @@ function mapSongRow(row,i){
     keyStatus: pick(row,['keyStatus','estado_tono','Estado tono','Estado tonalidad']) || 'Google Sheet',
     keyMiguel: pick(row,['tono_propuesto_miguel','Tono propuesto Miguel','Tono Miguel','keyMiguel']),
     keyCarmen: pick(row,['tono_propuesto_carmen','Tono propuesto Carmen','Tono Carmen','keyCarmen']),
-    keyTeo: pick(row,['tono_propuesto_teo','Tono propuesto Teo','Tono Teo','tono_guitarra','Tono guitarra','keyTeo']),
     transposeNotes,
     capo: pick(row,['capo','Capo','cejilla','Cejilla','Cejilla / capo']),
     bpm: pick(row,['bpm','BPM']),
@@ -2609,7 +2618,7 @@ function repertoireFiltered(){
       s.title,s.titleCanonical,s.artist,s.versionReference,s.singer,s.leadVocal,
       s.duration,s.durationLive,s.durationOriginal,s.durationStatus,
       s.tone,s.originalKey,s.currentKey,s.rehearsalKey,s.keyStatus,
-      s.keyMiguel,s.keyCarmen,s.keyTeo,s.transposeNotes,s.capo,s.bpm,
+      s.keyMiguel,s.keyCarmen,s.transposeNotes,s.capo,s.bpm,
       s.block,s.status,s.spotifyPlaylistUrl,s.spotifyUrl,s.youtubeUrl,s.chordsUrl,
       s.chordsText,s.structure,s.lyricsNotes,s.notes,s.sourceNotes
     ].join(' ');
@@ -2648,7 +2657,7 @@ function renderRepertoire(){
     <td>${esc(s.singer||s.leadVocal||'—')}</td>
     <td>${esc(s.durationLive||s.duration||'—')}<br><small>${esc(s.durationStatus||'')}</small></td>
     <td>${esc(s.currentKey||s.tone||'—')}<br><small>${esc(s.keyStatus||'')}</small></td>
-    <td><small>Miguel</small> ${esc(s.keyMiguel||'—')}<br><small>Carmen</small> ${esc(s.keyCarmen||'—')}<br><small>Teo</small> ${esc(s.keyTeo||'—')}</td>
+    <td><small>Miguel</small> ${esc(s.keyMiguel||'—')}<br><small>Carmen</small> ${esc(s.keyCarmen||'—')}</td>
     <td>${esc(s.block||'—')}</td>
     <td>${badge(s.status||'—')}</td>
     <td>${songLinkButtons(s)}</td>
@@ -2677,7 +2686,6 @@ function songFields(){return [
   ['keyStatus','Estado tonalidad','select','', ['Confirmada','Provisional','Pendiente de reconstrucción','Pendiente validar']],
   ['keyMiguel','Tono propuesto Miguel','text'],
   ['keyCarmen','Tono propuesto Carmen','text'],
-  ['keyTeo','Tono apoyo guitarra / Teo','text'],
   ['transposeNotes','Notas de transporte / criterio vocal','textarea','span4'],
   ['capo','Cejilla / capo','text'],
   ['bpm','BPM','text'],
@@ -2716,7 +2724,6 @@ function viewSongModal(id){
       <div class="detailItem"><small>Tono propuesto ensayo</small><div>${esc(s.rehearsalKey||'—')}</div></div>
       <div class="detailItem"><small>Propuesta Miguel</small><div>${esc(s.keyMiguel||'—')}</div></div>
       <div class="detailItem"><small>Propuesta Carmen</small><div>${esc(s.keyCarmen||'—')}</div></div>
-      <div class="detailItem"><small>Propuesta Teo</small><div>${esc(s.keyTeo||'—')}</div></div>
       <div class="detailItem"><small>Bloque / estado</small><div>${esc(s.block||'—')} · ${esc(s.status||'—')}</div></div>
     </div>
     <div class="hr"></div>
@@ -2767,7 +2774,6 @@ function repertoireHeaders(){return [
   {label:'Estado tonalidad',key:'keyStatus'},
   {label:'Tono Miguel',key:'keyMiguel'},
   {label:'Tono Carmen',key:'keyCarmen'},
-  {label:'Tono Teo',key:'keyTeo'},
   {label:'Notas transporte',key:'transposeNotes'},
   {label:'Cejilla / capo',key:'capo'},
   {label:'BPM',key:'bpm'},

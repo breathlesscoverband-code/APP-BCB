@@ -28,7 +28,7 @@ function importarTonalidadesBCB_(write) {
   const headersToEnsure = [
     'ID','Orden','Canción','Artista / referencia','Voz principal','Duración','Tonalidad','Estado','Bloque sugerido','Notas',
     'Referencia concreta','Voz asignada','Duración directo','Duración original','Estado duración','Tono visible',
-    'Tono original','Tono actual banda','Tono propuesto ensayo','Estado tonalidad','Tono Miguel','Tono Carmen','Tono Teo',
+    'Tono original','Tono actual banda','Tono propuesto ensayo','Estado tonalidad','Tono Miguel','Tono Carmen','Tono guitarra / referencia',
     'Notas transporte','Cejilla / capo','BPM','Playlist Spotify','Spotify tema','YouTube','Enlace acordes/letra',
     'Estructura','Letra/acordes/tablatura','Notas interpretación/letra','Fuente / validación','Notas internas'
   ];
@@ -79,7 +79,7 @@ function importarTonalidadesBCB_(write) {
     'Estado tonalidad':'Estado tonalidad',
     'Tono Miguel':'Tono Miguel',
     'Tono Carmen':'Tono Carmen',
-    'Tono Teo':'Tono Teo',
+    'Tono guitarra / referencia':'Tono guitarra / referencia',
     'Notas transporte':'Notas transporte',
     'Cejilla / capo':'Cejilla / capo',
     'BPM':'BPM',
