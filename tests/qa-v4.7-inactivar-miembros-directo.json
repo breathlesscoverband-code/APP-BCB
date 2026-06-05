@@ -1,0 +1,21 @@
+{
+  "version": "APP-BCB v4.7 final sync",
+  "focus": "Miembros: botón Inactivar/Reactivar",
+  "changes": [
+    "pushMemberToSheet ya no usa JSONP ni iframe para MIEMBROS",
+    "Inactivar/reactivar usa GET mínimo action=memberSimple",
+    "Apps Script incluye doGet action=membersimple y setmemberactive",
+    "La app verifica leyendo MIEMBROS desde Google Sheet directo antes de cambiar la vista local"
+  ],
+  "static_checks": {
+    "js/app.js": "OK",
+    "js/data.js": "OK",
+    "js/assets.js": "OK",
+    "js/admin-guard.js": "OK",
+    "sw.js": "OK",
+    "apps-script/Code.gs": "node:internal/modules/esm/get_format:219\n  throw new ERR_UNKNOWN_FILE_EXTENSION(ext, filepath);\n        ^\n\nTypeError [ERR_UNKNOWN_FILE_EXTENSION]: Unknown file extension \".gs\" for /mnt/data/build_v47/apps-script/Code.gs\n\u001b[90m    at Object.getFileProtocolModuleFormat [as file:] (node:internal/modules/esm/get_format:219:9)\u001b[39m\n\u001b[90m    at defaultGetFormat (node:internal/modules/esm/get_format:245:36)\u001b[39m\n\u001b[90m    at checkSyntax (node:internal/main/check_syntax:69:20)\u001b[39m {\n  code: \u001b[32m'ERR_UNKNOWN_FILE_EXTENSION'\u001b[39m\n}\n\nNode.js v22.16.0\n"
+  },
+  "notes": [
+    "No se puede ejecutar contra la cuenta Google del usuario desde el entorno, pero se validó sintaxis y rutas internas."
+  ]
+}

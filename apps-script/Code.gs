@@ -1,6 +1,6 @@
 /**
  * APP-BCB Bridge — Breathless Cover Band
- * Version: APP-BCB v4.6 final sync · miembros fire-and-verify estable
+ * Version: APP-BCB v4.8 final sync · miembros confirmación Apps Script
  *
  * Fuente principal: Google Sheet maestro BCB.
  * App GitHub Pages / PWA.
@@ -23,7 +23,7 @@
  * No usar endpoint ni Sheet de otra banda.
  */
 
-const APP_VERSION = 'APP-BCB v4.6 final sync';
+const APP_VERSION = 'APP-BCB v4.8 final sync';
 const BAND = 'BCB';
 const BAND_NAME = 'Breathless Cover Band';
 const SHEET_ID = '1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q';
@@ -107,6 +107,7 @@ function doGet(e) {
     if (action === 'upsertlocalmonth') return jsonOrJsonp_(upsertLocalMonth_(rowsFromParam_(params), params.key), params.callback);
     if (action === 'upsertrepertoire') return jsonOrJsonp_(upsertRepertoire_(rowFromParam_(params), params.key), params.callback);
     if (action === 'upsertmember') return jsonOrJsonp_(upsertMember_(rowFromParam_(params), params.key), params.callback);
+    if (action === 'membersimple' || action === 'setmemberactive') return jsonOrJsonp_(upsertMemberSimple_(params, params.key), params.callback);
     if (action === 'deleterow') return jsonOrJsonp_(deleteRowByIdGet_(params.tab, params.id, params.key, params.rowIndex), params.callback);
 
     return jsonOrJsonp_({ ok: false, error: 'Acción no reconocida: ' + action, version: APP_VERSION }, params.callback);
@@ -134,6 +135,7 @@ function iframePayload_(params) {
   if (action === 'upsertlocalmonth') return upsertLocalMonth_(rowsFromParam_(params), params.key);
   if (action === 'upsertrepertoire') return upsertRepertoire_(rowFromParam_(params), params.key);
   if (action === 'upsertmember') return upsertMember_(rowFromParam_(params), params.key);
+  if (action === 'membersimple' || action === 'setmemberactive') return upsertMemberSimple_(params, params.key);
   if (action === 'deleterow') return deleteRowByIdGet_(params.tab, params.id, params.key, params.rowIndex);
 
   return { ok: false, error: 'Acción iframe no reconocida: ' + action, version: APP_VERSION };
@@ -214,6 +216,7 @@ function handleWriteAction_(body) {
   if (action === 'upsertlocalmonth') return upsertLocalMonth_(rowsFromParam_(body), body.key || body.adminKey);
   if (action === 'upsertrepertoire') return upsertRepertoire_(rowFromParam_(body), body.key || body.adminKey);
   if (action === 'upsertmember') return upsertMember_(rowFromParam_(body), body.key || body.adminKey);
+  if (action === 'membersimple' || action === 'setmemberactive') return upsertMemberSimple_(body, body.key || body.adminKey);
   if (action === 'deleterow') return deleteRowByIdGet_(body.tab, body.id, body.key || body.adminKey, body.rowIndex);
 
   return { ok: false, error: 'Acción POST no reconocida: ' + action, version: APP_VERSION };
@@ -495,6 +498,53 @@ function updateRowById_(tabName, id, data) {
 }
 
 
+
+
+function upsertMemberSimple_(params, key) {
+  if (!isAdminKey_(key)) return { ok: false, error: 'Clave admin incorrecta', version: APP_VERSION };
+  params = params || {};
+  var data = {
+    ID: valueForAny_(params, ['id','ID','memberId','miembroId']),
+    Nombre: valueForAny_(params, ['name','Nombre','nombre','memberName']),
+    Rol: valueForAny_(params, ['role','Rol','rol']),
+    Instrumento: valueForAny_(params, ['instrument','Instrumento','instrumento']),
+    Voz: valueForAny_(params, ['vocal','Voz','voz','canta']),
+    Admin: valueForAny_(params, ['admin','Admin']),
+    Activo: valueForAny_(params, ['active','Activo','estado']),
+    'Paga local': valueForAny_(params, ['payLocal','pagaLocal','Paga local','local']),
+    'Aparece ensayos': valueForAny_(params, ['showInRehearsals','apareceEnsayos','Aparece ensayos','ensayos']),
+    'Fecha alta': valueForAny_(params, ['joinDate','fechaAlta','Fecha alta']),
+    'Fecha inactividad': valueForAny_(params, ['inactiveDate','fechaInactividad','Fecha inactividad']),
+    Email: valueForAny_(params, ['email','Email']),
+    'Teléfono': valueForAny_(params, ['phone','telefono','Teléfono','Telefono']),
+    Notas: valueForAny_(params, ['notes','Notas','notas']),
+    actualizado_en: new Date().toISOString()
+  };
+
+  // Normalización específica si se usa acción corta setMemberActive.
+  var action = String(params.action || '').toLowerCase();
+  if (action === 'setmemberactive') {
+    var active = valueForAny_(params, ['active','Activo','estado']);
+    data.Activo = active || 'Sí';
+    if (String(data.Activo).toLowerCase() === 'no' || String(data.Activo).toLowerCase() === 'inactivo') {
+      data.Activo = 'No';
+      data['Paga local'] = valueForAny_(params, ['payLocal','pagaLocal','Paga local']) || 'No';
+      data['Aparece ensayos'] = valueForAny_(params, ['showInRehearsals','apareceEnsayos','Aparece ensayos']) || 'No';
+      data['Fecha inactividad'] = data['Fecha inactividad'] || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    } else {
+      data.Activo = 'Sí';
+      data['Paga local'] = valueForAny_(params, ['payLocal','pagaLocal','Paga local']) || 'Sí';
+      data['Aparece ensayos'] = valueForAny_(params, ['showInRehearsals','apareceEnsayos','Aparece ensayos']) || 'Sí';
+      data['Fecha inactividad'] = '';
+    }
+  }
+
+  data = normalizeMemberRow_(data);
+  var result = upsertMember_(data, key);
+  result.action = 'memberSimple';
+  result.member = data;
+  return result;
+}
 
 function upsertMember_(data, key) {
   if (!isAdminKey_(key)) return { ok: false, error: 'Clave admin incorrecta', version: APP_VERSION };

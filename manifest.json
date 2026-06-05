@@ -1,7 +1,7 @@
 {
   "name": "APP-BCB · Breathless Cover Band",
   "short_name": "APP-BCB",
-  "description": "App interna de Breathless Cover Band · v4.6 final sync miembros fire-and-verify estable",
+  "description": "App interna de Breathless Cover Band · v4.7 final sync inactivar miembros directo",
   "start_url": "./?v=46",
   "scope": "./",
   "display": "standalone",
