@@ -1,6 +1,6 @@
 /**
  * APP-BCB Bridge — Breathless Cover Band
- * Version: APP-BCB v4.1 final sync · aprendizajes ENHE
+ * Version: APP-BCB v4.2 final sync · miembros admin
  *
  * Fuente principal: Google Sheet maestro BCB.
  * App GitHub Pages / PWA.
@@ -17,12 +17,13 @@
  *   ?action=upsertLocalPayment&key=1929&row={...}
  *   ?action=upsertLocalMonth&key=1929&rows=[...]
  *   ?action=upsertRepertoire&key=1929&row={...}
+ *   ?action=upsertMember&key=1929&row={...}
  *   ?action=deleteRow&key=1929&tab=REPERTORIO&id=...&rowIndex=...
  *
  * No usar endpoint ni Sheet de otra banda.
  */
 
-const APP_VERSION = 'APP-BCB v4.1 final sync';
+const APP_VERSION = 'APP-BCB v4.2 final sync';
 const BAND = 'BCB';
 const BAND_NAME = 'Breathless Cover Band';
 const SHEET_ID = '1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q';
@@ -69,7 +70,7 @@ const SCHEMA = {
   ENSAYOS: ['ID','Fecha','hora_inicio','hora_fin','Lugar','estado','objetivo','todos_los_temas','temas_ids','temas_texto','Notas','asistencia_miguel','asistencia_carmen','asistencia_teo','asistencia_alvaro','asistencia_nataly','asistencia_lord_enzo','actualizado_en'],
   REPERTORIO: ['ID','Orden','Canción','Artista / referencia','Idioma','Voz principal','Duración','Tempo / Energía','Tonalidad','Estado','Bloque sugerido','Fuente','Notas','Referencia concreta','Voz asignada','Duración directo','Duración original','Estado duración','Tono visible','Tono original','Tono actual banda','Tono propuesto ensayo','Estado tonalidad','Tono Miguel','Tono Carmen','Tono guitarra / referencia','Notas transporte','Cejilla / capo','BPM','Playlist Spotify','Spotify tema','YouTube','Enlace acordes/letra','Estructura','Letra/acordes/tablatura','Notas interpretación/letra','Fuente / validación','Notas internas'],
   SETLISTS: ['ID','Setlist ID','Orden','Título','Voz','Tono','Duración','Bloque','Notas'],
-  MIEMBROS: ['ID','Nombre','Rol','Email','Teléfono','Estado','Notas'],
+  MIEMBROS: ['ID','Nombre','Rol','Instrumento','Voz','Admin','Activo','Paga local','Aparece ensayos','Fecha alta','Fecha inactividad','Email','Teléfono','Notas','actualizado_en'],
   TAREAS: ['ID','Tarea','Responsable','Fecha','Estado','Prioridad','Área','Notas','actualizado_en'],
   PLANTILLAS_DOSSIER: ['ID','Tipo','Uso','Texto','Estado'],
   CONFIG_GRUPO: ['Campo','Valor','Notas'],
@@ -105,6 +106,7 @@ function doGet(e) {
     if (action === 'upsertlocalpayment') return jsonOrJsonp_(upsertLocalPayment_(rowFromParam_(params), params.key), params.callback);
     if (action === 'upsertlocalmonth') return jsonOrJsonp_(upsertLocalMonth_(rowsFromParam_(params), params.key), params.callback);
     if (action === 'upsertrepertoire') return jsonOrJsonp_(upsertRepertoire_(rowFromParam_(params), params.key), params.callback);
+    if (action === 'upsertmember') return jsonOrJsonp_(upsertMember_(rowFromParam_(params), params.key), params.callback);
     if (action === 'deleterow') return jsonOrJsonp_(deleteRowByIdGet_(params.tab, params.id, params.key, params.rowIndex), params.callback);
 
     return jsonOrJsonp_({ ok: false, error: 'Acción no reconocida: ' + action, version: APP_VERSION }, params.callback);
@@ -131,6 +133,7 @@ function iframePayload_(params) {
   if (action === 'upsertlocalpayment') return upsertLocalPayment_(rowFromParam_(params), params.key);
   if (action === 'upsertlocalmonth') return upsertLocalMonth_(rowsFromParam_(params), params.key);
   if (action === 'upsertrepertoire') return upsertRepertoire_(rowFromParam_(params), params.key);
+  if (action === 'upsertmember') return upsertMember_(rowFromParam_(params), params.key);
   if (action === 'deleterow') return deleteRowByIdGet_(params.tab, params.id, params.key, params.rowIndex);
 
   return { ok: false, error: 'Acción iframe no reconocida: ' + action, version: APP_VERSION };
@@ -443,6 +446,72 @@ function updateRowById_(tabName, id, data) {
   sheet.getRange(found.rowIndex, 1, 1, info.headers.length).setValues([rowValues]);
   logAction_('update', tabName, String(id));
   return { ok: true, action: 'update', tab: tabName, id: String(id), updated: data, version: APP_VERSION };
+}
+
+
+
+function upsertMember_(data, key) {
+  if (!isAdminKey_(key)) return { ok: false, error: 'Clave admin incorrecta', version: APP_VERSION };
+  data = normalizeMemberRow_(data);
+  validateTabAndData_('MIEMBROS', data);
+  const sheet = getSheetOrCreate_('MIEMBROS');
+  const info = ensureHeaderRow_(sheet, 'MIEMBROS', Object.keys(data));
+  const id = data.ID || data.id || '';
+  const foundById = id ? findRowById_(sheet, info, id) : { found:false };
+  if (foundById.found) {
+    updateRowAt_(sheet, info, foundById.rowIndex, data);
+    logAction_('upsertMember-update-id', 'MIEMBROS', id);
+    return { ok:true, action:'upsertMember', mode:'update-id', tab:'MIEMBROS', id:String(id), version:APP_VERSION };
+  }
+  const foundByName = findMemberRowByName_(sheet, info, data.Nombre || data.name || '');
+  if (foundByName.found) {
+    updateRowAt_(sheet, info, foundByName.rowIndex, data);
+    logAction_('upsertMember-update-name', 'MIEMBROS', id || data.Nombre);
+    return { ok:true, action:'upsertMember', mode:'update-name', tab:'MIEMBROS', id:String(id), version:APP_VERSION };
+  }
+  return appendRow_('MIEMBROS', data);
+}
+
+function findMemberRowByName_(sheet, info, name) {
+  const target = normalize_(name).replace(/[^a-z0-9]/g, '');
+  if (!target) return { found:false };
+  const headers = info.headers || [];
+  const nameIndex = headers.findIndex(h => ['nombre','name','miembro','usuarioapp'].indexOf(normalize_(h)) !== -1);
+  if (nameIndex === -1) return { found:false };
+  const startRow = info.headerRow + 1;
+  const lastRow = sheet.getLastRow();
+  if (startRow > lastRow) return { found:false };
+  const values = sheet.getRange(startRow, nameIndex + 1, lastRow - info.headerRow, 1).getDisplayValues().flat();
+  const offset = values.findIndex(v => normalize_(v).replace(/[^a-z0-9]/g, '') === target);
+  return offset === -1 ? { found:false } : { found:true, rowIndex:startRow + offset };
+}
+
+function normalizeMemberRow_(data) {
+  data = data || {};
+  const name = valueForAny_(data, ['Nombre','nombre','name','Miembro']) || '';
+  let id = valueForAny_(data, ['ID','id','Id']);
+  const nameKey = name ? normalizeMemberForKey_(name) : '';
+  const known = ['miguel','carmen','teo','alvaro','nataly','lord_enzo'];
+  if (nameKey && known.indexOf(nameKey) !== -1) id = nameKey;
+  if (!id && name) id = normalizeMemberForKey_(name);
+  if (!id) id = 'miembro_' + new Date().getTime();
+
+  data.ID = id;
+  data.Nombre = name || data.Nombre || '';
+  data.Rol = valueForAny_(data, ['Rol','role','rol','Instrumento']) || data.Rol || '';
+  data.Instrumento = valueForAny_(data, ['Instrumento','instrument','Instrumento/voz','Rol']) || data.Instrumento || data.Rol || '';
+  data.Voz = valueForAny_(data, ['Voz','vocal','Canta']) || data.Voz || 'No';
+  data.Admin = valueForAny_(data, ['Admin','Administrador']) || data.Admin || 'No';
+  data.Activo = valueForAny_(data, ['Activo','active','Estado']) || data.Activo || 'Sí';
+  data['Paga local'] = valueForAny_(data, ['Paga local','payLocal','pagaLocal','Local']) || data['Paga local'] || 'Sí';
+  data['Aparece ensayos'] = valueForAny_(data, ['Aparece ensayos','showInRehearsals','Ensayos']) || data['Aparece ensayos'] || 'Sí';
+  data['Fecha alta'] = valueForAny_(data, ['Fecha alta','joinDate','fecha_alta']) || data['Fecha alta'] || '';
+  data['Fecha inactividad'] = valueForAny_(data, ['Fecha inactividad','inactiveDate','fecha_inactividad']) || data['Fecha inactividad'] || '';
+  data.Email = valueForAny_(data, ['Email','email']) || data.Email || '';
+  data['Teléfono'] = valueForAny_(data, ['Teléfono','Telefono','phone']) || data['Teléfono'] || '';
+  data.Notas = valueForAny_(data, ['Notas','notes','notas']) || data.Notas || '';
+  data.actualizado_en = new Date().toISOString();
+  return data;
 }
 
 function upsertById_(tabName, data, key) {

@@ -1,7 +1,7 @@
-const APP_BCB_APP_VERSION = '4.1.0-final-sync-aprendizajes-enhe';
-const STORE_KEY = 'app_bcb_control_pro_v41_aprendizajes_enhe';
-const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v41';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
+const APP_BCB_APP_VERSION = '4.2.0-final-sync-miembros-admin';
+const STORE_KEY = 'app_bcb_control_pro_v42_miembros_admin';
+const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v42';
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v41_aprendizajes_enhe','app_bcb_google_sheet_snapshot_latest_v41','app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
 let db = loadData();
 let filteredCRM = [];
 let rehearsalSyncRunning = false;
@@ -13,17 +13,17 @@ let appBcbAutoSyncRunning = false;
 let appBcbRendering = false;
 let appBcbSaveQueued = false;
 const tabs = [
-  ['dashboard','Panel','●'],['crm','CRM','●'],['followup','Seguimiento','●'],['gmail','Gmail','●'],['concerts','Conciertos','●'],['rehearsals','Ensayos','●'],['local','Local ensayo','●'],
+  ['dashboard','Panel','●'],['crm','CRM','●'],['followup','Seguimiento','●'],['gmail','Gmail','●'],['concerts','Conciertos','●'],['rehearsals','Ensayos','●'],['local','Local ensayo','●'],['members','Miembros','●'],
   ['budget','Presupuesto','●'],['repertoire','Canciones','●'],['setlist','Setlist','●'],['dossier','Dossier','●'],['templates','Plantillas','●'],['tasks','Tareas','●'],['importExport','Exportar','●']
 ];
 
 const BCB_FIXED_MEMBERS = Object.freeze([
-  {id:'miguel',name:'Miguel',role:'Voz / administrador'},
-  {id:'carmen',name:'Carmen',role:'Voz'},
-  {id:'teo',name:'Teo',role:'Guitarra solista'},
-  {id:'alvaro',name:'Álvaro',role:'Guitarra rítmica'},
-  {id:'nataly',name:'Nataly',role:'Bajista'},
-  {id:'lord_enzo',name:'Lord Enzo',role:'Batería'}
+  {id:'miguel',name:'Miguel',role:'Voz / administrador', instrument:'Voz', vocal:'Sí', admin:'Sí', active:'Sí', payLocal:'Sí', showInRehearsals:'Sí', joinDate:'', inactiveDate:'', notes:'Administrador APP-BCB'},
+  {id:'carmen',name:'Carmen',role:'Voz', instrument:'Voz', vocal:'Sí', admin:'No', active:'Sí', payLocal:'Sí', showInRehearsals:'Sí', joinDate:'', inactiveDate:'', notes:''},
+  {id:'teo',name:'Teo',role:'Guitarra solista', instrument:'Guitarra solista', vocal:'No', admin:'No', active:'Sí', payLocal:'Sí', showInRehearsals:'Sí', joinDate:'', inactiveDate:'', notes:'No canta'},
+  {id:'alvaro',name:'Álvaro',role:'Guitarra rítmica', instrument:'Guitarra rítmica', vocal:'No', admin:'No', active:'Sí', payLocal:'Sí', showInRehearsals:'Sí', joinDate:'', inactiveDate:'', notes:''},
+  {id:'nataly',name:'Nataly',role:'Bajista', instrument:'Bajo', vocal:'No', admin:'No', active:'Sí', payLocal:'Sí', showInRehearsals:'Sí', joinDate:'', inactiveDate:'', notes:''},
+  {id:'lord_enzo',name:'Lord Enzo',role:'Batería', instrument:'Batería', vocal:'No', admin:'No', active:'Sí', payLocal:'Sí', showInRehearsals:'Sí', joinDate:'', inactiveDate:'', notes:''}
 ]);
 const BCB_FIXED_MEMBER_IDS = BCB_FIXED_MEMBERS.map(m=>m.id);
 
@@ -410,8 +410,62 @@ function normalizeMemberKey(v){
 }
 function memberDisplayName(id, fallback=''){
   const key=normalizeMemberKey(id||fallback);
+  const fromDb=(Array.isArray(db?.bandMembers)?db.bandMembers:[]).find(m=>normalizeMemberKey(m.id||m.name)===key);
+  if(fromDb && fromDb.name) return fromDb.name;
   const map={miguel:'Miguel',carmen:'Carmen',teo:'Teo',alvaro:'Álvaro',nataly:'Nataly',lord_enzo:'Lord Enzo'};
   return map[key] || fallback || id || '';
+}
+function yesNo(v, def='Sí'){
+  const s=norm(v);
+  if(!s) return def;
+  if(['no','n','false','0','inactivo','baja'].includes(s)) return 'No';
+  return 'Sí';
+}
+function memberIsActive(m){
+  const st=norm(m?.active ?? m?.Estado ?? m?.estado ?? m?.status ?? m?.EstadoMiembro ?? '');
+  if(['no','inactivo','baja','inactive','false','0'].includes(st)) return false;
+  return true;
+}
+function memberPaysLocal(m){
+  if(!memberIsActive(m)) return false;
+  return yesNo(m?.payLocal ?? m?.pagaLocal ?? m?.['Paga local'] ?? m?.local ?? 'Sí') === 'Sí';
+}
+function memberShowsInRehearsals(m){
+  if(!memberIsActive(m)) return false;
+  return yesNo(m?.showInRehearsals ?? m?.['Aparece ensayos'] ?? m?.ensayos ?? 'Sí') === 'Sí';
+}
+function normalizeMemberRecord(m, idx=0){
+  const name = String(m?.name || m?.Nombre || m?.nombre || m?.Miembro || '').trim();
+  const nameKey = normalizeMemberKey(name);
+  const idRaw = m?.id || m?.ID || m?.Id || name || ('miembro_'+idx);
+  const idKey = normalizeMemberKey(idRaw);
+  const id = BCB_FIXED_MEMBER_IDS.includes(nameKey) ? nameKey : (idKey || nameKey || ('miembro_'+idx));
+  const role = m?.role || m?.Rol || m?.rol || m?.instrument || m?.Instrumento || m?.['Instrumento/voz'] || '';
+  const instrument = m?.instrument || m?.Instrumento || role || '';
+  const vocalRaw = m?.vocal || m?.Voz || m?.voz || (norm(role).includes('voz')?'Sí':'No');
+  const active = yesNo(m?.active ?? m?.Activo ?? m?.Estado ?? m?.estado ?? 'Sí', 'Sí');
+  return {
+    id,
+    name: name || memberDisplayName(id, String(idRaw||'')),
+    role: role || instrument,
+    instrument,
+    vocal: norm(vocalRaw).includes('miguel')||norm(vocalRaw).includes('carmen')||yesNo(vocalRaw,'No')==='Sí' ? (yesNo(vocalRaw,'No')==='Sí'?'Sí':String(vocalRaw)) : 'No',
+    admin: yesNo(m?.admin ?? m?.Admin ?? m?.Administrador ?? (id==='miguel'?'Sí':'No'), id==='miguel'?'Sí':'No'),
+    active,
+    payLocal: yesNo(m?.payLocal ?? m?.['Paga local'] ?? m?.pagaLocal ?? 'Sí', 'Sí'),
+    showInRehearsals: yesNo(m?.showInRehearsals ?? m?.['Aparece ensayos'] ?? m?.ensayos ?? 'Sí', 'Sí'),
+    joinDate: m?.joinDate || m?.['Fecha alta'] || m?.fecha_alta || '',
+    inactiveDate: m?.inactiveDate || m?.['Fecha inactividad'] || m?.fecha_inactividad || '',
+    notes: m?.notes || m?.Notas || m?.notas || '',
+    sheetRow: m?.sheetRow || m?.__row || '',
+    raw: m?.raw || m || {}
+  };
+}
+function activeBandMembers(){
+  const src=(Array.isArray(db?.bandMembers) && db.bandMembers.length ? db.bandMembers : BCB_FIXED_MEMBERS).map(normalizeMemberRecord);
+  const byId=new Map();
+  src.forEach(m=>{ if(m.name) byId.set(normalizeMemberKey(m.id||m.name), m); });
+  return Array.from(byId.values()).filter(memberIsActive);
 }
 function cleanBCBLeadVocal(v){
   const s=String(v||'').trim();
@@ -436,24 +490,18 @@ function mergeTextNotes(a,b){
   return out.join(' | ');
 }
 function localPaymentMemberDefinitions(){
-  // APP-BCB v3.2:
-  // Los pagos del local NO dependen de lo que venga en MIEMBROS desde Google Sheet,
-  // porque allí los ID pueden ser M-001, M-002... y eso rompía la vista mensual.
-  // Para el local, la base fija son siempre los 6 miembros actuales de BCB.
-  const fixed = BCB_FIXED_MEMBERS.map(m=>Object.assign({}, m));
-  try{
-    const source = Array.isArray(db && db.bandMembers) ? db.bandMembers : [];
-    fixed.forEach(member=>{
-      const match = source.find(x=>normalizeMemberKey(x.name || x.Nombre || x.nombre || x.Miembro || x.id || x.ID) === member.id);
-      if(match && (match.role || match.Rol || match.rol || match['Rol artístico'] || match['Instrumento/voz'])){
-        member.role = match.role || match.Rol || match.rol || match['Rol artístico'] || match['Instrumento/voz'] || member.role;
-      }
-    });
-  }catch(e){}
-  return fixed;
+  // APP-BCB v4.2:
+  // El local usa la lista de MIEMBROS editable desde la app.
+  // Solo entran quienes estén Activos y con Paga local = Sí.
+  const source = (Array.isArray(db?.bandMembers) && db.bandMembers.length ? db.bandMembers : BCB_FIXED_MEMBERS)
+    .map(normalizeMemberRecord);
+  const members = source.filter(memberPaysLocal);
+  return members.length ? members : BCB_FIXED_MEMBERS.map(normalizeMemberRecord);
 }
 function localMemberOrder(){
-  return {miguel:1,carmen:2,teo:3,alvaro:4,nataly:5,lord_enzo:6};
+  const out={};
+  localPaymentMemberDefinitions().forEach((m,i)=>{out[normalizeMemberKey(m.id||m.name)] = i+1;});
+  return out;
 }
 function localTotalAmount(){
   try{
@@ -1317,6 +1365,27 @@ function localPaymentToSheetRow(patch){
     'Última actualización':new Date().toISOString()
   };
 }
+function memberToSheetRow(m){
+  const item=normalizeMemberRecord(m);
+  return {
+    ID:item.id,
+    Nombre:item.name,
+    Rol:item.role || item.instrument || '',
+    Instrumento:item.instrument || item.role || '',
+    Voz:item.vocal || 'No',
+    Admin:item.admin || 'No',
+    Activo:item.active || 'Sí',
+    'Paga local':item.payLocal || 'Sí',
+    'Aparece ensayos':item.showInRehearsals || 'Sí',
+    'Fecha alta':item.joinDate || '',
+    'Fecha inactividad':item.inactiveDate || '',
+    Email:item.email || '',
+    Teléfono:item.phone || '',
+    Notas:item.notes || '',
+    actualizado_en:new Date().toISOString()
+  };
+}
+
 function songToSheetRow(s){
   const voice = s.leadVocal || s.singer || '';
   const row = {
@@ -1401,6 +1470,7 @@ function pushSheetRow(action,row,opts={}){
       else if(opts.afterWrite === 'concerts') afterWrite = syncSingleSheetAfterWrite('CONCIERTOS');
       else if(opts.afterWrite === 'rehearsals') afterWrite = syncRehearsalsFromGoogleSheet({silent:true, reason:'afterRehearsalWrite'});
       else if(opts.afterWrite === 'tasks') afterWrite = syncSingleSheetAfterWrite('TAREAS');
+      else if(opts.afterWrite === 'members') afterWrite = syncSingleSheetAfterWrite('MIEMBROS');
       else if(opts.afterWrite === 'none') afterWrite = true;
       else afterWrite = syncCRMFromGoogleSheet({silent:true, afterWrite:true});
       return Promise.resolve(afterWrite).then(()=>payload);
@@ -1430,6 +1500,10 @@ function pushTaskToSheet(t){
 function pushLocalPaymentToSheet(p, opts={}){
   const options = Object.assign({afterWrite:'local'}, opts || {});
   return pushSheetRow('upsertLocalPayment', localPaymentToSheetRow(p), options);
+}
+
+function pushMemberToSheet(m){
+  return pushSheetRow('upsertMember', memberToSheetRow(m), {afterWrite:'members'});
 }
 
 function alertSheetWriteError(err){
@@ -2027,14 +2101,22 @@ function applyCoreSheetRows(tab, rows){
   if(tab === 'TAREAS') count = applyTasksFromSheet(safeRows);
   if(tab === 'RESPUESTAS_GMAIL') count = applyGmailResponsesFromSheet(safeRows);
   if(tab === 'MIEMBROS' && safeRows.length){
-    db.bandMembers = safeRows.map(m=>{
-      const name = m.nombre || m.Nombre || m.name || m.Miembro || m['Usuario app'] || '';
-      return {
-        id: normalizeMemberKey(name || m.id || m.ID),
-        name,
-        role: m.rol || m.Rol || m.role || m.instrumento || m['Rol artístico'] || m['Instrumento/voz'] || ''
-      };
-    }).filter(x=>x.name && BCB_FIXED_MEMBER_IDS.includes(normalizeMemberKey(x.name || x.id)));
+    db.bandMembers = safeRows.map((m,idx)=>normalizeMemberRecord({
+      id: pick(m,['ID','id','Id']) || pick(m,['App ID','app_id','ID interno']) || '',
+      name: pick(m,['Nombre','nombre','name','Miembro','Usuario app']) || '',
+      role: pick(m,['Rol','rol','role','Instrumento/voz','instrumento','Instrumento']) || '',
+      instrument: pick(m,['Instrumento','instrumento','Instrumento/voz','Rol']) || '',
+      vocal: pick(m,['Voz','voz','Vocal','Canta']) || '',
+      admin: pick(m,['Admin','Administrador','admin']) || '',
+      active: pick(m,['Activo','Estado','estado','active']) || 'Sí',
+      payLocal: pick(m,['Paga local','pagaLocal','payLocal','Local']) || 'Sí',
+      showInRehearsals: pick(m,['Aparece ensayos','showInRehearsals','Ensayos']) || 'Sí',
+      joinDate: pick(m,['Fecha alta','joinDate','fecha_alta']) || '',
+      inactiveDate: pick(m,['Fecha inactividad','inactiveDate','fecha_inactividad']) || '',
+      notes: pick(m,['Notas','notas','notes']) || '',
+      sheetRow: Number(m.sheetRow || m.__row || m.Fila || m['Nº fila']) || '',
+      raw:m
+    }, idx)).filter(x=>x.name);
     count = db.bandMembers.length;
   }
   return count || 0;
@@ -2276,6 +2358,7 @@ function renderShell(){
     `${(db.gmailResponses||[]).length} respuestas Gmail`,
     `${(db.rehearsals||[]).length} ensayos`,
     `${(db.localPayments||[]).length} pagos local`,
+    `${(db.bandMembers||[]).filter(memberIsActive).length} miembros activos`,
     `${(db.repertoire||[]).length} canciones`,
     `${setlistRows().length} temas setlist`,
     `${(db.templates||[]).length} plantillas`
@@ -2295,6 +2378,7 @@ function renderActiveTab(){
   else if(id==='concerts') renderConcerts();
   else if(id==='rehearsals') renderRehearsals();
   else if(id==='local') renderLocalPayments();
+  else if(id==='members') renderMembers();
   else if(id==='budget') renderBudgetUI();
   else if(id==='repertoire') renderRepertoire();
   else if(id==='setlist') renderSetlist();
@@ -2484,7 +2568,8 @@ function sheetTabForArray(arrName){
     rehearsals:'ENSAYOS',
     repertoire:'REPERTORIO',
     tasks:'TAREAS',
-    localPayments:'PAGOS_LOCAL'
+    localPayments:'PAGOS_LOCAL',
+    bandMembers:'MIEMBROS'
   }[arrName] || '';
 }
 
@@ -2686,22 +2771,29 @@ function saveConcert(){
     .catch(alertSheetWriteError);
 }
 
-function bandMembers(){
-  return Array.isArray(db.bandMembers) && db.bandMembers.length ? db.bandMembers : [
-    {id:'miguel',name:'Miguel',role:'Voz / administrador'},
-    {id:'carmen',name:'Carmen',role:'Voz'},
-    {id:'teo',name:'Teo',role:'Guitarra solista'},
-    {id:'alvaro',name:'Álvaro',role:'Guitarra rítmica'},
-    {id:'nataly',name:'Nataly',role:'Bajista'},
-    {id:'lord_enzo',name:'Lord Enzo',role:'Batería'}
-  ];
+function bandMembers(opts={}){
+  const includeInactive=!!opts.includeInactive;
+  const source=(Array.isArray(db.bandMembers) && db.bandMembers.length ? db.bandMembers : BCB_FIXED_MEMBERS).map(normalizeMemberRecord);
+  const byId=new Map();
+  source.forEach(m=>{ if(m.name) byId.set(normalizeMemberKey(m.id||m.name), m); });
+  const items=Array.from(byId.values());
+  return includeInactive ? items : items.filter(memberShowsInRehearsals);
 }
 function memberLabel(id){
-  const m=bandMembers().find(x=>x.id===id);
-  return m ? `${m.name} · ${m.role}` : id;
+  const m=bandMembers({includeInactive:true}).find(x=>normalizeMemberKey(x.id||x.name)===normalizeMemberKey(id));
+  return m ? `${m.name} · ${m.role || m.instrument || ''}` : id;
 }
 function memberOptions(value=''){
-  return bandMembers().map(m=>`<option value="${esc(m.id)}" ${m.id===value?'selected':''}>${esc(m.name)} · ${esc(m.role)}</option>`).join('');
+  const current=normalizeMemberKey(value);
+  let items=bandMembers();
+  if(current && !items.some(m=>normalizeMemberKey(m.id||m.name)===current)){
+    const extra=bandMembers({includeInactive:true}).find(m=>normalizeMemberKey(m.id||m.name)===current);
+    if(extra) items=items.concat([extra]);
+  }
+  return items.map(m=>{
+    const id=normalizeMemberKey(m.id||m.name);
+    return `<option value="${esc(id)}" ${id===current?'selected':''}>${esc(m.name)} · ${esc(m.role||m.instrument||'')}</option>`;
+  }).join('');
 }
 function attendanceOptions(value='Pendiente'){
   return ['Pendiente','Confirmado','Duda','No asiste','Llega tarde','Necesita revisar horario'].map(v=>`<option ${v===value?'selected':''}>${esc(v)}</option>`).join('');
@@ -2888,6 +2980,160 @@ function renderRehearsals(){
     </tr>`;
   }).join('') || '<tr><td colspan="8" class="muted">Todavía no hay ensayos creados. Entra como administrador para añadir el primero.</td></tr>';
   renderConcertAttendancePanel();
+}
+
+
+function memberPaymentHistory(memberId){
+  const id=normalizeMemberKey(memberId);
+  return (db.localPayments||[])
+    .filter(p=>normalizeMemberKey(p.memberId||p.name)===id)
+    .sort((a,b)=>String(b.month||'').localeCompare(String(a.month||'')));
+}
+function memberPaymentSummary(memberId){
+  const rows=memberPaymentHistory(memberId);
+  const paid=rows.filter(r=>isPaymentPaid(r.paid)).length;
+  const pending=rows.filter(r=>!isPaymentPaid(r.paid)).length;
+  const last=rows[0];
+  return {rows, paid, pending, last};
+}
+function renderMembers(){
+  const section=document.getElementById('members');
+  if(!section) return;
+  db.bandMembers=(Array.isArray(db.bandMembers) && db.bandMembers.length ? db.bandMembers : BCB_FIXED_MEMBERS).map(normalizeMemberRecord);
+  const members=bandMembers({includeInactive:true});
+  const active=members.filter(memberIsActive).length;
+  const local=members.filter(memberPaysLocal).length;
+  const vocals=members.filter(m=>yesNo(m.vocal,'No')==='Sí' || ['Miguel','Carmen','Ambos'].includes(String(m.vocal))).length;
+  const kpis=document.getElementById('membersKpis');
+  if(kpis) kpis.innerHTML=[
+    ['Miembros totales', members.length],
+    ['Activos', active],
+    ['Pagan local', local],
+    ['Voces', vocals]
+  ].map(k=>`<div class="card kpi"><strong>${esc(k[1])}</strong><span>${esc(k[0])}</span></div>`).join('');
+  const tbody=document.querySelector('#membersTable tbody');
+  if(tbody) tbody.innerHTML=members.map(m=>{
+    const id=normalizeMemberKey(m.id||m.name);
+    const hist=memberPaymentSummary(id);
+    const status=memberIsActive(m)?'Activo':'Inactivo';
+    return `<tr>
+      <td><strong>${esc(m.name)}</strong><br><small>${esc(id)}</small></td>
+      <td>${esc(m.role||m.instrument||'—')}</td>
+      <td>${badge(status)}</td>
+      <td>${esc(m.vocal||'No')}</td>
+      <td>${badge(memberPaysLocal(m)?'Sí':'No')}</td>
+      <td>${badge(memberShowsInRehearsals(m)?'Sí':'No')}</td>
+      <td>${esc(m.joinDate||'—')}</td>
+      <td>${esc(m.inactiveDate||'—')}</td>
+      <td>${hist.rows.length} meses<br><small>${hist.paid} pagados · ${hist.pending} pendientes</small></td>
+      <td class="admin-only">
+        <button class="mini" onclick="openMemberModal('${esc(id)}')">Editar</button>
+        ${memberIsActive(m)?`<button class="mini danger" onclick="deactivateMember('${esc(id)}')">Inactivar</button>`:`<button class="mini" onclick="reactivateMember('${esc(id)}')">Reactivar</button>`}
+        <button class="mini" onclick="viewMemberPayments('${esc(id)}')">Pagos</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="10" class="muted">No hay miembros cargados.</td></tr>';
+}
+function memberFields(){
+  return [
+    ['name','Nombre','text',''],
+    ['role','Rol / instrumento','select','', ['Voz / administrador','Voz','Guitarra solista','Guitarra rítmica','Bajista','Batería','Teclista','Saxofón','Percusión','Técnico','Otro']],
+    ['instrument','Instrumento','select','', ['Voz','Guitarra solista','Guitarra rítmica','Bajo','Batería','Teclado','Percusión','Técnico','Otro']],
+    ['vocal','Canta','select','', ['No','Sí','Miguel','Carmen','Ambos','Por decidir']],
+    ['admin','Admin app','select','', ['No','Sí']],
+    ['active','Activo','select','', ['Sí','No']],
+    ['payLocal','Paga local','select','', ['Sí','No']],
+    ['showInRehearsals','Aparece en ensayos','select','', ['Sí','No']],
+    ['joinDate','Fecha alta','date',''],
+    ['inactiveDate','Fecha inactividad','date',''],
+    ['email','Email','text',''],
+    ['phone','Teléfono','text',''],
+    ['notes','Notas','textarea','span4']
+  ];
+}
+function openMemberModal(id=null){
+  const key=normalizeMemberKey(id||'');
+  const item=id ? bandMembers({includeInactive:true}).find(m=>normalizeMemberKey(m.id||m.name)===key) : {
+    id:'',
+    name:'',
+    role:'Otro',
+    instrument:'Otro',
+    vocal:'No',
+    admin:'No',
+    active:'Sí',
+    payLocal:'Sí',
+    showInRehearsals:'Sí',
+    joinDate:new Date().toISOString().slice(0,10),
+    inactiveDate:'',
+    notes:''
+  };
+  modalContext={type:'member', id:key};
+  document.getElementById('modalTitle').textContent=id?'Editar miembro':'Nuevo miembro';
+  const paymentHtml = id ? `<div class="hr"></div><h4>Histórico de pagos local</h4>${memberPaymentsMiniTable(key)}` : '';
+  document.getElementById('modalBody').innerHTML=renderForm(memberFields(), item)+paymentHtml+`<div class="hr"></div><div class="actions"><button class="btn gold" onclick="saveMember()">Guardar en Google Sheet</button><button class="btn dark" onclick="closeModal()">Cancelar</button></div>`;
+  openModal();
+}
+function memberPaymentsMiniTable(id){
+  const rows=memberPaymentHistory(id).slice(0,18);
+  if(!rows.length) return '<p class="muted">Sin pagos registrados todavía.</p>';
+  return `<div class="tableWrap"><table><thead><tr><th>Mes</th><th>Cuota</th><th>Estado</th><th>Fecha pago</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(monthLabel(r.month))}</td><td>${money2(parseEuroValue(r.amount)||0)}</td><td>${badge(isPaymentPaid(r.paid)?'Pagado':'Pendiente')}</td><td>${esc(r.paidDate||'—')}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function saveMember(){
+  const obj=readForm(memberFields());
+  let id=modalContext && modalContext.id ? modalContext.id : normalizeMemberKey(obj.name);
+  if(!obj.name){ alert('Falta nombre del miembro.'); return; }
+  if(!id) id=normalizeMemberKey(obj.name);
+  let existing=bandMembers({includeInactive:true}).find(m=>normalizeMemberKey(m.id||m.name)===id);
+  const item=normalizeMemberRecord(Object.assign({}, existing||{}, obj, {id}));
+  pushMemberToSheet(item)
+    .then(()=>{
+      const idx=(db.bandMembers||[]).findIndex(m=>normalizeMemberKey(m.id||m.name)===normalizeMemberKey(item.id||item.name));
+      if(idx>=0) db.bandMembers[idx]=item;
+      else {
+        db.bandMembers=db.bandMembers||[];
+        db.bandMembers.push(item);
+      }
+      ensureLocalPaymentsForMonth(localSelectedMonth || currentYYYYMM());
+      closeModal();
+      saveData();
+      renderMembers();
+      renderLocalPayments();
+      sheetStatus('Miembro guardado en Google Sheet maestro.','ok');
+    })
+    .catch(alertSheetWriteError);
+}
+function deactivateMember(id){
+  const key=normalizeMemberKey(id);
+  const item=bandMembers({includeInactive:true}).find(m=>normalizeMemberKey(m.id||m.name)===key);
+  if(!item) return alert('No se encuentra el miembro.');
+  if(!confirm('Se marcará como inactivo. No se borrará su histórico. ¿Continuar?')) return;
+  item.active='No';
+  item.inactiveDate=item.inactiveDate || new Date().toISOString().slice(0,10);
+  item.payLocal='No';
+  item.showInRehearsals='No';
+  pushMemberToSheet(item)
+    .then(()=>{ saveData(); renderMembers(); renderLocalPayments(); sheetStatus('Miembro inactivado sin borrar histórico.','ok'); })
+    .catch(alertSheetWriteError);
+}
+function reactivateMember(id){
+  const key=normalizeMemberKey(id);
+  const item=bandMembers({includeInactive:true}).find(m=>normalizeMemberKey(m.id||m.name)===key);
+  if(!item) return alert('No se encuentra el miembro.');
+  item.active='Sí';
+  item.inactiveDate='';
+  item.payLocal=item.payLocal || 'Sí';
+  item.showInRehearsals=item.showInRehearsals || 'Sí';
+  pushMemberToSheet(item)
+    .then(()=>{ ensureLocalPaymentsForMonth(localSelectedMonth || currentYYYYMM()); saveData(); renderMembers(); renderLocalPayments(); sheetStatus('Miembro reactivado.','ok'); })
+    .catch(alertSheetWriteError);
+}
+function viewMemberPayments(id){
+  const key=normalizeMemberKey(id);
+  const item=bandMembers({includeInactive:true}).find(m=>normalizeMemberKey(m.id||m.name)===key);
+  modalContext={type:'memberPayments', id:key};
+  document.getElementById('modalTitle').textContent='Pagos local · '+(item?.name || key);
+  document.getElementById('modalBody').innerHTML=memberPaymentsMiniTable(key)+`<div class="hr"></div><div class="actions"><button class="btn dark" onclick="closeModal()">Cerrar</button></div>`;
+  openModal();
 }
 
 function renderLocalPayments(){

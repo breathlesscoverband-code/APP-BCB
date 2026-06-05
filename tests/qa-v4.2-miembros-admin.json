@@ -1,0 +1,43 @@
+{
+  "version": "APP-BCB v4.2 final sync",
+  "scope": "Miembros administrables desde la app",
+  "checks": [
+    {
+      "check": "JS syntax app.js",
+      "status": "OK"
+    },
+    {
+      "check": "JS syntax data.js",
+      "status": "OK"
+    },
+    {
+      "check": "Apps Script syntax via node temp JS",
+      "status": "OK"
+    },
+    {
+      "check": "Nuevo tab members registrado",
+      "status": "OK"
+    },
+    {
+      "check": "Render activo solo por tab",
+      "status": "OK"
+    },
+    {
+      "check": "MIEMBROS mapper no filtra solo miembros fijos",
+      "status": "OK"
+    },
+    {
+      "check": "Local/Pagos usa activos con Paga local = Sí",
+      "status": "OK"
+    },
+    {
+      "check": "Ensayos usa activos con Aparece ensayos = Sí",
+      "status": "OK"
+    },
+    {
+      "check": "Inactivar no borra histórico de pagos",
+      "status": "OK"
+    }
+  ],
+  "limitations": "No se puede ejecutar escritura real en el Google Sheet del usuario desde este entorno; debe validarse tras subir ZIP y actualizar Apps Script."
+}

@@ -1,0 +1,13 @@
+{
+  "name": "APP-BCB v4.2 FINAL SYNC · Miembros admin",
+  "version": "4.2.0",
+  "date": "2026-06-05",
+  "includes": [
+    "GitHub Pages PWA",
+    "Apps Script Code.gs",
+    "Nuevo módulo Miembros",
+    "Local pagos dinámico por miembros",
+    "Ensayos dinámicos por miembros"
+  ],
+  "activeBand": "BCB"
+}

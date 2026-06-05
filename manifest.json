@@ -1,8 +1,8 @@
 {
   "name": "APP-BCB · Breathless Cover Band",
   "short_name": "APP-BCB",
-  "description": "App interna de Breathless Cover Band · v4.1 final sync aprendizajes ENHE",
-  "start_url": "./?v=41",
+  "description": "App interna de Breathless Cover Band · v4.2 final sync miembros admin",
+  "start_url": "./?v=42",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
@@ -34,7 +34,7 @@
       "name": "Canciones",
       "short_name": "Canciones",
       "description": "Abrir repertorio BCB",
-      "url": "./?tab=repertoire&v=41",
+      "url": "./?tab=repertoire&v=42",
       "icons": [
         {
           "src": "icons/icon-192.png",
@@ -46,7 +46,7 @@
       "name": "CRM",
       "short_name": "CRM",
       "description": "Abrir CRM BCB",
-      "url": "./?tab=crm&v=41",
+      "url": "./?tab=crm&v=42",
       "icons": [
         {
           "src": "icons/icon-192.png",
@@ -58,7 +58,7 @@
       "name": "Ensayos",
       "short_name": "Ensayos",
       "description": "Abrir ensayos BCB",
-      "url": "./?tab=rehearsals&v=41",
+      "url": "./?tab=rehearsals&v=42",
       "icons": [
         {
           "src": "icons/icon-192.png",
@@ -67,6 +67,6 @@
       ]
     }
   ],
-  "version": "4.1.0",
-  "id": "APP-BCB-v4-1"
+  "version": "4.2.0",
+  "id": "APP-BCB-v4-2"
 }
