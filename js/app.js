@@ -1,5 +1,5 @@
-const APP_BCB_APP_VERSION = '4.2.0-final-sync-miembros-admin';
-const STORE_KEY = 'app_bcb_control_pro_v42_miembros_admin';
+const APP_BCB_APP_VERSION = '4.3.0-final-sync-miembros-render';
+const STORE_KEY = 'app_bcb_control_pro_v43_miembros_render';
 const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v42';
 const OLD_STORE_KEYS = ['app_bcb_control_pro_v41_aprendizajes_enhe','app_bcb_google_sheet_snapshot_latest_v41','app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
 let db = loadData();
@@ -490,7 +490,7 @@ function mergeTextNotes(a,b){
   return out.join(' | ');
 }
 function localPaymentMemberDefinitions(){
-  // APP-BCB v4.2:
+  // APP-BCB v4.3:
   // El local usa la lista de MIEMBROS editable desde la app.
   // Solo entran quienes estén Activos y con Paga local = Sí.
   const source = (Array.isArray(db?.bandMembers) && db.bandMembers.length ? db.bandMembers : BCB_FIXED_MEMBERS)
@@ -2276,13 +2276,15 @@ function setTab(id, opts={}){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   section.classList.add('active');
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
+  if(id==='dashboard') renderDashboard();
   if(id==='crm') { fillFilters(); renderCRM(); }
   if(id==='gmail') renderGmail();
   if(id==='followup') renderFollowup();
   if(id==='concerts') renderConcerts();
   if(id==='rehearsals') { renderRehearsals(); setTimeout(()=>ensureRehearsalsFreshOnMobile(), 800); }
   if(id==='local') { renderLocalPayments(); setTimeout(()=>ensureLocalPaymentsFreshOnOpen(), 800); }
-  if(id==='budget') calcBudget();
+  if(id==='members') renderMembers();
+  if(id==='budget') { renderBudgetUI(); calcBudget(); }
   if(id==='repertoire') renderRepertoire();
   if(id==='setlist') renderSetlist();
   if(id==='dossier') renderDossier();
