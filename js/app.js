@@ -1,7 +1,7 @@
-const APP_BCB_APP_VERSION = '4.0.0-final-sync-arranque-estable';
-const STORE_KEY = 'app_bcb_control_pro_v40_arranque_estable';
-const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v40';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
+const APP_BCB_APP_VERSION = '4.1.0-final-sync-aprendizajes-enhe';
+const STORE_KEY = 'app_bcb_control_pro_v41_aprendizajes_enhe';
+const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v41';
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
 let db = loadData();
 let filteredCRM = [];
 let rehearsalSyncRunning = false;
@@ -57,7 +57,12 @@ function loadData(){
   // La app abre al instante con snapshot local/precargado y actualiza en segundo plano.
   let data=clone(INITIAL_DATA);
   try{
-    const snapshotRaw=localStorage.getItem(PERSISTENT_SNAPSHOT_KEY);
+    const snapshotKeys=[
+      PERSISTENT_SNAPSHOT_KEY,
+      'app_bcb_google_sheet_snapshot_latest_v40',
+      'app_bcb_google_sheet_snapshot_latest'
+    ];
+    const snapshotRaw=snapshotKeys.map(k=>localStorage.getItem(k)).find(Boolean);
     if(snapshotRaw){
       const snapshot=JSON.parse(snapshotRaw);
       data=mergeRuntimeData(data, snapshot);
@@ -270,6 +275,7 @@ function persistDataOnly(){
       metricsFromImport: db.metricsFromImport || {}
     };
     localStorage.setItem(PERSISTENT_SNAPSHOT_KEY, JSON.stringify(snapshot));
+    localStorage.setItem('app_bcb_google_sheet_snapshot_latest', JSON.stringify(snapshot));
   }catch(e){}
 }
 
@@ -637,8 +643,9 @@ function localAvailableMonths(){
 function setLocalPaymentMonth(month){
   localSelectedMonth=normalizeMonthValue(month) || localDefaultControlMonth();
   ensureLocalPaymentsForMonth(localSelectedMonth);
-  saveData();
+  saveData({refresh:false});
   renderLocalPayments();
+  renderShell();
 }
 function resetLocalPaymentMonthAuto(){
   localSelectedMonth='';
@@ -719,8 +726,9 @@ async function openNextLocalMonthAfterCompletion(closedMonth){
   const next=addMonthsToYYYYMM(month,1);
   const rows=ensureLocalPaymentsForMonth(next);
   localSelectedMonth=next;
-  saveData();
+  saveData({refresh:false});
   renderLocalPayments();
+  renderShell();
 
   const flag='app_bcb_local_month_opened_'+next;
   if(!localStorage.getItem(flag)){
@@ -1363,7 +1371,6 @@ async function syncRepertoireFromGoogleSheet(opts={}){
     const rows = await fetchSheetTabViaAppsScript('REPERTORIO', 800);
     const count = applySongsFromSheet(rows);
     saveData();
-    refreshAll();
     sheetStatus('Repertorio actualizado desde Google Sheet: '+count+' canciones.', 'ok');
     if(!silent) alert('Repertorio actualizado desde Google Sheet: '+count+' canciones.');
     return true;
@@ -2074,7 +2081,7 @@ async function syncCoreSheetsIndividually(opts={}){
       if(tab==='RESPUESTAS_GMAIL') { report.gmail = applyGmailResponsesFromSheet(rows); }
       db.sheetSync = Object.assign({}, db.sheetSync||{}, {
         status: 'partial',
-        method: fast ? 'instant-cache-fast-background-v40' : 'sheet-direct-full-v40',
+        method: fast ? 'instant-cache-fast-background-v41' : 'sheet-direct-full-v41',
         updatedAt: new Date().toISOString(),
         endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl,
         directSheet: GOOGLE_SHEET_MASTER.userUrl,
@@ -2087,7 +2094,7 @@ async function syncCoreSheetsIndividually(opts={}){
   }
   db.sheetSync = Object.assign({}, db.sheetSync||{}, {
     status: report.errors.length ? 'partial' : 'ok',
-    method: fast ? 'instant-cache-fast-background-v40' : 'sheet-direct-full-v40',
+    method: fast ? 'instant-cache-fast-background-v41' : 'sheet-direct-full-v41',
     updatedAt: new Date().toISOString(),
     endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl,
     directSheet: GOOGLE_SHEET_MASTER.userUrl,
@@ -2958,8 +2965,9 @@ async function markLocalPayment(month, memberId, paid){
 
   db.localPayments=mergeLocalPaymentRows(db.localPayments||[], [item]);
   localSelectedMonth=controlMonth;
-  saveData();
+  saveData({refresh:false});
   renderLocalPayments();
+  renderShell();
 
   try{
     await pushLocalPaymentToSheet(item,{afterWrite:'none'});
@@ -3544,6 +3552,34 @@ function safeImportCRMFile(file){
 
 function copyText(txt){navigator.clipboard?.writeText(txt).then(()=>alert('Copiado.')).catch(()=>{const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();alert('Copiado.');});}
 window.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+function appBcbSelfCheck(){
+  const report = {
+    version: APP_BCB_APP_VERSION,
+    checkedAt: new Date().toISOString(),
+    modules: {},
+    ok: true,
+    notes: []
+  };
+  const requiredArrays = ['crm','gmailResponses','concerts','rehearsals','localPayments','repertoire','setlists','tasks','bandMembers'];
+  requiredArrays.forEach(k=>{
+    const ok = Array.isArray(db[k]);
+    report.modules[k] = {ok, count: ok ? db[k].length : 0};
+    if(!ok){ report.ok=false; report.notes.push(k+' no es array'); }
+  });
+  const fixed = localPaymentMemberDefinitions().map(m=>m.id);
+  report.modules.localFixedMembers = {ok: fixed.length===6, ids: fixed};
+  if(fixed.length!==6){ report.ok=false; report.notes.push('Local/Pagos no tiene 6 miembros fijos'); }
+  const singers = [...new Set((db.repertoire||[]).map(s=>cleanBCBLeadVocal(s.leadVocal || s.singer || '')).filter(Boolean))];
+  const badSinger = singers.find(s=>!['Miguel','Carmen','Ambos','Por decidir'].includes(s));
+  report.modules.voces = {ok: !badSinger, singers};
+  if(badSinger){ report.ok=false; report.notes.push('Voz no permitida detectada: '+badSinger); }
+  const warning = report.ok ? 'Autochequeo APP-BCB OK' : 'Autochequeo APP-BCB con avisos';
+  sheetStatus(warning+' · '+Object.entries(report.modules).map(([k,v])=>k+': '+(v.count ?? (v.ok?'ok':'error'))).join(' · '), report.ok?'ok':'bad');
+  console.table(report.modules);
+  return report;
+}
+
 function initialTabFromUrl(){
   try{
     const raw = new URL(window.location.href).searchParams.get('tab') || '';
@@ -3555,7 +3591,7 @@ function initialTabFromUrl(){
 clearOldLocalCaches();
 renderShell();
 setTab(initialTabFromUrl(), {scroll:false, updateUrl:false});
-// v4.0: apertura primero, sincronización después. No se dispara nada pesado antes de pintar la pantalla.
+// v4.1: apertura primero, renderizado bajo demanda y sincronización después; se mantienen los aprendizajes de APP-ENHE.
 let appBcbLastAutoSync = 0;
 function appBcbAutoSync(reason){
   const now = Date.now();

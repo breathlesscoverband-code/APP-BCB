@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- APP-BCB v4.0 final sync · arranque estable -->
+<!-- APP-BCB v4.1 final sync · aprendizajes ENHE -->
 <title>Breathless Cover Band · APP-BCB control profesional</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#120608">
@@ -12,9 +12,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="css/styles.css?v=4.0.0-bcb">
-<link rel="stylesheet" href="css/admin-guard.css?v=4.0.0-bcb">
-<script defer src="js/admin-guard.js?v=4.0.0-bcb"></script>
+<link rel="stylesheet" href="css/styles.css?v=4.1.0-bcb">
+<link rel="stylesheet" href="css/admin-guard.css?v=4.1.0-bcb">
+<script defer src="js/admin-guard.js?v=4.1.0-bcb"></script>
 
 <script>
 (function(){
@@ -23,8 +23,8 @@
     Promise.resolve()
       .then(function(){ return window.caches ? caches.keys().then(function(keys){ return Promise.all(keys.map(function(k){ return caches.delete(k); })); }) : null; })
       .then(function(){ return navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(function(regs){ return Promise.all(regs.map(function(r){ return r.unregister(); })); }) : null; })
-      .then(function(){ ['app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard'].forEach(function(k){localStorage.removeItem(k);}); location.replace('./?v=40'); })
-      .catch(function(){ location.replace('./?v=40'); });
+      .then(function(){ ['app_bcb_control_pro_v41_aprendizajes_enhe','app_bcb_google_sheet_snapshot_latest_v41','app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard'].forEach(function(k){localStorage.removeItem(k);}); location.replace('./?v=41'); })
+      .catch(function(){ location.replace('./?v=41'); });
   }
 })();
 </script>
@@ -340,13 +340,13 @@
 
 <div class="modal" id="modal"><div class="modalPanel"><div class="modalHead"><strong id="modalTitle">Detalle</strong><button class="close" onclick="closeModal()">×</button></div><div class="modalBody" id="modalBody"></div></div></div>
 
-<script src="js/assets.js?v=4.0.0-bcb"></script>
-<script src="js/data.js?v=4.0.0-bcb"></script>
-<script src="js/app.js?v=4.0.0-bcb"></script>
+<script src="js/assets.js?v=4.1.0-bcb"></script>
+<script src="js/data.js?v=4.1.0-bcb"></script>
+<script src="js/app.js?v=4.1.0-bcb"></script>
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function () {
-    navigator.serviceWorker.register("./sw.js?v=4.0.0-bcb").catch(function (error) {
+    navigator.serviceWorker.register("./sw.js?v=4.1.0-bcb").catch(function (error) {
       console.warn("Service Worker no registrado:", error);
     });
   });

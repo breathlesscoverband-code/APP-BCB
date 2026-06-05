@@ -1,0 +1,59 @@
+{
+  "version": "APP-BCB v4.1 final sync",
+  "createdAt": "2026-06-05T16:06:56.848245Z",
+  "scope": "Aplicación de aprendizajes APP-ENHE/Ñ a APP-BCB",
+  "staticChecks": {
+    "nodeSyntax": {
+      "js/data.js": {
+        "ok": true,
+        "stderr": ""
+      },
+      "js/app.js": {
+        "ok": true,
+        "stderr": ""
+      },
+      "js/admin-guard.js": {
+        "ok": true,
+        "stderr": ""
+      },
+      "sw.js": {
+        "ok": true,
+        "stderr": ""
+      }
+    },
+    "versionedAssets": "v4.1",
+    "noFullRenderOnStartup": true,
+    "googleSheetDirectSerialQueue": true,
+    "localPaymentsNoSaveInsideRender": true,
+    "localPaymentsFixedMembers": [
+      "miguel",
+      "carmen",
+      "teo",
+      "alvaro",
+      "nataly",
+      "lord_enzo"
+    ],
+    "allowedLeadVocals": [
+      "Miguel",
+      "Carmen",
+      "Ambos",
+      "Por decidir"
+    ],
+    "allNodeSyntaxOk": true
+  },
+  "manualAcceptance": [
+    "Crear/editar/borrar tarea",
+    "Editar repertorio y borrar fila duplicada",
+    "Guardar ensayo con varios temas",
+    "Marcar pago local y mantener 6 miembros",
+    "Abrir CRM/Ensayos/Local sin bloqueo"
+  ],
+  "hashes": {
+    "index.html": "b3dbfd1ea73b0940",
+    "js/app.js": "9d440707f02694c1",
+    "js/data.js": "4b52a84c3f445256",
+    "apps-script/Code.gs": "40bef4b308add54c",
+    "sw.js": "b63e1b0e5a19fb72",
+    "manifest.json": "8097a8e70f3151ca"
+  }
+}

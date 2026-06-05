@@ -1,0 +1,21 @@
+{
+  "release": "APP-BCB v4.1 final sync",
+  "band": "BCB",
+  "name": "Aplicación de aprendizajes APP-ENHE / Ñ",
+  "builtAt": "2026-06-05T16:07:09.721143+00:00",
+  "base": "APP-BCB v4.0 final sync arranque estable",
+  "changes": [
+    "Versionado limpio v4.1 y PWA cache nueva",
+    "Carga de snapshot v4.0 como fallback para no perder datos al actualizar",
+    "Snapshot persistente genérico para futuras versiones",
+    "Menos repintados innecesarios en Local/Pagos y Repertorio",
+    "Code.gs alineado a APP-BCB v4.1 final sync",
+    "Autochequeo interno appBcbSelfCheck()"
+  ],
+  "install": [
+    "Subir ZIP completo al repo APP-BCB sobrescribiendo",
+    "Commit: APP-BCB v4.1 aprendizajes ENHE",
+    "Apps Script: sustituir Code.gs, guardar, nueva versión de implementación",
+    "Abrir https://breathlesscoverband-code.github.io/APP-BCB/?v=41"
+  ]
+}
