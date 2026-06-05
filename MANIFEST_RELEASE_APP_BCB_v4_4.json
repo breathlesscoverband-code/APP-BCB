@@ -1,0 +1,20 @@
+{
+  "version": "APP-BCB v4.5 final sync",
+  "focus": "Miembros: escritura estable con POST iframe a Apps Script",
+  "base": "APP-BCB v4.3",
+  "changes": [
+    "Nuevo transporte de escritura appsScriptFormPost() por POST a iframe oculto.",
+    "doPost() de Apps Script acepta form-urlencoded y JSON; responde por postMessage si recibe bridge/requestId.",
+    "deactivateMember/reactivateMember no mutan caché local hasta confirmación de Google Sheet.",
+    "admin-guard protege funciones de miembros.",
+    "Versionado PWA v4.5."
+  ],
+  "tests": [
+    "node --check js/app.js OK",
+    "node --check js/admin-guard.js OK",
+    "node --check js/data.js OK",
+    "node --check js/assets.js OK",
+    "node --check sw.js OK",
+    "node --check Code.gs como JS OK"
+  ]
+}

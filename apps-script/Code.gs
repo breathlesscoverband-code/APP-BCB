@@ -1,6 +1,6 @@
 /**
  * APP-BCB Bridge — Breathless Cover Band
- * Version: APP-BCB v4.3 final sync · miembros admin
+ * Version: APP-BCB v4.5 final sync · miembros escritura estable JSONP
  *
  * Fuente principal: Google Sheet maestro BCB.
  * App GitHub Pages / PWA.
@@ -23,7 +23,7 @@
  * No usar endpoint ni Sheet de otra banda.
  */
 
-const APP_VERSION = 'APP-BCB v4.3 final sync';
+const APP_VERSION = 'APP-BCB v4.5 final sync';
 const BAND = 'BCB';
 const BAND_NAME = 'Breathless Cover Band';
 const SHEET_ID = '1l_cr7pVu4Y3A2v0HPz_3brCNb1011EHIU3hm6D5a47Q';
@@ -155,24 +155,70 @@ function iframeBridge_(payload, params) {
 
 
 function doPost(e) {
+  var body = {};
   try {
-    const body = e && e.postData && e.postData.contents ? JSON.parse(e.postData.contents) : {};
-    const action = String(body.action || '').toLowerCase();
-
-    if (!isAdminKey_(body.adminKey || body.key)) {
-      return jsonResponse_({ ok: false, error: 'Clave admin incorrecta', version: APP_VERSION });
+    body = requestBody_(e);
+    var payload = handleWriteAction_(body);
+    if (String(body.bridge || '').toLowerCase().indexOf('iframe') !== -1 || body.requestId) {
+      return iframeBridge_(payload, body);
     }
-
-    if (action === 'append') return jsonResponse_(appendRow_(body.tab, body.data));
-    if (action === 'update') return jsonResponse_(updateRowById_(body.tab, body.id, body.data));
-    if (action === 'delete') return jsonResponse_(deleteRowById_(body.tab, body.id));
-    if (action === 'backup') return jsonResponse_(createBackup_());
-
-    return jsonResponse_({ ok: false, error: 'Acción POST no reconocida: ' + action, version: APP_VERSION });
+    return jsonResponse_(payload);
   } catch (err) {
-    return jsonResponse_({ ok: false, error: String(err && err.message ? err.message : err), version: APP_VERSION });
+    var fail = { ok: false, error: String(err && err.message ? err.message : err), version: APP_VERSION };
+    if (String(body && body.bridge || '').toLowerCase().indexOf('iframe') !== -1 || (body && body.requestId)) {
+      return iframeBridge_(fail, body || {});
+    }
+    return jsonResponse_(fail);
   }
 }
+
+function requestBody_(e) {
+  var body = {};
+  try {
+    if (e && e.postData && e.postData.contents) {
+      var raw = e.postData.contents;
+      var type = String(e.postData.type || '');
+      if (type.indexOf('application/json') !== -1 || raw.charAt(0) === '{') {
+        body = JSON.parse(raw);
+      }
+    }
+  } catch (jsonErr) {
+    body = {};
+  }
+  if (e && e.parameter) {
+    Object.keys(e.parameter).forEach(function(k) {
+      body[k] = e.parameter[k];
+    });
+  }
+  return body || {};
+}
+
+function handleWriteAction_(body) {
+  body = body || {};
+  var action = String(body.action || '').toLowerCase();
+
+  if (!isAdminKey_(body.adminKey || body.key)) {
+    return { ok: false, error: 'Clave admin incorrecta', version: APP_VERSION };
+  }
+
+  if (action === 'append') return appendRow_(body.tab, body.data || rowFromParam_(body));
+  if (action === 'update') return updateRowById_(body.tab, body.id, body.data || rowFromParam_(body));
+  if (action === 'delete') return deleteRowById_(body.tab, body.id);
+  if (action === 'backup') return createBackup_();
+
+  if (action === 'upsertcrm' || action === 'upsertcontact') return upsertById_('CRM_GENERAL', rowFromParam_(body), body.key || body.adminKey);
+  if (action === 'upsertconcert') return upsertById_('CONCIERTOS', rowFromParam_(body), body.key || body.adminKey);
+  if (action === 'upsertrehearsal') return upsertById_('ENSAYOS', rowFromParam_(body), body.key || body.adminKey);
+  if (action === 'upserttask') return upsertById_('TAREAS', rowFromParam_(body), body.key || body.adminKey);
+  if (action === 'upsertlocalpayment') return upsertLocalPayment_(rowFromParam_(body), body.key || body.adminKey);
+  if (action === 'upsertlocalmonth') return upsertLocalMonth_(rowsFromParam_(body), body.key || body.adminKey);
+  if (action === 'upsertrepertoire') return upsertRepertoire_(rowFromParam_(body), body.key || body.adminKey);
+  if (action === 'upsertmember') return upsertMember_(rowFromParam_(body), body.key || body.adminKey);
+  if (action === 'deleterow') return deleteRowByIdGet_(body.tab, body.id, body.key || body.adminKey, body.rowIndex);
+
+  return { ok: false, error: 'Acción POST no reconocida: ' + action, version: APP_VERSION };
+}
+
 
 function rowFromParam_(params) {
   if (!params.row) throw new Error('Falta parámetro row');
@@ -489,7 +535,7 @@ function findMemberRowByName_(sheet, info, name) {
 function normalizeMemberRow_(data) {
   data = data || {};
   const name = valueForAny_(data, ['Nombre','nombre','name','Miembro']) || '';
-  let id = valueForAny_(data, ['ID','id','Id']);
+  let id = valueForAny_(data, ['ID','id','Id','App ID','ID interno']);
   const nameKey = name ? normalizeMemberForKey_(name) : '';
   const known = ['miguel','carmen','teo','alvaro','nataly','lord_enzo'];
   if (nameKey && known.indexOf(nameKey) !== -1) id = nameKey;
@@ -500,8 +546,14 @@ function normalizeMemberRow_(data) {
   data.Nombre = name || data.Nombre || '';
   data.Rol = valueForAny_(data, ['Rol','role','rol','Instrumento']) || data.Rol || '';
   data.Instrumento = valueForAny_(data, ['Instrumento','instrument','Instrumento/voz','Rol']) || data.Instrumento || data.Rol || '';
-  data.Voz = valueForAny_(data, ['Voz','vocal','Canta']) || data.Voz || 'No';
-  data.Admin = valueForAny_(data, ['Admin','Administrador']) || data.Admin || 'No';
+
+  var voz = valueForAny_(data, ['Voz','vocal','Canta']) || data.Voz || 'No';
+  if (id === 'miguel') voz = 'Miguel';
+  if (id === 'carmen') voz = 'Carmen';
+  if (['teo','alvaro','nataly','lord_enzo'].indexOf(id) !== -1) voz = 'No';
+  data.Voz = voz;
+
+  data.Admin = valueForAny_(data, ['Admin','Administrador']) || data.Admin || (id === 'miguel' ? 'Sí' : 'No');
   data.Activo = valueForAny_(data, ['Activo','active','Estado']) || data.Activo || 'Sí';
   data['Paga local'] = valueForAny_(data, ['Paga local','payLocal','pagaLocal','Local']) || data['Paga local'] || 'Sí';
   data['Aparece ensayos'] = valueForAny_(data, ['Aparece ensayos','showInRehearsals','Ensayos']) || data['Aparece ensayos'] || 'Sí';

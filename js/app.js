@@ -1,5 +1,5 @@
-const APP_BCB_APP_VERSION = '4.3.0-final-sync-miembros-render';
-const STORE_KEY = 'app_bcb_control_pro_v43_miembros_render';
+const APP_BCB_APP_VERSION = '4.4.0-final-sync-miembros-escritura-estable';
+const STORE_KEY = 'app_bcb_control_pro_v44_miembros_escritura_estable';
 const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v42';
 const OLD_STORE_KEYS = ['app_bcb_control_pro_v41_aprendizajes_enhe','app_bcb_google_sheet_snapshot_latest_v41','app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
 let db = loadData();
@@ -435,30 +435,48 @@ function memberShowsInRehearsals(m){
   return yesNo(m?.showInRehearsals ?? m?.['Aparece ensayos'] ?? m?.ensayos ?? 'Sí') === 'Sí';
 }
 function normalizeMemberRecord(m, idx=0){
-  const name = String(m?.name || m?.Nombre || m?.nombre || m?.Miembro || '').trim();
+  m = m || {};
+  const name = String(m.name || m.Nombre || m.nombre || m.Miembro || m['Usuario app'] || '').trim();
   const nameKey = normalizeMemberKey(name);
-  const idRaw = m?.id || m?.ID || m?.Id || name || ('miembro_'+idx);
+  const idRaw = m.id || m.ID || m.Id || m['App ID'] || m['ID interno'] || name || ('miembro_'+idx);
   const idKey = normalizeMemberKey(idRaw);
-  const id = BCB_FIXED_MEMBER_IDS.includes(nameKey) ? nameKey : (idKey || nameKey || ('miembro_'+idx));
-  const role = m?.role || m?.Rol || m?.rol || m?.instrument || m?.Instrumento || m?.['Instrumento/voz'] || '';
-  const instrument = m?.instrument || m?.Instrumento || role || '';
-  const vocalRaw = m?.vocal || m?.Voz || m?.voz || (norm(role).includes('voz')?'Sí':'No');
-  const active = yesNo(m?.active ?? m?.Activo ?? m?.Estado ?? m?.estado ?? 'Sí', 'Sí');
+  const fixedId = BCB_FIXED_MEMBER_IDS.includes(nameKey) ? nameKey : (BCB_FIXED_MEMBER_IDS.includes(idKey) ? idKey : '');
+  const id = fixedId || idKey || nameKey || ('miembro_'+idx);
+  const role = m.role || m.Rol || m.rol || m.instrument || m.Instrumento || m['Instrumento/voz'] || '';
+  const instrument = m.instrument || m.Instrumento || m.instrumento || role || '';
+
+  let vocalRaw = m.vocal ?? m.Voz ?? m.voz ?? m.Vocal ?? m.Canta ?? m.canta ?? '';
+  if(id === 'miguel') vocalRaw = 'Miguel';
+  else if(id === 'carmen') vocalRaw = 'Carmen';
+  else if(['teo','alvaro','nataly','lord_enzo'].includes(id)) vocalRaw = 'No';
+  else if(!vocalRaw) vocalRaw = norm(role).includes('voz') ? 'Sí' : 'No';
+
+  let vocal = 'No';
+  const nv = norm(vocalRaw);
+  if(nv.includes('miguel')) vocal = 'Miguel';
+  else if(nv.includes('carmen')) vocal = 'Carmen';
+  else if(nv.includes('ambos')) vocal = 'Ambos';
+  else if(nv.includes('decidir')) vocal = 'Por decidir';
+  else if(yesNo(vocalRaw,'No') === 'Sí') vocal = 'Sí';
+
+  const active = yesNo(m.active ?? m.Activo ?? m.Estado ?? m.estado ?? 'Sí', 'Sí');
   return {
     id,
     name: name || memberDisplayName(id, String(idRaw||'')),
     role: role || instrument,
     instrument,
-    vocal: norm(vocalRaw).includes('miguel')||norm(vocalRaw).includes('carmen')||yesNo(vocalRaw,'No')==='Sí' ? (yesNo(vocalRaw,'No')==='Sí'?'Sí':String(vocalRaw)) : 'No',
-    admin: yesNo(m?.admin ?? m?.Admin ?? m?.Administrador ?? (id==='miguel'?'Sí':'No'), id==='miguel'?'Sí':'No'),
+    vocal,
+    admin: yesNo(m.admin ?? m.Admin ?? m.Administrador ?? (id==='miguel'?'Sí':'No'), id==='miguel'?'Sí':'No'),
     active,
-    payLocal: yesNo(m?.payLocal ?? m?.['Paga local'] ?? m?.pagaLocal ?? 'Sí', 'Sí'),
-    showInRehearsals: yesNo(m?.showInRehearsals ?? m?.['Aparece ensayos'] ?? m?.ensayos ?? 'Sí', 'Sí'),
-    joinDate: m?.joinDate || m?.['Fecha alta'] || m?.fecha_alta || '',
-    inactiveDate: m?.inactiveDate || m?.['Fecha inactividad'] || m?.fecha_inactividad || '',
-    notes: m?.notes || m?.Notas || m?.notas || '',
-    sheetRow: m?.sheetRow || m?.__row || '',
-    raw: m?.raw || m || {}
+    payLocal: yesNo(m.payLocal ?? m['Paga local'] ?? m.pagaLocal ?? m.Local ?? 'Sí', 'Sí'),
+    showInRehearsals: yesNo(m.showInRehearsals ?? m['Aparece ensayos'] ?? m.Ensayos ?? m.ensayos ?? 'Sí', 'Sí'),
+    joinDate: m.joinDate || m['Fecha alta'] || m.fecha_alta || '',
+    inactiveDate: m.inactiveDate || m['Fecha inactividad'] || m.fecha_inactividad || '',
+    email: m.email || m.Email || '',
+    phone: m.phone || m.Teléfono || m.Telefono || '',
+    notes: m.notes || m.Notas || m.notas || '',
+    sheetRow: m.sheetRow || m.__row || m.Fila || m['Nº fila'] || '',
+    raw: m.raw || m || {}
   };
 }
 function activeBandMembers(){
@@ -490,7 +508,7 @@ function mergeTextNotes(a,b){
   return out.join(' | ');
 }
 function localPaymentMemberDefinitions(){
-  // APP-BCB v4.3:
+  // APP-BCB v4.5:
   // El local usa la lista de MIEMBROS editable desde la app.
   // Solo entran quienes estén Activos y con Paga local = Sí.
   const source = (Array.isArray(db?.bandMembers) && db.bandMembers.length ? db.bandMembers : BCB_FIXED_MEMBERS)
@@ -1152,6 +1170,112 @@ function appsScriptIframe(params={}){
   });
 }
 
+
+function appsScriptFormPost(params={}){
+  // Escritura estable para Google Apps Script.
+  // Evita depender de JSONP GET para operaciones de admin; usa POST a iframe oculto
+  // y el Apps Script responde con postMessage.
+  return new Promise((resolve,reject)=>{
+    if(!GOOGLE_SHEET_MASTER.appsScriptUrl) return reject(new Error('No hay URL /exec de Apps Script configurada.'));
+    const requestId='APP_BCB_POST_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    const iframe=document.createElement('iframe');
+    const form=document.createElement('form');
+    let finished=false;
+    iframe.name=requestId;
+    iframe.id=requestId;
+    iframe.style.display='none';
+    iframe.style.width='0';
+    iframe.style.height='0';
+    iframe.style.border='0';
+
+    const timeout=setTimeout(()=>{
+      cleanup();
+      reject(new Error('Tiempo agotado escribiendo en Apps Script por POST.'));
+    }, 8000);
+
+    function cleanup(){
+      if(finished) return;
+      finished=true;
+      clearTimeout(timeout);
+      window.removeEventListener('message', handler);
+      try{ if(form && form.parentNode) form.parentNode.removeChild(form); }catch(e){}
+      try{ if(iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe); }catch(e){}
+    }
+
+    function handler(ev){
+      const data=ev && ev.data;
+      if(!data || data.source !== 'APP_BCB_IFRAME' || data.requestId !== requestId) return;
+      cleanup();
+      resolve(data.payload);
+    }
+
+    window.addEventListener('message', handler);
+
+    form.method='POST';
+    form.action=GOOGLE_SHEET_MASTER.appsScriptUrl;
+    form.target=requestId;
+    form.style.display='none';
+
+    const postParams=Object.assign({}, params, {
+      bridge:'iframePost',
+      requestId:requestId,
+      ts:String(Date.now())
+    });
+
+    Object.entries(postParams).forEach(([k,v])=>{
+      const input=document.createElement('input');
+      input.type='hidden';
+      input.name=k;
+      input.value=(v===undefined || v===null) ? '' : String(v);
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(iframe);
+    document.body.appendChild(form);
+
+    try{
+      form.submit();
+    }catch(err){
+      cleanup();
+      reject(err);
+    }
+  });
+}
+
+async function appsScriptWrite(params={}){
+  // v4.5: escritura rápida y comprobable.
+  // Primero intenta JSONP/GET (suficiente para miembros, pagos, tareas y cambios cortos).
+  // Si el payload es grande o JSONP falla, usa POST por iframe como respaldo.
+  const rowText = String(params.row || params.rows || '');
+  const preferJsonp = rowText.length <= 5500;
+  const errors = [];
+  async function runJsonp(){
+    const payload = await appsScriptJSONP(params);
+    if(!payload || payload.ok === false) throw new Error((payload && payload.error) || 'Apps Script respondió sin OK por JSONP.');
+    payload._transport = payload._transport || 'jsonp';
+    return payload;
+  }
+  async function runPost(){
+    const payload = await appsScriptFormPost(params);
+    if(!payload || payload.ok === false) throw new Error((payload && payload.error) || 'Apps Script respondió sin OK por POST.');
+    payload._transport = payload._transport || 'post-iframe';
+    return payload;
+  }
+  if(preferJsonp){
+    try{ return await runJsonp(); }
+    catch(e){ errors.push('JSONP: '+(e.message||e)); }
+    try{ return await runPost(); }
+    catch(e){ errors.push('POST: '+(e.message||e)); }
+  }else{
+    try{ return await runPost(); }
+    catch(e){ errors.push('POST: '+(e.message||e)); }
+    try{ return await runJsonp(); }
+    catch(e){ errors.push('JSONP: '+(e.message||e)); }
+  }
+  throw new Error(errors.join(' | ') || 'No se pudo escribir en Apps Script.');
+}
+
+
 async function appsScriptJSONP(params={}){
   try{
     const payload = await appsScriptJsonpOnly(params);
@@ -1459,7 +1583,7 @@ function pushSheetRow(action,row,opts={}){
   if(!sheetWriteEnabled()) return Promise.reject(new Error('No hay endpoint Apps Script configurado.'));
   if(!isAdminActive() && !opts.allowUser) return Promise.reject(new Error('Modo usuario: no se puede escribir en Google Sheet.'));
   sheetStatus('Guardando en Google Sheet maestro…');
-  return appsScriptJSONP({action, key:'1929', row:JSON.stringify(row)})
+  return appsScriptWrite({action, key:'1929', row:JSON.stringify(row)})
     .then(payload=>{
       if(!payload || payload.ok===false) throw new Error(payload?.error || 'No se pudo guardar en Google Sheet.');
       sheetStatus('Guardado en Google Sheet maestro. Actualizando vista…','ok');
@@ -1507,7 +1631,8 @@ function pushMemberToSheet(m){
 }
 
 function alertSheetWriteError(err){
-  alert('El cambio se ha guardado en este navegador, pero NO se ha podido enviar a Google Sheet.\\n\\nMotivo: '+(err.message||err)+'\\n\\nHasta que no se guarde en Google Sheet, el móvil y otros equipos no verán ese cambio.');
+  const msg=(err && err.message) ? err.message : String(err||'Error desconocido');
+  alert('NO se ha guardado en Google Sheet. No he cambiado la app local para evitar datos falsos.\n\nMotivo: '+msg+'\n\nComprueba que Apps Script esté actualizado a la misma versión y que el endpoint /exec sea el público actual.');
 }
 
 
@@ -3028,10 +3153,10 @@ function renderMembers(){
       <td>${esc(m.joinDate||'—')}</td>
       <td>${esc(m.inactiveDate||'—')}</td>
       <td>${hist.rows.length} meses<br><small>${hist.paid} pagados · ${hist.pending} pendientes</small></td>
-      <td class="admin-only">
-        <button class="mini" onclick="openMemberModal('${esc(id)}')">Editar</button>
-        ${memberIsActive(m)?`<button class="mini danger" onclick="deactivateMember('${esc(id)}')">Inactivar</button>`:`<button class="mini" onclick="reactivateMember('${esc(id)}')">Reactivar</button>`}
-        <button class="mini" onclick="viewMemberPayments('${esc(id)}')">Pagos</button>
+      <td class="member-actions admin-only">
+        <button class="mini member-edit-btn" type="button" onclick="openMemberModal('${esc(id)}')">Editar</button>
+        ${memberIsActive(m)?`<button class="mini danger" type="button" onclick="deactivateMember('${esc(id)}')">Inactivar</button>`:`<button class="mini" type="button" onclick="reactivateMember('${esc(id)}')">Reactivar</button>`}
+        <button class="mini" type="button" onclick="viewMemberPayments('${esc(id)}')">Pagos</button>
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="10" class="muted">No hay miembros cargados.</td></tr>';
@@ -3041,7 +3166,7 @@ function memberFields(){
     ['name','Nombre','text',''],
     ['role','Rol / instrumento','select','', ['Voz / administrador','Voz','Guitarra solista','Guitarra rítmica','Bajista','Batería','Teclista','Saxofón','Percusión','Técnico','Otro']],
     ['instrument','Instrumento','select','', ['Voz','Guitarra solista','Guitarra rítmica','Bajo','Batería','Teclado','Percusión','Técnico','Otro']],
-    ['vocal','Canta','select','', ['No','Sí','Miguel','Carmen','Ambos','Por decidir']],
+    ['vocal','Canta','select','', ['No','Miguel','Carmen','Ambos','Por decidir']],
     ['admin','Admin app','select','', ['No','Sí']],
     ['active','Activo','select','', ['Sí','No']],
     ['payLocal','Paga local','select','', ['Sí','No']],
@@ -3106,27 +3231,46 @@ function saveMember(){
 }
 function deactivateMember(id){
   const key=normalizeMemberKey(id);
-  const item=bandMembers({includeInactive:true}).find(m=>normalizeMemberKey(m.id||m.name)===key);
-  if(!item) return alert('No se encuentra el miembro.');
+  const current=bandMembers({includeInactive:true}).find(m=>normalizeMemberKey(m.id||m.name)===key);
+  if(!current) return alert('No se encuentra el miembro.');
   if(!confirm('Se marcará como inactivo. No se borrará su histórico. ¿Continuar?')) return;
-  item.active='No';
-  item.inactiveDate=item.inactiveDate || new Date().toISOString().slice(0,10);
-  item.payLocal='No';
-  item.showInRehearsals='No';
+  const item=normalizeMemberRecord(Object.assign({}, current, {
+    active:'No',
+    inactiveDate: current.inactiveDate || new Date().toISOString().slice(0,10),
+    payLocal:'No',
+    showInRehearsals:'No'
+  }));
   pushMemberToSheet(item)
-    .then(()=>{ saveData(); renderMembers(); renderLocalPayments(); sheetStatus('Miembro inactivado sin borrar histórico.','ok'); })
+    .then(()=>{
+      const idx=(db.bandMembers||[]).findIndex(m=>normalizeMemberKey(m.id||m.name)===normalizeMemberKey(item.id||item.name));
+      if(idx>=0) db.bandMembers[idx]=item;
+      saveData();
+      renderMembers();
+      renderLocalPayments();
+      sheetStatus('Miembro inactivado en Google Sheet sin borrar histórico.','ok');
+    })
     .catch(alertSheetWriteError);
 }
 function reactivateMember(id){
   const key=normalizeMemberKey(id);
-  const item=bandMembers({includeInactive:true}).find(m=>normalizeMemberKey(m.id||m.name)===key);
-  if(!item) return alert('No se encuentra el miembro.');
-  item.active='Sí';
-  item.inactiveDate='';
-  item.payLocal=item.payLocal || 'Sí';
-  item.showInRehearsals=item.showInRehearsals || 'Sí';
+  const current=bandMembers({includeInactive:true}).find(m=>normalizeMemberKey(m.id||m.name)===key);
+  if(!current) return alert('No se encuentra el miembro.');
+  const item=normalizeMemberRecord(Object.assign({}, current, {
+    active:'Sí',
+    inactiveDate:'',
+    payLocal: current.payLocal || 'Sí',
+    showInRehearsals: current.showInRehearsals || 'Sí'
+  }));
   pushMemberToSheet(item)
-    .then(()=>{ ensureLocalPaymentsForMonth(localSelectedMonth || currentYYYYMM()); saveData(); renderMembers(); renderLocalPayments(); sheetStatus('Miembro reactivado.','ok'); })
+    .then(()=>{
+      const idx=(db.bandMembers||[]).findIndex(m=>normalizeMemberKey(m.id||m.name)===normalizeMemberKey(item.id||item.name));
+      if(idx>=0) db.bandMembers[idx]=item;
+      ensureLocalPaymentsForMonth(localSelectedMonth || currentYYYYMM());
+      saveData();
+      renderMembers();
+      renderLocalPayments();
+      sheetStatus('Miembro reactivado en Google Sheet.','ok');
+    })
     .catch(alertSheetWriteError);
 }
 function viewMemberPayments(id){

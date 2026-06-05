@@ -37,7 +37,12 @@
     'downloadXlsx',
     'copyBudgetText',
     'composeTemplate',
-    'composeForContact'
+    'composeForContact',
+    'openMemberModal',
+    'saveMember',
+    'deactivateMember',
+    'reactivateMember',
+    'viewMemberPayments'
   ];
 
   const ADMIN_ONCLICK_PATTERNS = ADMIN_FUNCTIONS.slice();

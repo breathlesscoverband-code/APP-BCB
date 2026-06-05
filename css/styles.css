@@ -424,3 +424,7 @@ code{
 .local-month-card small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
 .local-month-card.active{border-color:var(--gold);box-shadow:0 0 0 1px rgba(215,177,92,.25) inset}
 .local-month-card.complete{border-color:rgba(88,195,126,.6);background:rgba(88,195,126,.10)}
+
+/* v4.5: asegurar acciones de Miembros visibles en modo admin */
+body.admin-enabled #members .member-actions{display:table-cell !important; white-space:nowrap;}
+body.admin-enabled #members .member-edit-btn{display:inline-block !important; visibility:visible !important;}

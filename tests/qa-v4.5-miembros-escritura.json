@@ -1,0 +1,19 @@
+{
+  "version": "APP-BCB v4.5 final sync",
+  "changes": [
+    "Miembros: boton Editar visible en modo admin",
+    "Miembros: escritura JSONP GET primero; POST iframe como respaldo",
+    "Miembros: si Google Sheet no confirma, no cambia la vista local",
+    "Voces: solo Miguel y Carmen; Teo no canta",
+    "Timeout POST reducido para evitar bloqueos",
+    "Sintaxis validada de app.js, data.js, assets.js, admin-guard.js, sw.js y Code.gs como JS"
+  ],
+  "checks": {
+    "node_app_js": "ok",
+    "node_data_js": "ok",
+    "node_assets_js": "ok",
+    "node_admin_guard_js": "ok",
+    "node_sw_js": "ok",
+    "node_code_gs_syntax": "ok"
+  }
+}
