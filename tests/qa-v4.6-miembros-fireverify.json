@@ -1,0 +1,38 @@
+{
+  "version": "4.6",
+  "checks": [
+    {
+      "name": "app version",
+      "ok": true
+    },
+    {
+      "name": "fire verify function",
+      "ok": true
+    },
+    {
+      "name": "pushMember custom",
+      "ok": true
+    },
+    {
+      "name": "index v46",
+      "ok": true
+    },
+    {
+      "name": "sw v46",
+      "ok": true
+    },
+    {
+      "name": "codegs v46",
+      "ok": true
+    },
+    {
+      "name": "codegs upsertmember get",
+      "ok": true
+    },
+    {
+      "name": "codegs syntax node check",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

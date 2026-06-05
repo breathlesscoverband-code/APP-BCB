@@ -1,5 +1,5 @@
-const APP_BCB_APP_VERSION = '4.4.0-final-sync-miembros-escritura-estable';
-const STORE_KEY = 'app_bcb_control_pro_v44_miembros_escritura_estable';
+const APP_BCB_APP_VERSION = '4.6.0-final-sync-miembros-fireverify-estable';
+const STORE_KEY = 'app_bcb_control_pro_v46_miembros_fireverify_estable';
 const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v42';
 const OLD_STORE_KEYS = ['app_bcb_control_pro_v41_aprendizajes_enhe','app_bcb_google_sheet_snapshot_latest_v41','app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
 let db = loadData();
@@ -508,7 +508,7 @@ function mergeTextNotes(a,b){
   return out.join(' | ');
 }
 function localPaymentMemberDefinitions(){
-  // APP-BCB v4.5:
+  // APP-BCB v4.6:
   // El local usa la lista de MIEMBROS editable desde la app.
   // Solo entran quienes estén Activos y con Paga local = Sí.
   const source = (Array.isArray(db?.bandMembers) && db.bandMembers.length ? db.bandMembers : BCB_FIXED_MEMBERS)
@@ -1243,7 +1243,7 @@ function appsScriptFormPost(params={}){
 }
 
 async function appsScriptWrite(params={}){
-  // v4.5: escritura rápida y comprobable.
+  // v4.6: escritura rápida y comprobable.
   // Primero intenta JSONP/GET (suficiente para miembros, pagos, tareas y cambios cortos).
   // Si el payload es grande o JSONP falla, usa POST por iframe como respaldo.
   const rowText = String(params.row || params.rows || '');
@@ -1626,13 +1626,100 @@ function pushLocalPaymentToSheet(p, opts={}){
   return pushSheetRow('upsertLocalPayment', localPaymentToSheetRow(p), options);
 }
 
+function verifyMemberInCurrentDb(expected){
+  const key = normalizeMemberKey(expected.id || expected.name);
+  const current = (db.bandMembers || []).find(m => normalizeMemberKey(m.id || m.name) === key);
+  if(!current) return false;
+  const exp = normalizeMemberRecord(expected);
+  const sameName = norm(current.name) === norm(exp.name);
+  const sameActive = yesNo(current.active,'Sí') === yesNo(exp.active,'Sí');
+  const sameLocal = yesNo(current.payLocal,'Sí') === yesNo(exp.payLocal,'Sí');
+  const sameRehearsals = yesNo(current.showInRehearsals,'Sí') === yesNo(exp.showInRehearsals,'Sí');
+  const sameVocal = String(current.vocal || 'No') === String(exp.vocal || 'No');
+  return sameName && sameActive && sameLocal && sameRehearsals && sameVocal;
+}
+
+function sleepBCB(ms){
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function fireAppsScriptGet(params={}){
+  // GET "fire and verify".
+  // No depende de que Apps Script devuelva JSONP válido. El servidor ejecuta el GET y
+  // luego confirmamos leyendo MIEMBROS desde Google Sheet publicado.
+  return new Promise((resolve,reject)=>{
+    if(!GOOGLE_SHEET_MASTER.appsScriptUrl) return reject(new Error('No hay URL /exec de Apps Script configurada.'));
+    let done = false;
+    const url = appBcbEndpointUrl(params);
+    const img = new Image();
+    const timeout = setTimeout(()=>{
+      if(done) return;
+      done = true;
+      resolve({ok:true, transport:'get-timeout-assumed', url});
+    }, 3500);
+    function finish(kind){
+      if(done) return;
+      done = true;
+      clearTimeout(timeout);
+      resolve({ok:true, transport:kind, url});
+    }
+    img.onload = ()=>finish('get-image-load');
+    img.onerror = ()=>finish('get-image-error'); // respuesta no-imagen esperada, pero el GET ya se ejecutó
+    img.referrerPolicy = 'no-referrer';
+    img.src = url;
+  });
+}
+
+async function syncMembersFromGoogleSheetDirectOnly(){
+  const rows = await fetchSheetTabViaGoogleSheetDirect('MIEMBROS', 150);
+  const count = applyCoreSheetRows('MIEMBROS', rows);
+  persistDataOnly();
+  return {ok:true, count};
+}
+
+async function waitForMemberSheetConfirmation(expected, opts={}){
+  const attempts = Number(opts.attempts || 8);
+  const delay = Number(opts.delay || 1200);
+  let lastError = '';
+  for(let i=0; i<attempts; i++){
+    try{
+      await syncMembersFromGoogleSheetDirectOnly();
+      if(verifyMemberInCurrentDb(expected)){
+        return {ok:true, attempts:i+1};
+      }
+      lastError = 'El miembro aún no aparece confirmado con los cambios esperados en Google Sheet.';
+    }catch(err){
+      lastError = err && err.message ? err.message : String(err);
+    }
+    await sleepBCB(delay);
+  }
+  throw new Error('Google Sheet no confirmó el cambio de miembro. Último detalle: '+lastError);
+}
+
 function pushMemberToSheet(m){
-  return pushSheetRow('upsertMember', memberToSheetRow(m), {afterWrite:'members'});
+  const row = memberToSheetRow(m);
+  const expected = normalizeMemberRecord(m);
+
+  // 1) intento normal JSONP/POST corto
+  // 2) si no devuelve respuesta, GET fire-and-verify
+  // 3) se acepta solo cuando MIEMBROS confirma el cambio
+  return appsScriptWrite({action:'upsertMember', key:'1929', row:JSON.stringify(row)})
+    .catch(async firstErr=>{
+      console.warn('APP-BCB miembros: escritura con respuesta falló; probando fire-and-verify:', firstErr);
+      await fireAppsScriptGet({action:'upsertMember', key:'1929', row:JSON.stringify(row)});
+      return {ok:true, transport:'fire-and-verify'};
+    })
+    .then(async payload=>{
+      if(payload && payload.ok === false) throw new Error(payload.error || 'Apps Script no confirmó miembro.');
+      await waitForMemberSheetConfirmation(expected);
+      sheetStatus('Miembro confirmado en Google Sheet maestro.','ok');
+      return Object.assign({ok:true, action:'upsertMember'}, payload || {});
+    });
 }
 
 function alertSheetWriteError(err){
   const msg=(err && err.message) ? err.message : String(err||'Error desconocido');
-  alert('NO se ha guardado en Google Sheet. No he cambiado la app local para evitar datos falsos.\n\nMotivo: '+msg+'\n\nComprueba que Apps Script esté actualizado a la misma versión y que el endpoint /exec sea el público actual.');
+  alert('NO se ha confirmado el guardado en Google Sheet. No he cambiado la app local para evitar datos falsos.\n\nMotivo: '+msg+'\n\nComprueba que Apps Script esté actualizado a la misma versión y que el endpoint /exec sea el público actual.');
 }
 
 

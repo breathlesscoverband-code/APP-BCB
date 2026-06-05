@@ -1,8 +1,8 @@
 {
   "name": "APP-BCB · Breathless Cover Band",
   "short_name": "APP-BCB",
-  "description": "App interna de Breathless Cover Band · v4.5 final sync miembros escritura estable JSONP",
-  "start_url": "./?v=45",
+  "description": "App interna de Breathless Cover Band · v4.6 final sync miembros fire-and-verify estable",
+  "start_url": "./?v=46",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
