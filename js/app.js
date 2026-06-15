@@ -14,6 +14,7 @@ let appBcbRendering = false;
 let appBcbSaveQueued = false;
 const tabs = [
   ['dashboard','Panel','●'],['crm','CRM','●'],['followup','Seguimiento','●'],['gmail','Gmail','●'],['concerts','Conciertos','●'],['rehearsals','Ensayos','●'],['local','Local ensayo','●'],['members','Miembros','●'],
+  ['audioLibrary','Pistas','●'],
   ['budget','Presupuesto','●'],['repertoire','Canciones','●'],['setlist','Setlist','●'],['dossier','Dossier','●'],['templates','Plantillas','●'],['tasks','Tareas','●'],['importExport','Exportar','●']
 ];
 
@@ -2628,6 +2629,7 @@ function renderActiveTab(){
   else if(id==='rehearsals') renderRehearsals();
   else if(id==='local') renderLocalPayments();
   else if(id==='members') renderMembers();
+  else if(id==='audioLibrary') { if(window.initAudioLibraryPlayers) window.initAudioLibraryPlayers(); }
   else if(id==='budget') renderBudgetUI();
   else if(id==='repertoire') renderRepertoire();
   else if(id==='setlist') renderSetlist();

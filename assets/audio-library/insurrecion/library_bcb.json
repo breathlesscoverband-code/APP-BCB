@@ -1,0 +1,281 @@
+{
+  "schema": "audio_studio_library_v1",
+  "band": "bcb",
+  "band_label": "Breathless Cover Band",
+  "updated_at": "2026-06-15 21:29:52",
+  "songs": [
+    {
+      "title": "Cadiillac",
+      "slug": "cadiillac",
+      "band": "bcb",
+      "band_label": "Breathless Cover Band",
+      "created_at": "2026-06-15 21:21:28",
+      "default_variant": "0",
+      "tracks": [
+        {
+          "id": "bass",
+          "label": "Bajo",
+          "source": "bass.wav",
+          "file": "tracks/bass.mp3",
+          "url": "cadiillac/tracks/bass.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "drums",
+          "label": "Batería",
+          "source": "drums.wav",
+          "file": "tracks/drums.mp3",
+          "url": "cadiillac/tracks/drums.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "other",
+          "label": "Resto",
+          "source": "other.wav",
+          "file": "tracks/other.mp3",
+          "url": "cadiillac/tracks/other.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "vocals",
+          "label": "Voz",
+          "source": "vocals.wav",
+          "file": "tracks/vocals.mp3",
+          "url": "cadiillac/tracks/vocals.mp3",
+          "drive_url": ""
+        }
+      ],
+      "variants": {
+        "0": {
+          "label": "Original",
+          "semitones": 0,
+          "tracks": [
+            {
+              "id": "bass",
+              "label": "Bajo",
+              "source": "bass.wav",
+              "file": "tracks/bass.mp3",
+              "url": "cadiillac/tracks/bass.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "drums",
+              "label": "Batería",
+              "source": "drums.wav",
+              "file": "tracks/drums.mp3",
+              "url": "cadiillac/tracks/drums.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "other",
+              "label": "Resto",
+              "source": "other.wav",
+              "file": "tracks/other.mp3",
+              "url": "cadiillac/tracks/other.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "vocals",
+              "label": "Voz",
+              "source": "vocals.wav",
+              "file": "tracks/vocals.mp3",
+              "url": "cadiillac/tracks/vocals.mp3",
+              "drive_url": ""
+            }
+          ]
+        }
+      },
+      "notes": "URLs relativas. Si los audios están en Drive, sustituir url por enlace directo reproducible si hace falta.",
+      "original_archive": {
+        "storage": "drive_local_sync",
+        "file": "cadiillac__original.mp3",
+        "path": "H:\\Mi unidad\\BCB\\Audio Studio\\Originales\\cadiillac__original.mp3"
+      },
+      "storage": "drive_local_sync",
+      "folder": "cadiillac",
+      "published_at": "2026-06-15 21:21:30"
+    },
+    {
+      "title": "Insurrecion",
+      "slug": "insurrecion",
+      "band": "bcb",
+      "band_label": "Breathless Cover Band",
+      "created_at": "2026-06-15 21:29:51",
+      "default_variant": "0",
+      "tracks": [
+        {
+          "id": "bass",
+          "label": "Bajo",
+          "source": "bass.wav",
+          "file": "tracks/bass.mp3",
+          "url": "insurrecion/tracks/bass.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "drums",
+          "label": "Batería",
+          "source": "drums.wav",
+          "file": "tracks/drums.mp3",
+          "url": "insurrecion/tracks/drums.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "other",
+          "label": "Resto",
+          "source": "other.wav",
+          "file": "tracks/other.mp3",
+          "url": "insurrecion/tracks/other.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "vocals",
+          "label": "Voz",
+          "source": "vocals.wav",
+          "file": "tracks/vocals.mp3",
+          "url": "insurrecion/tracks/vocals.mp3",
+          "drive_url": ""
+        }
+      ],
+      "variants": {
+        "0": {
+          "label": "Original",
+          "semitones": 0,
+          "tracks": [
+            {
+              "id": "bass",
+              "label": "Bajo",
+              "source": "bass.wav",
+              "file": "tracks/bass.mp3",
+              "url": "insurrecion/tracks/bass.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "drums",
+              "label": "Batería",
+              "source": "drums.wav",
+              "file": "tracks/drums.mp3",
+              "url": "insurrecion/tracks/drums.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "other",
+              "label": "Resto",
+              "source": "other.wav",
+              "file": "tracks/other.mp3",
+              "url": "insurrecion/tracks/other.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "vocals",
+              "label": "Voz",
+              "source": "vocals.wav",
+              "file": "tracks/vocals.mp3",
+              "url": "insurrecion/tracks/vocals.mp3",
+              "drive_url": ""
+            }
+          ]
+        }
+      },
+      "notes": "URLs relativas. Si los audios están en Drive, sustituir url por enlace directo reproducible si hace falta.",
+      "original_archive": {
+        "storage": "drive_local_sync",
+        "file": "insurrecion__original.mp3",
+        "path": "H:\\Mi unidad\\BCB\\Audio Studio\\Originales\\insurrecion__original.mp3"
+      },
+      "storage": "drive_local_sync",
+      "folder": "insurrecion",
+      "published_at": "2026-06-15 21:29:52"
+    },
+    {
+      "title": "Zombie",
+      "slug": "zombie",
+      "band": "bcb",
+      "band_label": "Breathless Cover Band",
+      "created_at": "2026-06-15 16:10:51",
+      "default_variant": "0",
+      "tracks": [
+        {
+          "id": "bass",
+          "label": "Bajo",
+          "source": "bass.wav",
+          "file": "tracks/bass.mp3",
+          "url": "zombie/tracks/bass.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "drums",
+          "label": "Batería",
+          "source": "drums.wav",
+          "file": "tracks/drums.mp3",
+          "url": "zombie/tracks/drums.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "other",
+          "label": "Resto",
+          "source": "other.wav",
+          "file": "tracks/other.mp3",
+          "url": "zombie/tracks/other.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "vocals",
+          "label": "Voz",
+          "source": "vocals.wav",
+          "file": "tracks/vocals.mp3",
+          "url": "zombie/tracks/vocals.mp3",
+          "drive_url": ""
+        }
+      ],
+      "variants": {
+        "0": {
+          "label": "Original",
+          "semitones": 0,
+          "tracks": [
+            {
+              "id": "bass",
+              "label": "Bajo",
+              "source": "bass.wav",
+              "file": "tracks/bass.mp3",
+              "url": "zombie/tracks/bass.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "drums",
+              "label": "Batería",
+              "source": "drums.wav",
+              "file": "tracks/drums.mp3",
+              "url": "zombie/tracks/drums.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "other",
+              "label": "Resto",
+              "source": "other.wav",
+              "file": "tracks/other.mp3",
+              "url": "zombie/tracks/other.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "vocals",
+              "label": "Voz",
+              "source": "vocals.wav",
+              "file": "tracks/vocals.mp3",
+              "url": "zombie/tracks/vocals.mp3",
+              "drive_url": ""
+            }
+          ]
+        }
+      },
+      "notes": "URLs relativas. Si los audios están en Drive, sustituir url por enlace directo reproducible si hace falta.",
+      "original_archive": {
+        "storage": "drive_local_sync",
+        "file": "zombie__original.mp4",
+        "path": "H:\\Mi unidad\\BCB\\Audio Studio\\Originales\\zombie__original.mp4"
+      },
+      "storage": "drive_local_sync",
+      "folder": "zombie",
+      "published_at": "2026-06-15 16:10:53"
+    }
+  ]
+}

@@ -29,6 +29,7 @@
 })();
 </script>
 
+<link rel="stylesheet" href="css/audio-library.css?v=4.2-audio-library">
 </head>
 <body>
 <div class="app">
@@ -347,6 +348,38 @@
     <div class="tableWrap"><table id="taskTable"><thead><tr><th>Tarea</th><th>Responsable</th><th>Fecha</th><th>Estado</th><th>Prioridad</th><th>Área</th><th>Notas</th><th>Acciones</th></tr></thead><tbody></tbody></table></div>
   </section>
 
+  <section class="tab" id="audioLibrary">
+    <div class="sectionTitle">
+      <div>
+        <h3>Biblioteca de pistas BCB</h3>
+        <p>Temas separados de Breathless Cover Band para ensayo en móvil, tablet o PC. No separa audio: reproduce sesiones ya preparadas por Audio Studio Admin.</p>
+      </div>
+      <div class="actions">
+        <button class="btn gold" type="button" onclick="window.initAudioLibraryPlayers && window.initAudioLibraryPlayers()">Recargar biblioteca</button>
+      </div>
+    </div>
+    <div class="grid two">
+      <div class="card" style="grid-column:1/-1">
+        <div
+          data-audio-library
+          data-band="bcb"
+          data-band-label="Breathless Cover Band"
+          data-library-url="assets/audio-library/library_bcb.json">
+        </div>
+      </div>
+      <div class="card">
+        <h4>Uso para músicos</h4>
+        <p class="muted">Elige un tema, pulsa Play y trabaja las pistas con volumen, mute, solo, velocidad y loop. El tono solo aparecerá si se exportaron variantes desde Audio Studio Admin.</p>
+      </div>
+      <div class="card">
+        <h4>Biblioteca BCB</h4>
+        <p class="muted">Esta app lee únicamente la biblioteca de <strong>Breathless Cover Band</strong>. El archivo base está en <code>assets/audio-library/library_bcb.json</code>.</p>
+      </div>
+    </div>
+  </section>
+
+
+
   <section class="tab" id="importExport">
     <div class="sectionTitle"><div><h3>Importar / Exportar</h3><p>Copias de seguridad, CSV, dossier y libro maestro.</p></div></div>
     <div class="grid two">
@@ -365,6 +398,7 @@
 
 <script src="js/assets.js?v=4.7.0-bcb"></script>
 <script src="js/data.js?v=4.7.0-bcb"></script>
+<script src="js/audio-library.js?v=4.2-audio-library"></script>
 <script src="js/app.js?v=4.7.0-bcb"></script>
 <script>
 if ("serviceWorker" in navigator) {

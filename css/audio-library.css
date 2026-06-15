@@ -1,0 +1,37 @@
+/* Audio Library Player v1 */
+.audio-lib-shell{border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:18px;background:rgba(0,0,0,.16)}
+.audio-lib-head,.audio-lib-player-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}
+.audio-lib-eyebrow{margin:0 0 4px;color:#d6aa45;text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:800}
+.audio-lib-muted{color:#bfb7c8;font-size:13px;line-height:1.4;margin:5px 0}
+.audio-lib-actions{display:flex;gap:8px;flex-wrap:wrap}
+.audio-lib-btn,.audio-lib-file-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:12px;padding:10px 13px;background:#d6aa45;color:#211200;font-weight:800;text-decoration:none;cursor:pointer}
+.audio-lib-btn.secondary{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.18)}
+.audio-lib-btn.active{outline:2px solid #d6aa45}
+.audio-lib-file-btn input{display:none}
+.audio-lib-config{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:end;margin:12px 0}
+.audio-lib-config input,.audio-lib-config select,.audio-lib-search,.audio-lib-controls input,.audio-lib-controls select{width:100%;border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(0,0,0,.22);color:inherit;padding:10px}
+.audio-lib-status{margin:10px 0;color:#d7e8c5;font-size:13px}.audio-lib-status.is-error{color:#ffb3b3}
+.audio-lib-layout{display:grid;grid-template-columns:280px 1fr;gap:14px}
+.audio-lib-list,.audio-lib-player{border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:14px;background:rgba(255,255,255,.04)}
+.audio-lib-song{width:100%;text-align:left;margin-top:8px;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:inherit;display:block;cursor:pointer}
+.audio-lib-song.active{border-color:#d6aa45;background:rgba(214,170,69,.12)}
+.audio-lib-song strong{display:block}.audio-lib-song small{display:block;color:#bfb7c8;margin-top:3px}
+.audio-lib-empty{color:#bfb7c8;padding:30px;text-align:center}
+.audio-lib-transport-buttons{display:flex;gap:8px;flex-wrap:wrap}
+.audio-lib-seek-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin:10px 0}
+.audio-lib-seek-row input{width:100%}
+.audio-lib-controls{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:end;margin:12px 0}
+.audio-lib-track-list{display:grid;gap:8px;margin-top:12px}
+.audio-lib-track{display:grid;grid-template-columns:1fr 170px auto auto auto;gap:10px;align-items:center;padding:11px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10)}
+.audio-lib-track small{display:block;color:#bfb7c8}
+.audio-lib-track a{color:#f1d27a;text-decoration:none;font-weight:700}
+@media(max-width:800px){
+  .audio-lib-head,.audio-lib-player-head{display:block}
+  .audio-lib-config,.audio-lib-layout,.audio-lib-controls,.audio-lib-track{grid-template-columns:1fr}
+  .audio-lib-transport-buttons{margin-top:10px}
+}
+
+
+.audio-lib-tone-note{display:block;margin-top:6px;color:#bfb7c8;font-size:12px;line-height:1.3}
+.audio-lib-controls label{min-width:0}
+.audio-lib-controls select:disabled{opacity:.72;cursor:not-allowed}
