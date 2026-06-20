@@ -1,5 +1,5 @@
-/* APP-BCB · PWA service worker v4.8 final sync · inactivar miembros directo */
-const CACHE_NAME = "app-bcb-pwa-v4-6-0-miembros-fireverify-estable";
+﻿/* APP-BCB · PWA service worker v4.8 final sync · inactivar miembros directo */
+const CACHE_NAME = "app-bcb-pwa-v5-3-0-news";
 const APP_SHELL = [
   "./",
   "./index.html?v=4.7.0-bcb",
@@ -9,6 +9,7 @@ const APP_SHELL = [
   "./js/assets.js?v=4.7.0-bcb",
   "./js/data.js?v=4.7.0-bcb",
   "./js/app.js?v=4.7.0-bcb",
+  "./js/news-modal.js?v=5.3.0-news",
   "./js/admin-guard.js?v=4.7.0-bcb",
   "./assets/bcb_logo_main.png",
   "./assets/bcb_home_background.png",
@@ -75,3 +76,4 @@ self.addEventListener("fetch", event => {
       }))
   );
 });
+

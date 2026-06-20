@@ -1,72 +1,72 @@
-{
-  "name": "APP-BCB · Breathless Cover Band",
-  "short_name": "APP-BCB",
-  "description": "App interna de Breathless Cover Band · v4.7 final sync inactivar miembros directo",
-  "start_url": "./?v=46",
-  "scope": "./",
-  "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#050505",
-  "theme_color": "#090b10",
-  "lang": "es",
-  "icons": [
-    {
-      "src": "icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Canciones",
-      "short_name": "Canciones",
-      "description": "Abrir repertorio BCB",
-      "url": "./?tab=repertoire&v=42",
-      "icons": [
-        {
-          "src": "icons/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "CRM",
-      "short_name": "CRM",
-      "description": "Abrir CRM BCB",
-      "url": "./?tab=crm&v=42",
-      "icons": [
-        {
-          "src": "icons/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "Ensayos",
-      "short_name": "Ensayos",
-      "description": "Abrir ensayos BCB",
-      "url": "./?tab=rehearsals&v=42",
-      "icons": [
-        {
-          "src": "icons/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    }
-  ],
-  "version": "4.2.0",
-  "id": "APP-BCB-v4-2"
+﻿{
+    "name":  "APP-BCB · Breathless Cover Band",
+    "short_name":  "APP-BCB",
+    "description":  "App interna de Breathless Cover Band con pantalla automÃ¡tica de novedades, CRM, repertorio, setlist, miembros, pagos, ensayos y mÃ³dulo Pistas.",
+    "start_url":  "./?v=5.3-news",
+    "scope":  "./",
+    "display":  "standalone",
+    "orientation":  "portrait",
+    "background_color":  "#050505",
+    "theme_color":  "#090b10",
+    "lang":  "es",
+    "icons":  [
+                  {
+                      "src":  "icons/icon-192.png",
+                      "sizes":  "192x192",
+                      "type":  "image/png",
+                      "purpose":  "any"
+                  },
+                  {
+                      "src":  "icons/icon-512.png",
+                      "sizes":  "512x512",
+                      "type":  "image/png",
+                      "purpose":  "any"
+                  },
+                  {
+                      "src":  "icons/maskable-512.png",
+                      "sizes":  "512x512",
+                      "type":  "image/png",
+                      "purpose":  "maskable"
+                  }
+              ],
+    "shortcuts":  [
+                      {
+                          "name":  "Canciones",
+                          "short_name":  "Canciones",
+                          "description":  "Abrir repertorio BCB",
+                          "url":  "./?tab=repertoire\u0026v=42",
+                          "icons":  [
+                                        {
+                                            "src":  "icons/icon-192.png",
+                                            "sizes":  "192x192"
+                                        }
+                                    ]
+                      },
+                      {
+                          "name":  "CRM",
+                          "short_name":  "CRM",
+                          "description":  "Abrir CRM BCB",
+                          "url":  "./?tab=crm\u0026v=42",
+                          "icons":  [
+                                        {
+                                            "src":  "icons/icon-192.png",
+                                            "sizes":  "192x192"
+                                        }
+                                    ]
+                      },
+                      {
+                          "name":  "Ensayos",
+                          "short_name":  "Ensayos",
+                          "description":  "Abrir ensayos BCB",
+                          "url":  "./?tab=rehearsals\u0026v=42",
+                          "icons":  [
+                                        {
+                                            "src":  "icons/icon-192.png",
+                                            "sizes":  "192x192"
+                                        }
+                                    ]
+                      }
+                  ],
+    "version":  "4.2.0",
+    "id":  "APP-BCB-v4-2"
 }

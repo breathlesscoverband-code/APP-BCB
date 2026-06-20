@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
@@ -13,6 +13,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="stylesheet" href="css/styles.css?v=4.7.0-bcb">
+<link rel="stylesheet" href="css/news-modal.css?v=5.3.0-news">
 <link rel="stylesheet" href="css/admin-guard.css?v=4.7.0-bcb">
 <script defer src="js/admin-guard.js?v=4.7.0-bcb"></script>
 
@@ -400,10 +401,11 @@
 <script src="js/data.js?v=4.7.0-bcb"></script>
 <script src="js/audio-library.js?v=4.2-audio-library"></script>
 <script src="js/app.js?v=4.7.0-bcb"></script>
+<script src="js/news-modal.js?v=5.3.0-news"></script>
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function () {
-    navigator.serviceWorker.register("./sw.js?v=4.7.0-bcb").catch(function (error) {
+    navigator.serviceWorker.register("./sw.js?v=5.3.0-news").catch(function (error) {
       console.warn("Service Worker no registrado:", error);
     });
   });
@@ -411,3 +413,4 @@ if ("serviceWorker" in navigator) {
 </script>
 </body>
 </html>
+
