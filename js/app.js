@@ -1,7 +1,7 @@
-const APP_BCB_APP_VERSION = '4.9.0-setlist-v11';
-const STORE_KEY = 'app_bcb_control_pro_v49_setlist_v11';
-const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v48';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v41_aprendizajes_enhe','app_bcb_google_sheet_snapshot_latest_v41','app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
+const APP_BCB_APP_VERSION = '5.6.0-setlist-v11-clean32-direct';
+const STORE_KEY = 'app_bcb_control_pro_v56_setlist_v11_clean32';
+const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v56';
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v49_setlist_v11','app_bcb_control_pro_v48_final_sync_miembros_confirmacion_appscript','app_bcb_google_sheet_snapshot_latest_v48','app_bcb_google_sheet_snapshot_latest_v49','app_bcb_control_pro_v41_aprendizajes_enhe','app_bcb_google_sheet_snapshot_latest_v41','app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
 const BCB_REPERTOIRE_PATCH_ID = 'bcb_setlist_v11_20260620';
 
 let db = loadData();
@@ -46,7 +46,7 @@ function shouldSeedReplace(v){
 }
 function mergeRuntimeData(base, runtime){
   if(!runtime || typeof runtime !== 'object') return base;
-  const keepArrays = ['crm','rehearsals','concerts','repertoire','setlists','bandMembers','tasks','localPayments','gmailResponses','templates'];
+  const keepArrays = ['crm','rehearsals','concerts','bandMembers','tasks','localPayments','gmailResponses','templates'];
   keepArrays.forEach(k=>{
     if(Array.isArray(runtime[k]) && runtime[k].length) base[k]=runtime[k];
   });
@@ -2027,6 +2027,12 @@ function mergeSongWithExisting(item){
   return merged;
 }
 function applySongsFromSheet(rows){
+  // BCB v5.6: el repertorio del concierto v11 queda bloqueado en 32 temas.
+  // No se permite que Google Sheet antiguo vuelva a pisarlo a 24 canciones.
+  if(Array.isArray(INITIAL_DATA.repertoire) && INITIAL_DATA.repertoire.length === 32){
+    db.repertoire = clone(INITIAL_DATA.repertoire);
+    return db.repertoire.length;
+  }
   const items=rows.map(mapSongRow)
     .filter(x=>{
       const t=norm(x.title||'');
@@ -2042,6 +2048,12 @@ function applySongsFromSheet(rows){
   return items.length;
 }
 function applySetlistFromSheet(rows){
+  // BCB v5.6: setlist del concierto v11 bloqueado en 32 temas.
+  // Evita que SETLISTS antiguo vuelva a mostrar 26.
+  if(INITIAL_DATA.strategicSetlist && Array.isArray(INITIAL_DATA.strategicSetlist.blocks)){
+    db.strategicSetlist = clone(INITIAL_DATA.strategicSetlist);
+    return (db.strategicSetlist.blocks||[]).reduce((n,b)=>n+((b.songs||[]).length),0);
+  }
   const items=rows.map((row,i)=>({
     order:Number(pick(row,['orden','Orden','order'])) || i+1,
     title:pick(row,['titulo','Título','title','Tema']),
@@ -4125,7 +4137,26 @@ function initialTabFromUrl(){
     return tabs.some(t=>t[0]===id) ? id : 'dashboard';
   }catch(e){ return 'dashboard'; }
 }
+
+// BCB v5.6 · refuerzo final: repertorio y setlist v11 siempre 32.
+function forceBCBSetlistV11Clean32(){
+  try{
+    if(Array.isArray(INITIAL_DATA.repertoire) && INITIAL_DATA.repertoire.length === 32){
+      db.repertoire = clone(INITIAL_DATA.repertoire);
+    }
+    if(INITIAL_DATA.strategicSetlist && Array.isArray(INITIAL_DATA.strategicSetlist.blocks)){
+      db.strategicSetlist = clone(INITIAL_DATA.strategicSetlist);
+    }
+    db.createdFrom = Object.assign({}, db.createdFrom||{}, {
+      setlistPatch: 'v5.6: setlist v11 limpio 32 temas aplicado por parche directo BAT',
+      repertoireSetlistV11AppliedAt: '2026-06-20'
+    });
+    persistDataOnly();
+  }catch(e){ console.warn('BCB setlist v11 clean32 patch warning', e); }
+}
+
 clearOldLocalCaches();
+forceBCBSetlistV11Clean32();
 renderShell();
 setTab(initialTabFromUrl(), {scroll:false, updateUrl:false});
 // v4.1: apertura primero, renderizado bajo demanda y sincronización después; se mantienen los aprendizajes de APP-ENHE.
