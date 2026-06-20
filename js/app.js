@@ -1,4 +1,4 @@
-const APP_BCB_APP_VERSION = '5.9.0-guardado-estable-pagos-novedades';
+const APP_BCB_APP_VERSION = '6.0.0-ensayos-asistencia-dinamica';
 const STORE_KEY = 'app_bcb_control_pro_v59_guardado_estable';
 const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v56';
 const OLD_STORE_KEYS = ['app_bcb_control_pro_v49_setlist_v11','app_bcb_control_pro_v48_final_sync_miembros_confirmacion_appscript','app_bcb_google_sheet_snapshot_latest_v48','app_bcb_google_sheet_snapshot_latest_v49','app_bcb_control_pro_v41_aprendizajes_enhe','app_bcb_google_sheet_snapshot_latest_v41','app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
@@ -1322,22 +1322,42 @@ function sheetWriteEnabled(){
 
 function attendanceToSheetFields(attendance){
   const out={};
-  const map={
-    miguel:'asistencia_miguel',
-    carmen:'asistencia_carmen',
-    teo:'asistencia_teo',
-    alvaro:'asistencia_alvaro',
-    nataly:'asistencia_nataly',
-    lord_enzo:'asistencia_lord_enzo'
-  };
-  Object.keys(map).forEach(id=>{
-    const v=attendance && attendance[id];
-    if(v){
-      out[map[id]] = typeof v === 'string' ? v : (v.status || '');
+  const members = bandMembers({includeInactive:true});
+  const written = new Set();
+
+  function cleanStatus(v){
+    if(!v) return '';
+    return typeof v === 'string' ? v : (v.status || '');
+  }
+  function putFor(id, name, status){
+    const key = normalizeMemberKey(id || name);
+    const label = String(name || id || '').trim();
+    if(!key || !status) return;
+    out['asistencia_'+key] = status;
+    if(label){
+      out[label] = status;
+      out['Asistencia '+label] = status;
     }
+    written.add(key);
+  }
+
+  members.forEach(m=>{
+    const id = normalizeMemberKey(m.id || m.name);
+    const v = attendance && (attendance[id] || attendance[m.id] || attendance[m.name]);
+    putFor(id, m.name, cleanStatus(v));
   });
+
+  // Fallback: no perder asistencias de miembros añadidos aunque todavía no estén normalizados.
+  Object.keys(attendance || {}).forEach(rawId=>{
+    const key = normalizeMemberKey(rawId);
+    if(written.has(key)) return;
+    const v = attendance[rawId];
+    putFor(key, rawId, cleanStatus(v));
+  });
+
   return out;
 }
+
 
 function contactToSheetRow(c){
   const notes = [c.followNotes, c.dossierNotes, c.originNotes].filter(Boolean).join(' | ');
@@ -1838,22 +1858,40 @@ function applyCRMObjectsFromSheet(rows){
   return items.length;
 }
 function memberAttendanceFromRow(row, prefix='asistencia_'){
-  const ids=['miguel','carmen','teo','alvaro','nataly','lord_enzo'];
-  const aliases={
-    miguel:['asistencia_miguel','Miguel','Asistencia Miguel'],
-    carmen:['asistencia_carmen','Carmen','Asistencia Carmen'],
-    teo:['asistencia_teo','Teo','Asistencia Teo'],
-    alvaro:['asistencia_alvaro','Álvaro','Alvaro','Asistencia Álvaro','Asistencia Alvaro'],
-    nataly:['asistencia_nataly','Nataly','Natalia','Asistencia Nataly'],
-    lord_enzo:['asistencia_lord_enzo','Lord Enzo','Enzo','Asistencia Lord Enzo']
-  };
   const attendance={};
-  ids.forEach(id=>{
-    const st=pick(row, aliases[id]) || 'Pendiente';
-    attendance[id]={status:st||'Pendiente', notes:''};
+
+  function aliasesForMember(m){
+    const id = normalizeMemberKey(m.id || m.name);
+    const name = String(m.name || '').trim();
+    const base = [
+      prefix + id,
+      'asistencia_' + id,
+      id,
+      name,
+      'Asistencia ' + name
+    ].filter(Boolean);
+
+    // Compatibilidad con cabeceras antiguas.
+    const legacy = {
+      miguel:['asistencia_miguel','Miguel','Asistencia Miguel'],
+      carmen:['asistencia_carmen','Carmen','Asistencia Carmen'],
+      teo:['asistencia_teo','Teo','Asistencia Teo'],
+      alvaro:['asistencia_alvaro','Álvaro','Alvaro','Asistencia Álvaro','Asistencia Alvaro'],
+      nataly:['asistencia_nataly','Nataly','Natalia','Asistencia Nataly'],
+      lord_enzo:['asistencia_lord_enzo','Lord Enzo','Enzo','Asistencia Lord Enzo']
+    };
+    return unique(base.concat(legacy[id] || []));
+  }
+
+  bandMembers({includeInactive:true}).forEach(m=>{
+    const id = normalizeMemberKey(m.id || m.name);
+    const st = pick(row, aliasesForMember(m)) || 'Pendiente';
+    attendance[id] = {status: st || 'Pendiente', notes:''};
   });
+
   return attendance;
 }
+
 function mapConcertRow(row,i){
   return {
     id: Number(pick(row,['id','ID'])) || i+1,
@@ -2955,14 +2993,16 @@ function rehearsalSongChecklist(item){
 function rehearsalAttendanceEditor(item){
   const a=item?.attendance||{};
   return `<div class="hr"></div><h4>Asistencia al ensayo</h4><div class="attendanceEditGrid">`+bandMembers().map(m=>{
-    const itemA=a[m.id]||{status:'Pendiente',notes:''};
+    const id = normalizeMemberKey(m.id || m.name);
+    const itemA = a[id] || a[m.id] || a[m.name] || {status:'Pendiente',notes:''};
     return `<div class="attendanceEditItem">
       <label>${esc(m.name)} · ${esc(m.role)}</label>
-      <select data-rehearsal-attendance="${esc(m.id)}">${attendanceOptions(itemA.status||'Pendiente')}</select>
-      <input data-rehearsal-attendance-note="${esc(m.id)}" placeholder="Notas" value="${esc(itemA.notes||'')}">
+      <select data-rehearsal-attendance="${esc(id)}">${attendanceOptions(itemA.status||'Pendiente')}</select>
+      <input data-rehearsal-attendance-note="${esc(id)}" placeholder="Notas" value="${esc(itemA.notes||'')}">
     </div>`;
   }).join('')+`</div>`;
 }
+
 function setRehearsalSongsMode(mode){
   const all=document.getElementById('rehearsalAllSongs');
   const checks=[...document.querySelectorAll('[data-rehearsal-song]')];
@@ -2999,9 +3039,10 @@ function saveRehearsal(){
   obj.songTitles=obj.allSongs?'Todos los temas':rehearsalSongTitlesForSave(obj.songIds);
   obj.attendance={};
   bandMembers().forEach(m=>{
-    const st=document.querySelector(`[data-rehearsal-attendance="${m.id}"]`)?.value||'Pendiente';
-    const notes=document.querySelector(`[data-rehearsal-attendance-note="${m.id}"]`)?.value||'';
-    obj.attendance[m.id]={status:st,notes};
+    const id=normalizeMemberKey(m.id || m.name);
+    const st=document.querySelector(`[data-rehearsal-attendance="${id}"]`)?.value||'Pendiente';
+    const notes=document.querySelector(`[data-rehearsal-attendance-note="${id}"]`)?.value||'';
+    obj.attendance[id]={status:st,notes};
   });
   let item;
   if(modalContext.id){
@@ -3021,6 +3062,7 @@ function saveRehearsal(){
     })
     .catch(alertSheetWriteError);
 }
+
 function viewRehearsalModal(id){
   const r=(db.rehearsals||[]).find(x=>x.id===id);
   if(!r)return;
@@ -3084,7 +3126,7 @@ function renderRehearsals(){
       <td><button class="btn small dark" onclick="viewRehearsalModal(${r.id})">Ver</button> <button class="btn small gold" onclick="openRehearsalModal(${r.id})">Editar</button> <button class="btn small red" onclick="deleteRecord('rehearsals',${r.id})">Borrar</button></td>
     </tr>`;
   }).join('') || '<tr><td colspan="8" class="muted">Todavía no hay ensayos creados. Entra como administrador para añadir el primero.</td></tr>';
-  renderConcertAttendancePanel();
+  renderRehearsalAttendancePanel();
 }
 
 
@@ -3385,11 +3427,79 @@ function renderConcertAttendancePanel(){
     `:'<p class="muted">No hay conciertos creados todavía.</p>';
   }
 }
+
+function renderRehearsalAttendancePanel(){
+  const select=document.getElementById('attendanceConcertSelect');
+  if(!select)return;
+  const prev=select.value;
+  const rehearsals=(db.rehearsals||[]).slice().sort((a,b)=>String(a.date||'9999-99-99').localeCompare(String(b.date||'9999-99-99')) || String(a.startTime||'99:99').localeCompare(String(b.startTime||'99:99')));
+  fillSelectKeep(select, rehearsals.map(r=>`<option value="${esc(r.id)}">${esc(r.date||'sin fecha')} · ${esc(r.place||'Ensayo')}</option>`).join(''), prev);
+  const memberSelect=document.getElementById('attendanceMemberSelect');
+  const prevMember=memberSelect?.value||'';
+  fillSelectKeep(memberSelect, memberOptions(prevMember), prevMember);
+  const r=rehearsals.find(x=>Number(x.id)===Number(select.value)) || rehearsals[0];
+  if(r && !select.value) select.value=r.id;
+  const mId=normalizeMemberKey(memberSelect?.value || bandMembers()[0]?.id);
+  const saved=(r?.attendance||{})[mId] || {};
+  const summary=document.getElementById('concertAttendanceSummary');
+  if(summary){
+    summary.innerHTML=r?`
+      <div class="detailItem"><small>Ensayo seleccionado</small><div><strong>${esc(r.date||'sin fecha')} · ${esc(r.place||'Ensayo')}</strong><br><span style="color:var(--muted)">${esc([r.startTime,r.endTime].filter(Boolean).join(' - ')||'sin horario')} ${r.objective?'· '+esc(r.objective):''}</span></div></div>
+      <div class="hr"></div>
+      <h4>Estado guardado por miembro</h4>
+      ${attendancePills(r.attendance)}
+      ${saved.notes?`<p class="muted">Nota guardada de ${esc(memberLabel(mId))}: ${esc(saved.notes)}</p>`:''}
+    `:'<p class="muted">No hay ensayos creados todavía.</p>';
+  }
+  fixRehearsalAttendanceLabels();
+}
+
+function selectedRehearsalForAttendance(){
+  const id=Number(document.getElementById('attendanceConcertSelect')?.value||0);
+  return (db.rehearsals||[]).find(r=>Number(r.id)===id) || (db.rehearsals||[])[0];
+}
+
+function fixRehearsalAttendanceLabels(){
+  const root=document.getElementById('rehearsals');
+  if(!root)return;
+  root.querySelectorAll('h1,h2,h3,h4,p,small,label,button,span,option').forEach(el=>{
+    el.childNodes.forEach(node=>{
+      if(node.nodeType === 3){
+        node.nodeValue = node.nodeValue
+          .replace(/confirmar asistencia a concierto/gi,'Confirmar asistencia a ensayo')
+          .replace(/asistencia a concierto/gi,'asistencia a ensayo')
+          .replace(/concierto seleccionado/gi,'Ensayo seleccionado')
+          .replace(/concierto:/gi,'Ensayo:')
+          .replace(/\bconcierto\b/gi,'ensayo')
+          .replace(/\bconciertos\b/gi,'ensayos');
+      }
+    });
+  });
+}
+
 function selectedConcertForAttendance(){
   const id=Number(document.getElementById('attendanceConcertSelect')?.value||0);
   return (db.concerts||[]).find(c=>Number(c.id)===id) || (db.concerts||[])[0];
 }
 function copyConcertAttendanceMessage(){
+  if(currentTabId && currentTabId()==='rehearsals'){
+    const r=selectedRehearsalForAttendance();
+    if(!r){alert('No hay ensayo seleccionado.');return;}
+    const mId=normalizeMemberKey(document.getElementById('attendanceMemberSelect')?.value || bandMembers()[0]?.id);
+    const status=document.getElementById('attendanceStatusSelect')?.value || 'Confirmo asistencia';
+    const notes=document.getElementById('attendanceNotesInput')?.value || '';
+    const msg=[
+      'Breathless Cover Band · Confirmación de asistencia a ensayo',
+      `Ensayo: ${r.date||'fecha pendiente'} · ${[r.startTime,r.endTime].filter(Boolean).join(' - ')||'sin horario'}`,
+      `Lugar: ${r.place||'pendiente'}`,
+      `Miembro: ${memberLabel(mId)}`,
+      `Estado: ${status}`,
+      notes?`Notas: ${notes}`:'Notas: —'
+    ].join('\n');
+    copyText(msg);
+    return;
+  }
+
   const c=selectedConcertForAttendance();
   if(!c){alert('No hay concierto seleccionado.');return;}
   const mId=document.getElementById('attendanceMemberSelect')?.value || bandMembers()[0]?.id;
@@ -3405,7 +3515,32 @@ function copyConcertAttendanceMessage(){
   ].join('\n');
   copyText(msg);
 }
+
 function saveConcertAttendance(){
+  if(currentTabId && currentTabId()==='rehearsals'){
+    const r=selectedRehearsalForAttendance();
+    if(!r){alert('No hay ensayo seleccionado.');return;}
+    const mId=normalizeMemberKey(document.getElementById('attendanceMemberSelect')?.value || bandMembers()[0]?.id);
+    const status=document.getElementById('attendanceStatusSelect')?.value || 'Pendiente';
+    const notes=document.getElementById('attendanceNotesInput')?.value || '';
+    r.attendance=r.attendance||{};
+    r.attendance[mId]={status,notes,updatedAt:new Date().toISOString()};
+
+    pushRehearsalToSheet(r)
+      .then(()=>{
+        upsertLocalArrayItem('rehearsals', r);
+        saveData({refresh:false});
+        return syncRehearsalsFromGoogleSheet({silent:true, reason:'afterRehearsalAttendanceWrite'});
+      })
+      .then(()=>{
+        renderRehearsals();
+        rehearsalSheetStatus('Asistencia de ensayo guardada en Google Sheet.','ok');
+        alert('Asistencia de ensayo guardada en Google Sheet.');
+      })
+      .catch(alertSheetWriteError);
+    return;
+  }
+
   const c=selectedConcertForAttendance();
   if(!c){alert('No hay concierto seleccionado.');return;}
   const mId=document.getElementById('attendanceMemberSelect')?.value || bandMembers()[0]?.id;
@@ -3418,6 +3553,7 @@ function saveConcertAttendance(){
     .then(()=>alert('Confirmación guardada en Google Sheet.'))
     .catch(alertSheetWriteError);
 }
+
 function rehearsalHeaders(){return [
   {label:'ID',key:'id'},
   {label:'Fecha',key:'date'},
