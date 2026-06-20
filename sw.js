@@ -1,4 +1,4 @@
-﻿/* APP-BCB · PWA service worker v4.8 final sync · inactivar miembros directo */
+/* APP-BCB · PWA service worker v4.8 final sync · inactivar miembros directo */
 const CACHE_NAME = "app-bcb-pwa-v4-9-setlist-v11";
 const APP_SHELL = [
   "./",
@@ -77,3 +77,5 @@ self.addEventListener("fetch", event => {
   );
 });
 
+
+// BCB setlist v11 limpio 32 temas v4 - 2026-06-20 23:03:05
