@@ -1,7 +1,7 @@
-const APP_BCB_APP_VERSION = '5.8.0-guardado-estable';
-const STORE_KEY = 'app_bcb_control_pro_v58_guardado_estable';
-const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v58';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v56_setlist_v11_clean32','app_bcb_google_sheet_snapshot_latest_v56','app_bcb_control_pro_v49_setlist_v11','app_bcb_control_pro_v48_final_sync_miembros_confirmacion_appscript','app_bcb_google_sheet_snapshot_latest_v48','app_bcb_google_sheet_snapshot_latest_v49','app_bcb_control_pro_v41_aprendizajes_enhe','app_bcb_google_sheet_snapshot_latest_v41','app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
+const APP_BCB_APP_VERSION = '5.9.0-guardado-estable-pagos-novedades';
+const STORE_KEY = 'app_bcb_control_pro_v59_guardado_estable';
+const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v56';
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v49_setlist_v11','app_bcb_control_pro_v48_final_sync_miembros_confirmacion_appscript','app_bcb_google_sheet_snapshot_latest_v48','app_bcb_google_sheet_snapshot_latest_v49','app_bcb_control_pro_v41_aprendizajes_enhe','app_bcb_google_sheet_snapshot_latest_v41','app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
 const BCB_REPERTOIRE_PATCH_ID = 'bcb_setlist_v11_20260620';
 
 let db = loadData();
@@ -3998,3 +3998,117 @@ function appBcbAutoSync(reason){
 setTimeout(()=>appBcbAutoSync('startup'), 800);
 window.addEventListener('focus',()=>appBcbAutoSync('focus'));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden) appBcbAutoSync('visible');});
+
+
+
+/* APP-BCB v5.9 FIX · guardado estable: pagos/ensayos/repertorio
+   Parche defensivo: define funciones que v5.8 llamaba pero no tenía declaradas.
+   No modifica CRM, miembros ni histórico. */
+(function(){
+  "use strict";
+
+  function bcbPick(row, keys){
+    if(!row) return "";
+    for(var i=0;i<keys.length;i++){
+      var k=keys[i];
+      if(Object.prototype.hasOwnProperty.call(row,k) && row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") return row[k];
+    }
+    return "";
+  }
+
+  if(typeof window.fetchSheetTabViaAppsScript !== "function"){
+    window.fetchSheetTabViaAppsScript = async function(tab, limit){
+      limit = limit || 500;
+      if(typeof appsScriptJsonpOnly !== "function") throw new Error("appsScriptJsonpOnly no disponible.");
+      var payload = await appsScriptJsonpOnly({action:"sheet", tab:tab, limit:String(limit)});
+      if(!payload || payload.ok === false) throw new Error((payload && payload.error) || ("Apps Script no devolvió "+tab));
+      if(Array.isArray(payload.rows)) return payload.rows;
+      if(typeof findPayloadSheet === "function" && typeof rowsFromPayloadSheet === "function"){
+        var sheet = findPayloadSheet(payload, [tab]);
+        var rows = rowsFromPayloadSheet(sheet);
+        if(Array.isArray(rows)) return rows;
+      }
+      return [];
+    };
+  }
+
+  if(typeof window.applyLocalPaymentsFromSheet !== "function"){
+    window.applyLocalPaymentsFromSheet = function(rows){
+      rows = Array.isArray(rows) ? rows : [];
+      var items = rows.map(function(row){
+        var month = normalizeMonthValue(bcbPick(row, ["mes","Mes","month","Month","MES"]));
+        var memberRaw = bcbPick(row, ["memberId","ID Miembro","id_miembro","Miembro ID","nombre","Nombre","miembro","Miembro"]);
+        var memberId = normalizeMemberKey(memberRaw);
+        if(!month || !memberId) return null;
+        var amount = parseEuroValue(bcbPick(row, ["cuota","Cuota","importe","Importe","amount","Amount"]));
+        var paidRaw = bcbPick(row, ["pagado","Pagado","estado_pago","Estado pago","paid","Paid","estado","Estado"]);
+        var paid = isPaymentPaid(paidRaw) ? "SI" : "NO";
+        return {
+          id: bcbPick(row, ["id","ID"]) || (month+"|"+memberId),
+          month: month,
+          memberId: memberId,
+          name: memberDisplayName(memberId, bcbPick(row, ["nombre","Nombre","miembro","Miembro"])),
+          amount: amount || localMemberAmount(),
+          paid: paid,
+          paidDate: bcbPick(row, ["fecha_pago","Fecha pago","Fecha Pago","paidDate","paid_date"]),
+          updatedAt: bcbPick(row, ["actualizado_en","Última actualización","Ultima actualizacion","updatedAt","updated_at"]),
+          notes: bcbPick(row, ["notas","Notas","notes","Notes"]),
+          sheetRow: row.sheetRow || row.__row || row.Fila || row["Nº fila"] || "",
+          raw: row
+        };
+      }).filter(Boolean);
+
+      if(items.length){
+        db.localPayments = mergeLocalPaymentRows(db.localPayments || [], items);
+      }
+      return items.length;
+    };
+  }
+
+  if(typeof window.syncLocalPaymentsFromGoogleSheet !== "function"){
+    window.syncLocalPaymentsFromGoogleSheet = async function(opts){
+      opts = opts || {};
+      var silent = !!opts.silent;
+      try{
+        if(typeof sheetStatus === "function") sheetStatus("Actualizando pagos de local desde Google Sheet…");
+        var rows = await fetchSheetTabLive("PAGOS_LOCAL", 800);
+        var count = applyLocalPaymentsFromSheet(rows);
+        if(!localSelectedMonth) localSelectedMonth = currentYYYYMM();
+        if(typeof saveData === "function") saveData({refresh:false});
+        if(typeof renderLocalPayments === "function") renderLocalPayments();
+        if(typeof renderShell === "function") renderShell();
+        if(typeof sheetStatus === "function") sheetStatus("Pagos de local actualizados: "+count+" filas leídas.", "ok");
+        if(!silent) alert("Pagos de local actualizados: "+count+" filas.");
+        return true;
+      }catch(err){
+        if(typeof sheetStatus === "function") sheetStatus("No se pudo actualizar PAGOS_LOCAL desde Google Sheet: "+esc(err.message||err), "bad");
+        if(!silent) alert("No se pudo actualizar PAGOS_LOCAL:\n\n"+(err.message||err));
+        return false;
+      }
+    };
+  }
+
+  if(typeof window.syncRehearsalsFromGoogleSheet !== "function"){
+    window.syncRehearsalsFromGoogleSheet = async function(opts){
+      opts = opts || {};
+      var silent = !!opts.silent;
+      try{
+        if(typeof sheetStatus === "function") sheetStatus("Actualizando ensayos desde Google Sheet…");
+        var rows = await fetchSheetTabLive("ENSAYOS", 800);
+        var count = applyRehearsalsFromSheet(rows);
+        if(typeof saveData === "function") saveData({refresh:false});
+        if(typeof renderRehearsals === "function") renderRehearsals();
+        if(typeof renderShell === "function") renderShell();
+        if(typeof sheetStatus === "function") sheetStatus("Ensayos actualizados: "+count+" filas leídas.", "ok");
+        if(!silent) alert("Ensayos actualizados: "+count+" filas.");
+        return true;
+      }catch(err){
+        if(typeof sheetStatus === "function") sheetStatus("No se pudo actualizar ENSAYOS desde Google Sheet: "+esc(err.message||err), "bad");
+        if(!silent) alert("No se pudo actualizar ENSAYOS:\n\n"+(err.message||err));
+        return false;
+      }
+    };
+  }
+
+})();
+
