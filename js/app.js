@@ -1,7 +1,9 @@
-const APP_BCB_APP_VERSION = '4.8.0-final-sync-miembros-confirmacion-appsscript';
-const STORE_KEY = 'app_bcb_control_pro_v48_miembros_confirmacion_appsscript';
+const APP_BCB_APP_VERSION = '4.9.0-setlist-v11';
+const STORE_KEY = 'app_bcb_control_pro_v49_setlist_v11';
 const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v48';
 const OLD_STORE_KEYS = ['app_bcb_control_pro_v41_aprendizajes_enhe','app_bcb_google_sheet_snapshot_latest_v41','app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
+const BCB_REPERTOIRE_PATCH_ID = 'bcb_setlist_v11_20260620';
+
 let db = loadData();
 let filteredCRM = [];
 let rehearsalSyncRunning = false;
@@ -163,6 +165,25 @@ function migrateData(data){
   });
 
   data.repertoire.sort((a,b)=>(Number(a.order)||Number(a.id)||0)-(Number(b.order)||Number(b.id)||0));
+
+  // PATCH BCB SETLIST V11 · fuerza repertorio exacto del setlist cuando el caché/Google Sheet trae sobrantes.
+  try{
+    const desiredTitles = (INITIAL_DATA.repertoire||[]).map(x=>norm(x.titleCanonical||x.title));
+    const currentTitles = (data.repertoire||[]).map(x=>norm(x.titleCanonical||x.title));
+    const mismatch = desiredTitles.length && (
+      currentTitles.length !== desiredTitles.length ||
+      desiredTitles.some(t=>!currentTitles.includes(t)) ||
+      currentTitles.some(t=>!desiredTitles.includes(t))
+    );
+    if(mismatch){
+      data.repertoire = clone(INITIAL_DATA.repertoire || []);
+      data.artistReferences = clone(INITIAL_DATA.artistReferences || []);
+      data.strategicSetlist = clone(INITIAL_DATA.strategicSetlist || data.strategicSetlist || {});
+      data.createdFrom = Object.assign({}, data.createdFrom||{}, INITIAL_DATA.createdFrom||{});
+      try{ localStorage.setItem('app_bcb_repertoire_patch_id', BCB_REPERTOIRE_PATCH_ID); }catch(e){}
+    }
+  }catch(e){}
+
 
   data.concerts = Array.isArray(data.concerts) ? data.concerts : [];
   data.localPayments = Array.isArray(data.localPayments) ? data.localPayments : [];
