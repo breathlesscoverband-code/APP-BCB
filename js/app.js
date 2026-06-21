@@ -1,7 +1,7 @@
-const APP_BCB_APP_VERSION = '6.2.0-canciones-setlist-guardado';
-const STORE_KEY = 'app_bcb_control_pro_v62_canciones_setlist_guardado';
+const APP_BCB_APP_VERSION = '6.2.0-canciones-setlist-estable';
+const STORE_KEY = 'app_bcb_control_pro_v62_canciones_setlist_estable';
 const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v62';
-const OLD_STORE_KEYS = ['app_bcb_control_pro_v56_setlist_v11_clean32','app_bcb_google_sheet_snapshot_latest_v56','app_bcb_control_pro_v49_setlist_v11','app_bcb_control_pro_v48_final_sync_miembros_confirmacion_appscript','app_bcb_google_sheet_snapshot_latest_v48','app_bcb_google_sheet_snapshot_latest_v49','app_bcb_control_pro_v41_aprendizajes_enhe','app_bcb_google_sheet_snapshot_latest_v41','app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
+const OLD_STORE_KEYS = ['app_bcb_control_pro_v49_setlist_v11','app_bcb_control_pro_v48_final_sync_miembros_confirmacion_appscript','app_bcb_google_sheet_snapshot_latest_v48','app_bcb_google_sheet_snapshot_latest_v49','app_bcb_control_pro_v41_aprendizajes_enhe','app_bcb_google_sheet_snapshot_latest_v41','app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
 const BCB_REPERTOIRE_PATCH_ID = 'bcb_setlist_v11_20260620';
 
 let db = loadData();
@@ -147,28 +147,29 @@ function migrateData(data){
     id: idx+1
   }, song || {}));
 
-  // v6.2: INITIAL_DATA solo sirve para arrancar una app vacía.
-  // No debe volver a añadir canciones que el usuario haya dado de baja ni pisar cambios reales.
+  // Importante: si el navegador tenía una versión antigua en localStorage,
+  // completamos desde INITIAL_DATA sin borrar ediciones existentes.
   const seed = Array.isArray(INITIAL_DATA.repertoire) ? INITIAL_DATA.repertoire : [];
-  if(!data.repertoire.length && seed.length){
-    data.repertoire = seed.map((seedSong,idx)=>Object.assign({}, defaultSong, seedSong, {id: Number(seedSong.id)||idx+1}));
-  }else{
-    seed.forEach(seedSong=>{
-      const match = data.repertoire.find(song =>
-        String(song.id||'') === String(seedSong.id||'') ||
-        norm(song.titleCanonical||song.title) === norm(seedSong.titleCanonical||seedSong.title)
-      );
-      if(match){
-        Object.keys(seedSong).forEach(key=>{
-          if(shouldSeedReplace(match[key])){
-            match[key] = seedSong[key];
-          }
-        });
-      }
-    });
-  }
+  seed.forEach(seedSong=>{
+    const match = data.repertoire.find(song => norm(song.titleCanonical||song.title) === norm(seedSong.titleCanonical||seedSong.title));
+    if(match){
+      Object.keys(seedSong).forEach(key=>{
+        if(shouldSeedReplace(match[key])){
+          match[key] = seedSong[key];
+        }
+      });
+    }else{
+      const next = nextId(data.repertoire);
+      data.repertoire.push(Object.assign({}, defaultSong, seedSong, {id: next}));
+    }
+  });
 
   data.repertoire.sort((a,b)=>(Number(a.order)||Number(a.id)||0)-(Number(b.order)||Number(b.id)||0));
+
+  // APP-BCB v6.2:
+  // No forzar ya el repertorio exacto desde INITIAL_DATA en cada arranque.
+  // INITIAL_DATA queda como semilla base, pero las altas/bajas/ediciones guardadas en Google Sheet mandan.
+  // Esto evita que una canción dada de baja vuelva a aparecer al recargar o al limpiar caché.
 
 
   data.concerts = Array.isArray(data.concerts) ? data.concerts : [];
@@ -336,26 +337,39 @@ function norm(v){return String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/
 function eur(n){n=Number(n||0);return n? n.toLocaleString('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0}) : '—';}
 function compact(v,n=95){v=String(v??'').trim(); return v.length>n ? v.slice(0,n-1)+'…' : v;}
 function nextId(arr){return (arr||[]).reduce((m,x)=>Math.max(m, Number(x.id)||0),0)+1;}
-function songStatusNorm(song){
-  return norm(song && (song.status || song.Estado || song.estado || 'Activo'));
+
+function songIdentityKey(song){
+  const id = song && song.id !== undefined && song.id !== null && String(song.id).trim() !== '' ? 'id:' + String(song.id).trim() : '';
+  if(id) return id;
+  return 'title:' + norm((song && (song.titleCanonical || song.title)) || '');
 }
-function songIsActive(song){
-  const st = songStatusNorm(song);
-  return !['descartado','descartada','inactivo','inactiva','baja','dado de baja','eliminado','eliminada','no'].includes(st);
+function isSongInactive(song){
+  const s = norm(song && (song.status || song.estado || song.Estado || ''));
+  return s.includes('descart') || s === 'baja' || s === 'baja repertorio' || s === 'inactivo' || s === 'inactiva' || s === 'no activa';
 }
 function activeRepertoire(){
-  return (db.repertoire || []).filter(songIsActive);
+  return (db.repertoire || []).filter(song => !isSongInactive(song));
 }
-function findSongByTitleOrId(ref){
-  const key = norm(ref && (ref.titleCanonical || ref.title || ref.Cancion || ref.Canción || ref.name || ref));
-  const id = ref && ref.id;
-  return (db.repertoire || []).find(s =>
-    (id && String(s.id) === String(id)) ||
-    norm(s.titleCanonical || s.title) === key ||
-    norm(s.title) === key
-  );
+function activeRepertoireTitleSet(){
+  const out = new Set();
+  activeRepertoire().forEach(song=>{
+    [song.title, song.titleCanonical].forEach(v=>{
+      const n = norm(v);
+      if(n) out.add(n);
+    });
+  });
+  return out;
 }
-
+function setlistSongIsActive(song){
+  const active = activeRepertoireTitleSet();
+  if(!active.size) return true;
+  return active.has(norm(song && song.title)) || active.has(norm(song && song.titleCanonical));
+}
+function appendInternalNote(existing, note){
+  const base = String(existing || '').trim();
+  if(base.includes(note)) return base;
+  return base ? (base + ' | ' + note) : note;
+}
 
 function parseEuroValue(v){
   if(typeof v==='number') return Number.isFinite(v)?v:0;
@@ -2033,22 +2047,54 @@ function mergeSongWithExisting(item){
   return merged;
 }
 function applySongsFromSheet(rows){
-  const items=rows.map(mapSongRow)
+  // APP-BCB v6.2:
+  // Google Sheet manda sobre altas/bajas/ediciones.
+  // INITIAL_DATA solo se usa como semilla para mantener los 32 temas base cuando el Sheet aún no los contiene todos.
+  const seed = Array.isArray(INITIAL_DATA.repertoire) ? clone(INITIAL_DATA.repertoire) : [];
+  const incoming = (rows || []).map(mapSongRow)
     .filter(x=>{
       const t=norm(x.title||'');
       const a=norm(x.artist||'');
-      // Evita que una cabecera mal desplazada se convierta en canción.
       if(!t || x.title==='Tema sin título') return false;
       if(['cancion','canción','tema','titulo','título','song'].includes(t)) return false;
       if(t==='insurreccion' && a==='artista referencia') return false;
       return true;
     })
     .map(mergeSongWithExisting);
-  if(items.length) db.repertoire=items;
-  return items.length;
+
+  const byKey = new Map();
+  seed.forEach(song=>{
+    byKey.set(songIdentityKey(song), Object.assign({}, song));
+  });
+
+  incoming.forEach(song=>{
+    const key = songIdentityKey(song);
+    const titleKey = 'title:' + norm(song.titleCanonical || song.title);
+    const existing = byKey.get(key) || byKey.get(titleKey) || {};
+    const merged = Object.assign({}, existing, song);
+    byKey.delete(titleKey);
+    byKey.set(key, merged);
+  });
+
+  const items = Array.from(byKey.values())
+    .filter(x=>{
+      const t=norm(x.title||'');
+      return t && !['cancion','canción','tema','titulo','título','song'].includes(t);
+    })
+    .sort((a,b)=>(Number(a.order)||Number(a.id)||0)-(Number(b.order)||Number(b.id)||0));
+
+  if(items.length) db.repertoire = items;
+  return activeRepertoire().length;
 }
 function applySetlistFromSheet(rows){
-  const items=rows.map((row,i)=>({
+  // APP-BCB v6.2:
+  // El setlist visual se basa en el setlist v11, pero se filtra contra el repertorio activo.
+  // Si una canción pasa a Descartado, deja de verse en Setlist sin destruir el histórico.
+  if(INITIAL_DATA.strategicSetlist && Array.isArray(INITIAL_DATA.strategicSetlist.blocks)){
+    db.strategicSetlist = clone(INITIAL_DATA.strategicSetlist);
+    return setlistRows().length;
+  }
+  const items=(rows||[]).map((row,i)=>({
     order:Number(pick(row,['orden','Orden','order'])) || i+1,
     title:pick(row,['titulo','Título','title','Tema']),
     vocal:pick(row,['voz','Voz','vocal']),
@@ -2056,7 +2102,7 @@ function applySetlistFromSheet(rows){
     duration:pick(row,['duracion','Duración','duration']),
     block:pick(row,['bloque','Bloque','block']) || 'Setlist',
     notes:pick(row,['notas','Notas','notes'])
-  })).filter(x=>x.title);
+  })).filter(x=>x.title && setlistSongIsActive(x));
   if(!items.length) return 0;
   db.strategicSetlist = {
     title:'Setlist desde Google Sheet',
@@ -2077,7 +2123,7 @@ function applySetlistFromSheet(rows){
       songs:items
     }]
   };
-  return items.length;
+  return setlistRows().length;
 }
 
 function mapLocalPaymentRow(row,i){
@@ -2304,23 +2350,21 @@ function ensureRehearsalsFreshOnMobile(){
 }
 
 
-async async function fetchSheetTabViaAppsScript(tab, limit=500){
-  // v6.2: para módulos editables se prefiere Apps Script vivo.
-  // Google Sheet publicado puede ir con caché y devolver datos antiguos.
-  let scriptErr = null;
+async function fetchSheetTabViaAppsScript(tab, limit=500){
+  // v3.0: para lectura pública y móvil se usa primero Google Sheet directo.
+  // Así evitamos esperas largas intentando Apps Script cuando el endpoint no está disponible como recurso externo.
   try{
-    const payload = await appsScriptJSONP({action:'sheet', tab, limit:String(limit), _ts:String(Date.now())});
+    const rows = await fetchSheetTabViaGoogleSheetDirect(tab, limit);
+    rows.forEach(r=>{ if(r && typeof r==='object') r.__source = r.__source || 'Google Sheet directo'; });
+    return rows;
+  }catch(directErr){
+    console.warn('APP-BCB: Google Sheet directo no cargó '+tab+'. Probando Apps Script:', directErr);
+    const payload = await appsScriptJSONP({action:'sheet', tab, limit:String(limit)});
     if(!payload || payload.ok===false) throw new Error((payload && payload.error) || ('No se pudo leer '+tab));
     const rows = Array.isArray(payload.rows) ? payload.rows : [];
-    rows.forEach(r=>{ if(r && typeof r==='object') r.__source = r.__source || 'Apps Script'; });
+    rows.forEach(r=>{ if(r && typeof r==='object') r.__source = r.__source || 'Apps Script'; r.__fallbackError = String(directErr.message||directErr); });
     return rows;
-  }catch(err){
-    scriptErr = err;
-    console.warn('APP-BCB: Apps Script no cargó '+tab+'. Probando Google Sheet directo:', err);
   }
-  const rows = await fetchSheetTabViaGoogleSheetDirect(tab, limit);
-  rows.forEach(r=>{ if(r && typeof r==='object') r.__source = r.__source || 'Google Sheet directo'; r.__fallbackError = String(scriptErr && (scriptErr.message||scriptErr)); });
-  return rows;
 }
 
 
@@ -2638,7 +2682,7 @@ function renderShell(){
     `${(db.rehearsals||[]).length} ensayos`,
     `${(db.localPayments||[]).length} pagos local`,
     `${(db.bandMembers||[]).filter(memberIsActive).length} miembros activos`,
-    `${activeRepertoire().length} canciones`,
+    `${(db.repertoire||[]).length} canciones`,
     `${setlistRows().length} temas setlist`,
     `${(db.templates||[]).length} plantillas`
   ].map(x=>`<span class="badge">${esc(x)}</span>`).join('');
@@ -2884,7 +2928,33 @@ function pushDeleteToSheet(arrName,id,record={}){
     });
 }
 
+function deactivateSong(id){
+  const song=(db.repertoire||[]).find(x=>String(x.id)===String(id));
+  if(!song){
+    alert('No se ha encontrado la canción en la app. Actualiza desde Google Sheet y vuelve a intentarlo.');
+    return;
+  }
+  const title = song.title || song.titleCanonical || ('ID '+id);
+  if(!confirm('¿Dar de baja "'+title+'"?\n\nNo se borra del histórico: queda como Descartado y deja de aparecer en Canciones activas y Setlist.')) return;
+  const updated = Object.assign({}, song, {
+    status:'Descartado',
+    notes: appendInternalNote(song.notes, 'Dada de baja desde APP-BCB')
+  });
+  pushSongToSheet(updated)
+    .then(()=>{
+      upsertLocalArrayItem('repertoire', updated);
+      closeModal();
+      saveData();
+      sheetStatus('Canción dada de baja en Google Sheet y retirada de Canciones/Setlist.','ok');
+    })
+    .catch(err=>{
+      sheetStatus('NO se ha dado de baja. Google Sheet no confirmó el cambio: '+esc(err.message||err),'bad');
+      alert('No se ha podido dar de baja en Google Sheet.\n\nMotivo: '+(err.message||err)+'\n\nNo cambio la app para no dejar datos falsos.');
+    });
+}
+
 function deleteRecord(arrName,id){
+  if(arrName==='repertoire') return deactivateSong(id);
   if(!confirm('¿Borrar este registro de APP-BCB y del Google Sheet maestro?'))return;
   const list=Array.isArray(db[arrName]) ? db[arrName] : [];
   const record=list.find(x=>String(x.id)===String(id)) || {};
@@ -3653,10 +3723,7 @@ function openPosterHelp(){
 function setlistRows(){
   const st=db.strategicSetlist || INITIAL_DATA.strategicSetlist || {blocks:[]};
   return (st.blocks||[]).flatMap(b=>(b.songs||[])
-    .filter(song=>{
-      const match = findSongByTitleOrId(song);
-      return !match || songIsActive(match);
-    })
+    .filter(song=>setlistSongIsActive(song))
     .map(song=>Object.assign({blockId:b.id,blockName:b.name,blockObjective:b.objective,stageControl:b.stageControl,blockDuration:b.musicDuration},song)));
 }
 function vocalClass(v){const x=norm(v); if(x.includes('miguel'))return 'vocal vocal-miguel'; if(x.includes('carmen'))return 'vocal vocal-carmen'; if(x.includes('ambos'))return 'vocal vocal-ambos'; if(x.includes('teo'))return 'vocal vocal-teo'; return 'vocal';}
@@ -3672,7 +3739,7 @@ function renderSetlist(){
   el('setlistFinal').innerHTML=`<strong>Final obligatorio:</strong> ${esc(st.finalMandatory||'')}`;
   el('setlistSummary').innerHTML=[['Música',st.musicDuration],['Ágil',st.agileDuration],['Amplio',st.extendedDuration]].map(x=>`<div class="detailItem"><small>${esc(x[0])}</small><div><strong>${esc(x[1])}</strong></div></div>`).join('');
   el('setlistPromoterReading').innerHTML=`<p><strong>Lectura para salas/promotores:</strong><br>${esc(st.promoterReading||'')}</p>`;
-  el('setlistBlocks').innerHTML=(st.blocks||[]).map(b=>`<div class="card setlistBlock" data-no="${b.id}"><h4>${b.id} · ${esc(b.name)}</h4><p>${esc(b.objective)}</p><div class="setlistMeta"><div class="detailItem"><small>Duración música</small><div>${esc(b.musicDuration)}</div></div><div class="detailItem"><small>Control de escenario</small><div>${esc(b.stageControl)}</div></div><div class="detailItem"><small>Temas</small><div>${(b.songs||[]).length}</div></div></div><div class="setlistSongs">${(b.songs||[]).map(song=>`<div class="setlistSong"><span class="num">${song.order}</span><strong>${esc(song.title)}</strong><span class="${vocalClass(song.vocal)}">${esc(song.vocal)}</span></div>`).join('')}</div></div>`).join('');
+  el('setlistBlocks').innerHTML=(st.blocks||[]).map(b=>`<div class="card setlistBlock" data-no="${b.id}"><h4>${b.id} · ${esc(b.name)}</h4><p>${esc(b.objective)}</p><div class="setlistMeta"><div class="detailItem"><small>Duración música</small><div>${esc(b.musicDuration)}</div></div><div class="detailItem"><small>Control de escenario</small><div>${esc(b.stageControl)}</div></div><div class="detailItem"><small>Temas</small><div>${(b.songs||[]).filter(song=>setlistSongIsActive(song)).length}</div></div></div><div class="setlistSongs">${(b.songs||[]).filter(song=>setlistSongIsActive(song)).map(song=>`<div class="setlistSong"><span class="num">${song.order}</span><strong>${esc(song.title)}</strong><span class="${vocalClass(song.vocal)}">${esc(song.vocal)}</span></div>`).join('')}</div></div>`).join('');
   renderBars('setlistVocalBars', counts(rows,'vocal'));
   document.querySelector('#setlistTable tbody').innerHTML=rows.map(r=>`<tr><td><strong>${r.order}</strong></td><td>${esc(r.title)}</td><td><span class="${vocalClass(r.vocal)}">${esc(r.vocal)}</span></td><td>${r.blockId} · ${esc(r.blockName)}</td><td>${esc(r.blockObjective)}</td><td>${esc(r.stageControl)}</td></tr>`).join('');
 }
@@ -3697,7 +3764,7 @@ function repertoireFiltered(){
   const status=document.getElementById('fRepStatus')?.value||'';
   const singer=document.getElementById('fRepSinger')?.value||'';
   return (db.repertoire||[]).filter(s=>{
-    if(!status && !songIsActive(s)) return false;
+    if(!status && isSongInactive(s)) return false;
     const blob=[
       s.title,s.titleCanonical,s.artist,s.versionReference,s.singer,s.leadVocal,
       s.duration,s.durationLive,s.durationOriginal,s.durationStatus,
@@ -3847,28 +3914,6 @@ function saveSong(){
     })
     .catch(alertSheetWriteError);
 }
-
-function deactivateSong(id){
-  const song=(db.repertoire||[]).find(x=>String(x.id)===String(id));
-  if(!song){ alert('No se ha encontrado la canción en la app.'); return; }
-  if(!confirm('¿Dar de baja esta canción? Quedará como Descartado en Google Sheet y desaparecerá de Canciones activas y del Setlist.')) return;
-  const saved=Object.assign({}, song, {
-    status:'Descartado',
-    notes: [song.notes||'', 'Baja desde APP-BCB '+new Date().toISOString().slice(0,10)].filter(Boolean).join(' | ')
-  });
-  pushSongToSheet(saved)
-    .then(()=>{
-      upsertLocalArrayItem('repertoire', saved);
-      closeModal();
-      saveData();
-      sheetStatus('Canción dada de baja en Google Sheet y retirada del setlist.','ok');
-    })
-    .catch(err=>{
-      sheetStatus('NO se ha dado de baja. Google Sheet no confirmó el cambio: '+esc(err.message||err),'bad');
-      alert('No se ha podido dar de baja en Google Sheet.\n\nMotivo: '+(err.message||err));
-    });
-}
-
 function repertoireHeaders(){return [
   {label:'ID',key:'id'},
   {label:'Orden',key:'order'},
@@ -4164,14 +4209,19 @@ function initialTabFromUrl(){
 
 // BCB v5.6 · refuerzo final: repertorio y setlist v11 siempre 32.
 function forceBCBSetlistV11Clean32(){
-  // v6.2: desactivado. Ya no se fuerza el repertorio base porque pisaba bajas y cambios reales.
   try{
+    if(Array.isArray(INITIAL_DATA.repertoire) && INITIAL_DATA.repertoire.length === 32){
+      db.repertoire = clone(INITIAL_DATA.repertoire);
+    }
+    if(INITIAL_DATA.strategicSetlist && Array.isArray(INITIAL_DATA.strategicSetlist.blocks)){
+      db.strategicSetlist = clone(INITIAL_DATA.strategicSetlist);
+    }
     db.createdFrom = Object.assign({}, db.createdFrom||{}, {
-      setlistPatch: 'v6.2: repertorio editable; bajas y cambios no se pisan desde INITIAL_DATA',
+      setlistPatch: 'v5.6: setlist v11 limpio 32 temas aplicado por parche directo BAT',
       repertoireSetlistV11AppliedAt: '2026-06-20'
     });
     persistDataOnly();
-  }catch(e){ console.warn('BCB v6.2 repertorio editable warning', e); }
+  }catch(e){ console.warn('BCB setlist v11 clean32 patch warning', e); }
 }
 
 clearOldLocalCaches();
