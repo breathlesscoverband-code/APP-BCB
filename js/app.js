@@ -1,6 +1,6 @@
-const APP_BCB_APP_VERSION = '6.3.0-panel-estable';
-const STORE_KEY = 'app_bcb_control_pro_v63_panel_estable';
-const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v63';
+const APP_BCB_APP_VERSION = '6.2.0-canciones-setlist-estable';
+const STORE_KEY = 'app_bcb_control_pro_v62_canciones_setlist_estable';
+const PERSISTENT_SNAPSHOT_KEY = 'app_bcb_google_sheet_snapshot_latest_v62';
 const OLD_STORE_KEYS = ['app_bcb_control_pro_v49_setlist_v11','app_bcb_control_pro_v48_final_sync_miembros_confirmacion_appscript','app_bcb_google_sheet_snapshot_latest_v48','app_bcb_google_sheet_snapshot_latest_v49','app_bcb_control_pro_v41_aprendizajes_enhe','app_bcb_google_sheet_snapshot_latest_v41','app_bcb_control_pro_v40_arranque_estable','app_bcb_google_sheet_snapshot_latest_v40','app_bcb_control_pro_v39_rendimiento_estable','app_bcb_google_sheet_snapshot_latest','app_bcb_control_pro_v38_local_mensual','app_bcb_control_pro_v37_auditoria_estable','app_bcb_control_pro_v36_edicion_repertorio','app_bcb_control_pro_v35_voces_bcb','app_bcb_control_pro_v34_tonalidades_bcb','app_bcb_control_pro_v33_rehearsal_songs_stable','app_bcb_control_pro_v32_local_payments_stable','app_bcb_control_pro_v31_local_payments','app_bcb_control_pro_v30_instant_cache','app_bcb_control_pro_v29_auto_direct','app_bcb_control_pro_v28_sheet_direct','app_bcb_control_pro_v27_iframe_fallback','app_bcb_control_pro_v26_public_endpoint','app_bcb_control_pro_v25_mobile_core','app_bcb_control_pro_v24_admin_guard','app_bcb_control_pro_v23_mobile_rehearsals','app_bcb_control_pro_v22_mobile_sheet_lite','app_bcb_control_pro_v21_mobile_sheet_lite','app_bcb_control_pro_v20_clon_enhe','app_bcb_control_pro_v12','app_bcb_control_pro_v11','app_bcb_control_pro_v10'];
 const BCB_REPERTOIRE_PATCH_ID = 'bcb_setlist_v11_20260620';
 
@@ -147,14 +147,30 @@ function migrateData(data){
     id: idx+1
   }, song || {}));
 
-  // v5.8 Guardado estable:
-  // INITIAL_DATA es solo semilla de arranque. No se vuelve a usar para reponer canciones borradas.
-  // Si Google Sheet o el snapshot traen repertorio real, ese repertorio gana.
-  if(!data.repertoire.length && Array.isArray(INITIAL_DATA.repertoire)){
-    data.repertoire = clone(INITIAL_DATA.repertoire).map((song,idx)=>Object.assign({}, defaultSong, {id:idx+1}, song || {}));
-  }
+  // Importante: si el navegador tenía una versión antigua en localStorage,
+  // completamos desde INITIAL_DATA sin borrar ediciones existentes.
+  const seed = Array.isArray(INITIAL_DATA.repertoire) ? INITIAL_DATA.repertoire : [];
+  seed.forEach(seedSong=>{
+    const match = data.repertoire.find(song => norm(song.titleCanonical||song.title) === norm(seedSong.titleCanonical||seedSong.title));
+    if(match){
+      Object.keys(seedSong).forEach(key=>{
+        if(shouldSeedReplace(match[key])){
+          match[key] = seedSong[key];
+        }
+      });
+    }else{
+      const next = nextId(data.repertoire);
+      data.repertoire.push(Object.assign({}, defaultSong, seedSong, {id: next}));
+    }
+  });
 
   data.repertoire.sort((a,b)=>(Number(a.order)||Number(a.id)||0)-(Number(b.order)||Number(b.id)||0));
+
+  // APP-BCB v6.2:
+  // No forzar ya el repertorio exacto desde INITIAL_DATA en cada arranque.
+  // INITIAL_DATA queda como semilla base, pero las altas/bajas/ediciones guardadas en Google Sheet mandan.
+  // Esto evita que una canción dada de baja vuelva a aparecer al recargar o al limpiar caché.
+
 
   data.concerts = Array.isArray(data.concerts) ? data.concerts : [];
   data.localPayments = Array.isArray(data.localPayments) ? data.localPayments : [];
@@ -309,7 +325,7 @@ async function syncSingleSheetAfterWrite(tab, opts={}){
     SETLISTS: 500,
     MIEMBROS: 100
   };
-  const rows = await fetchSheetTabLive(tab, limits[tab] || 500);
+  const rows = await fetchSheetTabViaAppsScript(tab, limits[tab] || 500);
   const count = applyCoreSheetRows(tab, rows);
   saveData();
   return {ok:true, tab, count};
@@ -321,6 +337,39 @@ function norm(v){return String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/
 function eur(n){n=Number(n||0);return n? n.toLocaleString('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0}) : '—';}
 function compact(v,n=95){v=String(v??'').trim(); return v.length>n ? v.slice(0,n-1)+'…' : v;}
 function nextId(arr){return (arr||[]).reduce((m,x)=>Math.max(m, Number(x.id)||0),0)+1;}
+
+function songIdentityKey(song){
+  const id = song && song.id !== undefined && song.id !== null && String(song.id).trim() !== '' ? 'id:' + String(song.id).trim() : '';
+  if(id) return id;
+  return 'title:' + norm((song && (song.titleCanonical || song.title)) || '');
+}
+function isSongInactive(song){
+  const s = norm(song && (song.status || song.estado || song.Estado || ''));
+  return s.includes('descart') || s === 'baja' || s === 'baja repertorio' || s === 'inactivo' || s === 'inactiva' || s === 'no activa';
+}
+function activeRepertoire(){
+  return (db.repertoire || []).filter(song => !isSongInactive(song));
+}
+function activeRepertoireTitleSet(){
+  const out = new Set();
+  activeRepertoire().forEach(song=>{
+    [song.title, song.titleCanonical].forEach(v=>{
+      const n = norm(v);
+      if(n) out.add(n);
+    });
+  });
+  return out;
+}
+function setlistSongIsActive(song){
+  const active = activeRepertoireTitleSet();
+  if(!active.size) return true;
+  return active.has(norm(song && song.title)) || active.has(norm(song && song.titleCanonical));
+}
+function appendInternalNote(existing, note){
+  const base = String(existing || '').trim();
+  if(base.includes(note)) return base;
+  return base ? (base + ' | ' + note) : note;
+}
 
 function parseEuroValue(v){
   if(typeof v==='number') return Number.isFinite(v)?v:0;
@@ -1102,35 +1151,6 @@ async function fetchSheetTabForRead(tab, limit=500){
   }
 }
 
-async function fetchSheetTabLive(tab, limit=500){
-  // v5.8: para confirmar guardados usamos Apps Script vivo antes que Google Sheet publicado.
-  // El publicado puede ir con caché y hacía que ensayos/pagos/canciones parecieran no guardarse.
-  let scriptErr = null;
-  try{
-    const payload = await appsScriptJsonpOnly({action:'sheet', tab, limit:String(limit)});
-    if(payload && payload.ok !== false){
-      let rows = Array.isArray(payload.rows) ? payload.rows : [];
-      if(!rows.length){
-        const sheet = findPayloadSheet(payload, [tab]);
-        rows = rowsFromPayloadSheet(sheet);
-      }
-      if(Array.isArray(rows)) return rows;
-    }
-    throw new Error((payload && payload.error) || 'Apps Script no devolvió filas para '+tab);
-  }catch(err){
-    scriptErr = err;
-    console.warn('APP-BCB v5.8: lectura viva por Apps Script falló para '+tab+'. Probando lectura normal:', err);
-  }
-  try{
-    return await fetchSheetTabForRead(tab, limit);
-  }catch(readErr){
-    const err = new Error('No se pudo leer '+tab+' en vivo ni por lectura normal. Apps Script: '+(scriptErr && (scriptErr.message||scriptErr))+' | Lectura: '+(readErr.message||readErr));
-    err.scriptError = scriptErr;
-    err.readError = readErr;
-    throw err;
-  }
-}
-
 function appsScriptJsonpOnly(params={}){
   return new Promise((resolve,reject)=>{
     if(!GOOGLE_SHEET_MASTER.appsScriptUrl) return reject(new Error('No hay URL /exec de Apps Script configurada.'));
@@ -1322,42 +1342,22 @@ function sheetWriteEnabled(){
 
 function attendanceToSheetFields(attendance){
   const out={};
-  const members = bandMembers({includeInactive:true});
-  const written = new Set();
-
-  function cleanStatus(v){
-    if(!v) return '';
-    return typeof v === 'string' ? v : (v.status || '');
-  }
-  function putFor(id, name, status){
-    const key = normalizeMemberKey(id || name);
-    const label = String(name || id || '').trim();
-    if(!key || !status) return;
-    out['asistencia_'+key] = status;
-    if(label){
-      out[label] = status;
-      out['Asistencia '+label] = status;
+  const map={
+    miguel:'asistencia_miguel',
+    carmen:'asistencia_carmen',
+    teo:'asistencia_teo',
+    alvaro:'asistencia_alvaro',
+    nataly:'asistencia_nataly',
+    lord_enzo:'asistencia_lord_enzo'
+  };
+  Object.keys(map).forEach(id=>{
+    const v=attendance && attendance[id];
+    if(v){
+      out[map[id]] = typeof v === 'string' ? v : (v.status || '');
     }
-    written.add(key);
-  }
-
-  members.forEach(m=>{
-    const id = normalizeMemberKey(m.id || m.name);
-    const v = attendance && (attendance[id] || attendance[m.id] || attendance[m.name]);
-    putFor(id, m.name, cleanStatus(v));
   });
-
-  // Fallback: no perder asistencias de miembros añadidos aunque todavía no estén normalizados.
-  Object.keys(attendance || {}).forEach(rawId=>{
-    const key = normalizeMemberKey(rawId);
-    if(written.has(key)) return;
-    const v = attendance[rawId];
-    putFor(key, rawId, cleanStatus(v));
-  });
-
   return out;
 }
-
 
 function contactToSheetRow(c){
   const notes = [c.followNotes, c.dossierNotes, c.originNotes].filter(Boolean).join(' | ');
@@ -1603,7 +1603,7 @@ async function syncRepertoireFromGoogleSheet(opts={}){
   const silent=!!opts.silent;
   try{
     sheetStatus('Actualizando repertorio desde Google Sheet…');
-    const rows = await fetchSheetTabLive('REPERTORIO', 800);
+    const rows = await fetchSheetTabViaAppsScript('REPERTORIO', 800);
     const count = applySongsFromSheet(rows);
     saveData();
     sheetStatus('Repertorio actualizado desde Google Sheet: '+count+' canciones.', 'ok');
@@ -1858,40 +1858,22 @@ function applyCRMObjectsFromSheet(rows){
   return items.length;
 }
 function memberAttendanceFromRow(row, prefix='asistencia_'){
+  const ids=['miguel','carmen','teo','alvaro','nataly','lord_enzo'];
+  const aliases={
+    miguel:['asistencia_miguel','Miguel','Asistencia Miguel'],
+    carmen:['asistencia_carmen','Carmen','Asistencia Carmen'],
+    teo:['asistencia_teo','Teo','Asistencia Teo'],
+    alvaro:['asistencia_alvaro','Álvaro','Alvaro','Asistencia Álvaro','Asistencia Alvaro'],
+    nataly:['asistencia_nataly','Nataly','Natalia','Asistencia Nataly'],
+    lord_enzo:['asistencia_lord_enzo','Lord Enzo','Enzo','Asistencia Lord Enzo']
+  };
   const attendance={};
-
-  function aliasesForMember(m){
-    const id = normalizeMemberKey(m.id || m.name);
-    const name = String(m.name || '').trim();
-    const base = [
-      prefix + id,
-      'asistencia_' + id,
-      id,
-      name,
-      'Asistencia ' + name
-    ].filter(Boolean);
-
-    // Compatibilidad con cabeceras antiguas.
-    const legacy = {
-      miguel:['asistencia_miguel','Miguel','Asistencia Miguel'],
-      carmen:['asistencia_carmen','Carmen','Asistencia Carmen'],
-      teo:['asistencia_teo','Teo','Asistencia Teo'],
-      alvaro:['asistencia_alvaro','Álvaro','Alvaro','Asistencia Álvaro','Asistencia Alvaro'],
-      nataly:['asistencia_nataly','Nataly','Natalia','Asistencia Nataly'],
-      lord_enzo:['asistencia_lord_enzo','Lord Enzo','Enzo','Asistencia Lord Enzo']
-    };
-    return unique(base.concat(legacy[id] || []));
-  }
-
-  bandMembers({includeInactive:true}).forEach(m=>{
-    const id = normalizeMemberKey(m.id || m.name);
-    const st = pick(row, aliasesForMember(m)) || 'Pendiente';
-    attendance[id] = {status: st || 'Pendiente', notes:''};
+  ids.forEach(id=>{
+    const st=pick(row, aliases[id]) || 'Pendiente';
+    attendance[id]={status:st||'Pendiente', notes:''};
   });
-
   return attendance;
 }
-
 function mapConcertRow(row,i){
   return {
     id: Number(pick(row,['id','ID'])) || i+1,
@@ -2064,122 +2046,325 @@ function mergeSongWithExisting(item){
   });
   return merged;
 }
-function songIsVisibleInApp(song){
-  const st = norm(song && (song.status || song.Estado || song.estado || 'Activo'));
-  if(!st) return true;
-  return !(
-    st.includes('borrad') ||
-    st.includes('eliminad') ||
-    st.includes('inactiv') ||
-    st.includes('archiv') ||
-    st.includes('descartad')
-  );
-}
-
-function songTitleKeyForSetlist(v){
-  return norm(v || '').replace(/[^a-z0-9]+/g,'');
-}
-
-function activeRepertoireTitleKeys(){
-  const set = new Set();
-  (db.repertoire || []).filter(songIsVisibleInApp).forEach(s=>{
-    [s.title, s.titleCanonical].filter(Boolean).forEach(t=>set.add(songTitleKeyForSetlist(t)));
-  });
-  return set;
-}
-
-function pruneStrategicSetlistToCurrentRepertoire(st){
-  if(!st || !Array.isArray(st.blocks)) return st;
-  const active = activeRepertoireTitleKeys();
-  if(!active.size) return st;
-  const copy = clone(st);
-  let order = 1;
-  copy.blocks = (copy.blocks || []).map(block=>{
-    const songs = (block.songs || []).filter(song=>{
-      const key = songTitleKeyForSetlist(song.title || song.titleCanonical || song.Canción || song.cancion);
-      return !key || active.has(key);
-    }).map(song=>Object.assign({}, song, {order: order++}));
-    return Object.assign({}, block, {songs});
-  });
-  return copy;
-}
-
-function pruneSetlistAfterRepertoireChange(){
-  if(db.strategicSetlist && Array.isArray(db.strategicSetlist.blocks)){
-    db.strategicSetlist = pruneStrategicSetlistToCurrentRepertoire(db.strategicSetlist);
-  }else if(INITIAL_DATA.strategicSetlist && Array.isArray(INITIAL_DATA.strategicSetlist.blocks)){
-    db.strategicSetlist = pruneStrategicSetlistToCurrentRepertoire(clone(INITIAL_DATA.strategicSetlist));
-  }
-}
-
 function applySongsFromSheet(rows){
-  const items=(rows||[]).map(mapSongRow)
+  // APP-BCB v6.2:
+  // Google Sheet manda sobre altas/bajas/ediciones.
+  // INITIAL_DATA solo se usa como semilla para mantener los 32 temas base cuando el Sheet aún no los contiene todos.
+  const seed = Array.isArray(INITIAL_DATA.repertoire) ? clone(INITIAL_DATA.repertoire) : [];
+  const incoming = (rows || []).map(mapSongRow)
     .filter(x=>{
       const t=norm(x.title||'');
       const a=norm(x.artist||'');
       if(!t || x.title==='Tema sin título') return false;
       if(['cancion','canción','tema','titulo','título','song'].includes(t)) return false;
       if(t==='insurreccion' && a==='artista referencia') return false;
-      return songIsVisibleInApp(x);
+      return true;
     })
     .map(mergeSongWithExisting);
 
-  if(items.length){
-    db.repertoire=items;
-    pruneSetlistAfterRepertoireChange();
+  const byKey = new Map();
+  seed.forEach(song=>{
+    byKey.set(songIdentityKey(song), Object.assign({}, song));
+  });
+
+  incoming.forEach(song=>{
+    const key = songIdentityKey(song);
+    const titleKey = 'title:' + norm(song.titleCanonical || song.title);
+    const existing = byKey.get(key) || byKey.get(titleKey) || {};
+    const merged = Object.assign({}, existing, song);
+    byKey.delete(titleKey);
+    byKey.set(key, merged);
+  });
+
+  const items = Array.from(byKey.values())
+    .filter(x=>{
+      const t=norm(x.title||'');
+      return t && !['cancion','canción','tema','titulo','título','song'].includes(t);
+    })
+    .sort((a,b)=>(Number(a.order)||Number(a.id)||0)-(Number(b.order)||Number(b.id)||0));
+
+  if(items.length) db.repertoire = items;
+  return activeRepertoire().length;
+}
+function applySetlistFromSheet(rows){
+  // APP-BCB v6.2:
+  // El setlist visual se basa en el setlist v11, pero se filtra contra el repertorio activo.
+  // Si una canción pasa a Descartado, deja de verse en Setlist sin destruir el histórico.
+  if(INITIAL_DATA.strategicSetlist && Array.isArray(INITIAL_DATA.strategicSetlist.blocks)){
+    db.strategicSetlist = clone(INITIAL_DATA.strategicSetlist);
+    return setlistRows().length;
   }
-  return items.length;
+  const items=(rows||[]).map((row,i)=>({
+    order:Number(pick(row,['orden','Orden','order'])) || i+1,
+    title:pick(row,['titulo','Título','title','Tema']),
+    vocal:pick(row,['voz','Voz','vocal']),
+    key:pick(row,['tono','Tono','key']),
+    duration:pick(row,['duracion','Duración','duration']),
+    block:pick(row,['bloque','Bloque','block']) || 'Setlist',
+    notes:pick(row,['notas','Notas','notes'])
+  })).filter(x=>x.title && setlistSongIsActive(x));
+  if(!items.length) return 0;
+  db.strategicSetlist = {
+    title:'Setlist desde Google Sheet',
+    subtitle:'Datos sincronizados desde Google Sheet maestro',
+    musicDuration:'',
+    agileDuration:'',
+    extendedDuration:'',
+    legend:unique(items.map(x=>x.vocal).filter(Boolean)),
+    rule:'Validar orden definitivo antes de cada concierto.',
+    finalMandatory:'',
+    promoterReading:'Setlist de trabajo sincronizado desde Google Sheet.',
+    blocks:[{
+      id:1,
+      name:'SETLIST',
+      objective:'Orden de concierto cargado desde Google Sheet.',
+      musicDuration:'',
+      stageControl:'',
+      songs:items
+    }]
+  };
+  return setlistRows().length;
+}
+
+function mapLocalPaymentRow(row,i){
+  const memberRaw = pick(row,['ID Miembro','id_miembro','miembro_id','memberId','member_id']) || pick(row,['Nombre','nombre','miembro','name','Pagado por','pagado_por']);
+  const cuotaRaw = pick(row,['Cuota','cuota','importe','amount','Reparto por persona','reparto_por_persona']);
+  const totalRaw = pick(row,['Importe total','importe_total','Total','total']);
+  const participantesRaw = pick(row,['Participantes','participantes']);
+  const total = parseEuroValue(totalRaw);
+  const participantes = parseEuroValue(participantesRaw);
+  const pagadoRaw = pick(row,['Pagado','pagado','paid','estado_pago','Estado pago','Estado']);
+  const memberId = normalizeMemberKey(memberRaw);
+  return {
+    id: pick(row,['ID','id']) || (normalizeMonthValue(pick(row,['Mes','mes','month']))+'|'+memberId) || (i+1),
+    month: normalizeMonthValue(pick(row,['Mes','mes','month'])),
+    memberId,
+    name: memberDisplayName(memberRaw, pick(row,['Nombre','nombre','miembro','name','Pagado por'])),
+    amount: parseEuroValue(cuotaRaw) || (total && participantes ? Math.round((total/participantes)*100)/100 : 0),
+    paid: isPaymentPaid(pagadoRaw) ? 'SI' : 'NO',
+    paidDate: pick(row,['Fecha pago','fecha_pago','paidDate']),
+    updatedAt: pick(row,['Última actualización','actualizado_en','updatedAt']),
+    notes: pick(row,['Notas','notas','notes']),
+    raw: row
+  };
+}
+function applyLocalPaymentsFromSheet(rows){
+  const mapped=(rows||[]).map(mapLocalPaymentRow);
+  const incoming=consolidateLocalPaymentRows(mapped);
+  const currentMonth=new Date().toISOString().slice(0,7);
+  const months=[...new Set([currentMonth]
+    .concat((db.localPayments||[]).map(r=>normalizeMonthValue(r.month)).filter(Boolean))
+    .concat(incoming.map(r=>normalizeMonthValue(r.month)).filter(Boolean)))];
+
+  let merged=mergeLocalPaymentRows(db.localPayments || [], incoming);
+  months.forEach(month=>{
+    const others=merged.filter(r=>normalizeMonthValue(r.month)!==month);
+    const completed=completeLocalPaymentMonth(merged, month);
+    merged=mergeLocalPaymentRows(others, completed);
+  });
+
+  db.localPayments=merged;
+  return incoming.length || (db.localPayments||[]).filter(r=>normalizeMonthValue(r.month)===currentMonth).length;
+}
+function applyAllFromGoogleSheetPayload(payload){
+  if(!payload || payload.ok===false) throw new Error(payload?.error || 'Respuesta no válida de Apps Script.');
+  const report={crm:0, concerts:0, rehearsals:0, songs:0, setlist:0, local:0};
+
+  const crmSheet = findPayloadSheet(payload, ['CRM','CRM_GENERAL','CRM GENERAL','CRM_MAESTRO','CRM MAESTRO'], GOOGLE_SHEET_MASTER.gid) || firstSheetByRows(payload, rowsLookLikeCRM);
+  const concertSheet = findPayloadSheet(payload, ['CONCIERTOS','Conciertos','BOLOS','Bolos','EVENTOS','Eventos']) || firstSheetByRows(payload, rowsLookLikeConcerts);
+  const rehearsalSheet = findPayloadSheet(payload, ['ENSAYOS','Ensayos','CALENDARIO_ENSAYOS','Calendario ensayos']) || firstSheetByRows(payload, rowsLookLikeRehearsals);
+  const songsSheet = findPayloadSheet(payload, ['CANCIONES','Canciones','REPERTORIO','Repertorio']) || firstSheetByRows(payload, rowsLookLikeSongs);
+  const setlistSheet = findPayloadSheet(payload, ['SETLIST','Setlist','SETLIST_CONCIERTO','Setlist concierto']);
+
+  const crmRows=rowsFromPayloadSheet(crmSheet);
+  if(crmRows.length) report.crm=applyCRMObjectsFromSheet(crmRows);
+
+  const concertRows=rowsFromPayloadSheet(concertSheet);
+  if(concertRows.length) report.concerts=applyConcertsFromSheet(concertRows);
+
+  const rehearsalRows=rowsFromPayloadSheet(rehearsalSheet);
+  if(rehearsalRows.length) report.rehearsals=applyRehearsalsFromSheet(rehearsalRows);
+
+  const songRows=rowsFromPayloadSheet(songsSheet);
+  if(songRows.length) report.songs=applySongsFromSheet(songRows);
+
+  const setlistRows=rowsFromPayloadSheet(setlistSheet);
+  if(setlistRows.length) report.setlist=applySetlistFromSheet(setlistRows);
+
+  const localSheet = findPayloadSheet(payload, ['PAGOS_LOCAL','LOCAL_ENSAYO_PAGOS','Pagos local','Local ensayo']);
+  const rawLocalRows = payload?.rawSheets?.PAGOS_LOCAL?.rows || payload?.sheets?.PAGOS_LOCAL?.rows || payload?.data?.PAGOS_LOCAL?.rows || [];
+  const normalizedLocalRows = Array.isArray(payload?.data?.pagosLocal) ? payload.data.pagosLocal : (Array.isArray(payload?.pagosLocal) ? payload.pagosLocal : []);
+  const localRows = rawLocalRows.length ? rawLocalRows : (normalizedLocalRows.length ? normalizedLocalRows : rowsFromPayloadSheet(localSheet));
+  report.local=applyLocalPaymentsFromSheet(localRows);
+  const localMensual=parseEuroValue(payload?.data?.localMensual || payload?.localMensual || 0);
+  if(localMensual){
+    db.localConfig=Object.assign({}, db.localConfig||{}, {monthlyAmount:localMensual, source:'CONFIG_GRUPO / Google Sheet', updatedAt:new Date().toISOString()});
+  }
+
+  const formacionPayload = Array.isArray(payload?.data?.miembros) ? payload.data.miembros : (Array.isArray(payload?.data?.MIEMBROS?.rows) ? payload.data.MIEMBROS.rows : payload.formacion);
+  if(Array.isArray(formacionPayload) && formacionPayload.length){
+    db.bandMembers=formacionPayload.map(m=>{
+      const name = m.nombre || m.Nombre || m.name || m.Miembro || m['Usuario app'] || '';
+      return {
+        id: normalizeMemberKey(name || m.id || m.ID),
+        name,
+        role: m.rol || m.Rol || m.role || m.instrumento || m['Rol artístico'] || m['Instrumento/voz'] || ''
+      };
+    }).filter(x=>x.name && BCB_FIXED_MEMBER_IDS.includes(normalizeMemberKey(x.name || x.id)));
+  }
+
+  if(false && Array.isArray(payload.formacion) && payload.formacion.length){
+    db.bandMembers=payload.formacion.map(m=>({
+      id: norm(m.nombre||m.name).includes('miguel') ? 'miguel_voz' : norm(m.nombre||m.name).replace(/[^a-z0-9]/g,'_'),
+      name: m.nombre || m.name || '',
+      role: m.rol || m.role || ''
+    })).filter(x=>x.name);
+  }
+
+  db.createdFrom.googleSheetUserUrl = GOOGLE_SHEET_MASTER.userUrl;
+  db.createdFrom.lastImport = new Date().toLocaleString('es-ES') + ' · Google Sheet maestro';
+  db.sheetSync = {
+    source: 'Google Sheet maestro / Apps Script',
+    spreadsheetId: GOOGLE_SHEET_MASTER.spreadsheetId,
+    gid: GOOGLE_SHEET_MASTER.gid,
+    records: report.crm,
+    concerts: report.concerts,
+    rehearsals: report.rehearsals,
+    songs: report.songs,
+    setlist: report.setlist,
+    updatedAt: new Date().toISOString(),
+    status: 'ok',
+    endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl, directSheet: GOOGLE_SHEET_MASTER.userUrl,
+    version: payload.version || ''
+  };
+  return report;
+}
+
+function applyRehearsalsOnlyPayload(payload){
+  if(!payload || payload.ok===false) throw new Error(payload?.error || 'Respuesta no válida de Apps Script.');
+  const rehearsalSheet = findPayloadSheet(payload, ['ENSAYOS','Ensayos','CALENDARIO_ENSAYOS','Calendario ensayos']) || firstSheetByRows(payload, rowsLookLikeRehearsals);
+  const rehearsalRows = rowsFromPayloadSheet(rehearsalSheet).length ? rowsFromPayloadSheet(rehearsalSheet) : (Array.isArray(payload.rows) ? payload.rows : []);
+  const count = applyRehearsalsFromSheet(rehearsalRows);
+
+  const memberSheet = findPayloadSheet(payload, ['MIEMBROS','Miembros','FORMACION','Formación']);
+  let memberRows = rowsFromPayloadSheet(memberSheet);
+  if(!memberRows.length) memberRows = payload?.data?.MIEMBROS?.rows || payload?.data?.miembros || [];
+  if(Array.isArray(memberRows) && memberRows.length){
+    db.bandMembers = memberRows.map(m=>({
+      id: normalizeMemberKey(m.id || m.ID || m.nombre || m.Nombre || m.name || m.Miembro),
+      name: m.nombre || m.Nombre || m.name || m.Miembro || '',
+      role: m.rol || m.Rol || m.role || m.instrumento || ''
+    })).filter(x=>x.name);
+  }
+
+  const songRows = rowsFromPayloadSheet(findPayloadSheet(payload, ['REPERTORIO','Repertorio','CANCIONES','Canciones']));
+  if(Array.isArray(songRows) && songRows.length && !(db.repertoire||[]).length){
+    applySongsFromSheet(songRows);
+  }
+
+  db.sheetSync = Object.assign({}, db.sheetSync||{}, {
+    rehearsals: count,
+    status: 'ok',
+    rehearsalOnly: true,
+    updatedAt: new Date().toISOString(),
+    endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl, directSheet: GOOGLE_SHEET_MASTER.userUrl,
+    version: payload.version || db.sheetSync?.version || ''
+  });
+  return count;
+}
+
+async function syncLocalPaymentsFromGoogleSheet(opts={}){
+  const silent = !!opts.silent;
+  const staleGuard = !!opts.guard;
+  if(staleGuard && Date.now() - localPaymentLastSync < 20000) return true;
+  try{
+    sheetStatus('Actualizando pagos del local desde Google Sheet…');
+    const rows = await fetchSheetTabForRead('PAGOS_LOCAL', 500);
+    const count = applyLocalPaymentsFromSheet(rows);
+    localPaymentLastSync = Date.now();
+    persistDataOnly();
+    if(currentTabId()==='local') renderLocalPayments(); else renderShell();
+    sheetStatus(`Pagos del local actualizados. Registros reales: ${count}. Vista mensual completa: ${localPaymentMemberDefinitions().length} miembros.`, 'ok');
+    if(!silent) alert(`Pagos del local actualizados. Vista mensual completa.`);
+    return true;
+  }catch(err){
+    localPaymentLastSync = Date.now();
+    ensureLocalPaymentsForMonth(new Date().toISOString().slice(0,7));
+    persistDataOnly();
+    if(currentTabId()==='local') renderLocalPayments(); else renderShell();
+    sheetStatus('No se pudo actualizar PAGOS_LOCAL desde Google Sheet. Se mantiene la vista mensual completa en caché: '+esc(err.message||err), 'bad');
+    if(!silent) alert('No se pudo actualizar PAGOS_LOCAL: '+(err.message||err));
+    return false;
+  }
+}
+function ensureLocalPaymentsFreshOnOpen(){
+  const stale = Date.now() - localPaymentLastSync > 30000;
+  if(stale){
+    syncLocalPaymentsFromGoogleSheet({silent:true, guard:true});
+  }
+}
+
+async function syncRehearsalsFromGoogleSheet(opts={}){
+  const silent = !!opts.silent;
+  if(rehearsalSyncRunning) return false;
+  rehearsalSyncRunning = true;
+  try{
+    rehearsalSheetStatus('Actualizando ensayos automáticamente desde Google Sheet…');
+    // v3.0: en lectura móvil se usa primero Google Sheet directo.
+    // Apps Script queda como respaldo, porque en algunos móviles Google bloquea la carga externa del endpoint.
+    let count = 0;
+    try{
+      const rows = await fetchSheetTabViaGoogleSheetDirect('ENSAYOS', 300);
+      count = applyRehearsalsFromSheet(rows);
+    }catch(directErr){
+      let payload;
+      try{
+        payload = await appsScriptJSONP({action:'rehearsals'});
+      }catch(firstErr){
+        payload = await appsScriptJSONP({action:'sheet', tab:'ENSAYOS', limit:'300'});
+      }
+      count = applyRehearsalsOnlyPayload(payload);
+    }
+    rehearsalLastSync = Date.now();
+    persistDataOnly();
+    if(currentTabId()==='rehearsals') renderRehearsals(); else renderShell();
+    rehearsalSheetStatus(`Ensayos actualizados desde Google Sheet: ${count}.`, 'ok');
+    if(!silent) alert(`Ensayos actualizados desde Google Sheet: ${count}`);
+    return true;
+  }catch(err){
+    db.sheetSync = Object.assign({}, db.sheetSync||{}, {status:'error', rehearsalError:String(err.message||err), updatedAt:new Date().toISOString(), endpoint: GOOGLE_SHEET_MASTER.appsScriptUrl});
+    rehearsalSheetStatus('No se han podido actualizar ensayos desde este dispositivo: '+esc(err.message||err), 'bad');
+    if(!silent) alert('No se pudieron cargar los ensayos desde Google Sheet: '+(err.message||err));
+    return false;
+  }finally{
+    rehearsalSyncRunning = false;
+  }
+}
+
+function ensureRehearsalsFreshOnMobile(){
+  const isSmall = window.matchMedia && window.matchMedia('(max-width: 900px)').matches;
+  const stale = Date.now() - rehearsalLastSync > 60000;
+  if((isSmall || !(db.rehearsals||[]).length) && stale){
+    syncRehearsalsFromGoogleSheet({silent:true, mobile:true});
+  }
 }
 
 
-function applySetlistFromSheet(rows){
-  const items=(rows||[]).map((row,i)=>({
-    order:Number(pick(row,['orden','Orden','order','#'])) || i+1,
-    title:pick(row,['titulo','Título','title','Tema','Canción','Cancion']),
-    vocal:pick(row,['voz','Voz','vocal','Voz principal']),
-    key:pick(row,['tono','Tono','key','Tonalidad']),
-    duration:pick(row,['duracion','Duración','duration','Duración directo']),
-    block:pick(row,['bloque','Bloque','block','Bloque/curva']) || 'Setlist',
-    notes:pick(row,['notas','Notas','notes'])
-  })).filter(x=>x.title);
-
-  if(items.length){
-    const blocksByName = {};
-    items.forEach(song=>{
-      const blockName = song.block || 'Setlist';
-      if(!blocksByName[blockName]){
-        blocksByName[blockName] = {
-          id:Object.keys(blocksByName).length+1,
-          name:blockName,
-          objective:'Orden de concierto sincronizado desde Google Sheet.',
-          musicDuration:'',
-          stageControl:'',
-          songs:[]
-        };
-      }
-      blocksByName[blockName].songs.push(song);
-    });
-    db.strategicSetlist = pruneStrategicSetlistToCurrentRepertoire({
-      title:'Setlist BCB',
-      subtitle:'Datos sincronizados desde Google Sheet maestro',
-      musicDuration:'',
-      agileDuration:'',
-      extendedDuration:'',
-      legend:unique(items.map(x=>x.vocal).filter(Boolean)),
-      rule:'Setlist editable: si se borra una canción del repertorio no se muestra aquí.',
-      finalMandatory:'',
-      promoterReading:'Setlist de trabajo sincronizado desde Google Sheet.',
-      blocks:Object.values(blocksByName)
-    });
-    return setlistRows().length;
+async function fetchSheetTabViaAppsScript(tab, limit=500){
+  // v3.0: para lectura pública y móvil se usa primero Google Sheet directo.
+  // Así evitamos esperas largas intentando Apps Script cuando el endpoint no está disponible como recurso externo.
+  try{
+    const rows = await fetchSheetTabViaGoogleSheetDirect(tab, limit);
+    rows.forEach(r=>{ if(r && typeof r==='object') r.__source = r.__source || 'Google Sheet directo'; });
+    return rows;
+  }catch(directErr){
+    console.warn('APP-BCB: Google Sheet directo no cargó '+tab+'. Probando Apps Script:', directErr);
+    const payload = await appsScriptJSONP({action:'sheet', tab, limit:String(limit)});
+    if(!payload || payload.ok===false) throw new Error((payload && payload.error) || ('No se pudo leer '+tab));
+    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    rows.forEach(r=>{ if(r && typeof r==='object') r.__source = r.__source || 'Apps Script'; r.__fallbackError = String(directErr.message||directErr); });
+    return rows;
   }
-
-  // Si la hoja SETLISTS está vacía, mantenemos el setlist base pero filtrado por repertorio real.
-  if(db.strategicSetlist || INITIAL_DATA.strategicSetlist){
-    db.strategicSetlist = pruneStrategicSetlistToCurrentRepertoire(db.strategicSetlist || clone(INITIAL_DATA.strategicSetlist));
-    return setlistRows().length;
-  }
-  return 0;
 }
 
 
@@ -2286,8 +2471,7 @@ async function syncCoreSheetsIndividually(opts={}){
   for(const [tab, limit] of tabsToRead){
     try{
       sheetStatus('Actualizando '+tab+' desde Google Sheet…');
-      const liveTabs = ['ENSAYOS','REPERTORIO','SETLISTS','PAGOS_LOCAL','MIEMBROS'];
-      const rows = liveTabs.includes(tab) ? await fetchSheetTabLive(tab, limit) : await fetchSheetTabForRead(tab, limit);
+      const rows = await fetchSheetTabForRead(tab, limit);
       const count = applyCoreSheetRows(tab, rows);
       if(tab==='CRM_GENERAL') report.crm = count || report.crm;
       if(tab==='CONCIERTOS') report.concerts = count || report.concerts;
@@ -2452,7 +2636,7 @@ function tabCount(id){
   if(id==='concerts')return db.concerts.length;
   if(id==='rehearsals')return (db.rehearsals||[]).length;
   if(id==='tasks')return db.tasks.length;
-  if(id==='repertoire')return db.repertoire.length;
+  if(id==='repertoire')return activeRepertoire().length;
   if(id==='setlist')return setlistRows().length;
   return '';
 }
@@ -2744,7 +2928,33 @@ function pushDeleteToSheet(arrName,id,record={}){
     });
 }
 
+function deactivateSong(id){
+  const song=(db.repertoire||[]).find(x=>String(x.id)===String(id));
+  if(!song){
+    alert('No se ha encontrado la canción en la app. Actualiza desde Google Sheet y vuelve a intentarlo.');
+    return;
+  }
+  const title = song.title || song.titleCanonical || ('ID '+id);
+  if(!confirm('¿Dar de baja "'+title+'"?\n\nNo se borra del histórico: queda como Descartado y deja de aparecer en Canciones activas y Setlist.')) return;
+  const updated = Object.assign({}, song, {
+    status:'Descartado',
+    notes: appendInternalNote(song.notes, 'Dada de baja desde APP-BCB')
+  });
+  pushSongToSheet(updated)
+    .then(()=>{
+      upsertLocalArrayItem('repertoire', updated);
+      closeModal();
+      saveData();
+      sheetStatus('Canción dada de baja en Google Sheet y retirada de Canciones/Setlist.','ok');
+    })
+    .catch(err=>{
+      sheetStatus('NO se ha dado de baja. Google Sheet no confirmó el cambio: '+esc(err.message||err),'bad');
+      alert('No se ha podido dar de baja en Google Sheet.\n\nMotivo: '+(err.message||err)+'\n\nNo cambio la app para no dejar datos falsos.');
+    });
+}
+
 function deleteRecord(arrName,id){
+  if(arrName==='repertoire') return deactivateSong(id);
   if(!confirm('¿Borrar este registro de APP-BCB y del Google Sheet maestro?'))return;
   const list=Array.isArray(db[arrName]) ? db[arrName] : [];
   const record=list.find(x=>String(x.id)===String(id)) || {};
@@ -2756,9 +2966,6 @@ function deleteRecord(arrName,id){
   pushDeleteToSheet(arrName,id,record)
     .then(()=>{
       removeLocalArrayItem(arrName,id);
-      if(arrName === 'repertoire'){
-        pruneSetlistAfterRepertoireChange();
-      }
       closeModal();
       saveData();
       sheetStatus('Registro borrado en Google Sheet maestro y retirado de la app.','ok');
@@ -2993,16 +3200,14 @@ function rehearsalSongChecklist(item){
 function rehearsalAttendanceEditor(item){
   const a=item?.attendance||{};
   return `<div class="hr"></div><h4>Asistencia al ensayo</h4><div class="attendanceEditGrid">`+bandMembers().map(m=>{
-    const id = normalizeMemberKey(m.id || m.name);
-    const itemA = a[id] || a[m.id] || a[m.name] || {status:'Pendiente',notes:''};
+    const itemA=a[m.id]||{status:'Pendiente',notes:''};
     return `<div class="attendanceEditItem">
       <label>${esc(m.name)} · ${esc(m.role)}</label>
-      <select data-rehearsal-attendance="${esc(id)}">${attendanceOptions(itemA.status||'Pendiente')}</select>
-      <input data-rehearsal-attendance-note="${esc(id)}" placeholder="Notas" value="${esc(itemA.notes||'')}">
+      <select data-rehearsal-attendance="${esc(m.id)}">${attendanceOptions(itemA.status||'Pendiente')}</select>
+      <input data-rehearsal-attendance-note="${esc(m.id)}" placeholder="Notas" value="${esc(itemA.notes||'')}">
     </div>`;
   }).join('')+`</div>`;
 }
-
 function setRehearsalSongsMode(mode){
   const all=document.getElementById('rehearsalAllSongs');
   const checks=[...document.querySelectorAll('[data-rehearsal-song]')];
@@ -3039,10 +3244,9 @@ function saveRehearsal(){
   obj.songTitles=obj.allSongs?'Todos los temas':rehearsalSongTitlesForSave(obj.songIds);
   obj.attendance={};
   bandMembers().forEach(m=>{
-    const id=normalizeMemberKey(m.id || m.name);
-    const st=document.querySelector(`[data-rehearsal-attendance="${id}"]`)?.value||'Pendiente';
-    const notes=document.querySelector(`[data-rehearsal-attendance-note="${id}"]`)?.value||'';
-    obj.attendance[id]={status:st,notes};
+    const st=document.querySelector(`[data-rehearsal-attendance="${m.id}"]`)?.value||'Pendiente';
+    const notes=document.querySelector(`[data-rehearsal-attendance-note="${m.id}"]`)?.value||'';
+    obj.attendance[m.id]={status:st,notes};
   });
   let item;
   if(modalContext.id){
@@ -3062,7 +3266,6 @@ function saveRehearsal(){
     })
     .catch(alertSheetWriteError);
 }
-
 function viewRehearsalModal(id){
   const r=(db.rehearsals||[]).find(x=>x.id===id);
   if(!r)return;
@@ -3126,7 +3329,7 @@ function renderRehearsals(){
       <td><button class="btn small dark" onclick="viewRehearsalModal(${r.id})">Ver</button> <button class="btn small gold" onclick="openRehearsalModal(${r.id})">Editar</button> <button class="btn small red" onclick="deleteRecord('rehearsals',${r.id})">Borrar</button></td>
     </tr>`;
   }).join('') || '<tr><td colspan="8" class="muted">Todavía no hay ensayos creados. Entra como administrador para añadir el primero.</td></tr>';
-  renderRehearsalAttendancePanel();
+  renderConcertAttendancePanel();
 }
 
 
@@ -3427,79 +3630,11 @@ function renderConcertAttendancePanel(){
     `:'<p class="muted">No hay conciertos creados todavía.</p>';
   }
 }
-
-function renderRehearsalAttendancePanel(){
-  const select=document.getElementById('attendanceConcertSelect');
-  if(!select)return;
-  const prev=select.value;
-  const rehearsals=(db.rehearsals||[]).slice().sort((a,b)=>String(a.date||'9999-99-99').localeCompare(String(b.date||'9999-99-99')) || String(a.startTime||'99:99').localeCompare(String(b.startTime||'99:99')));
-  fillSelectKeep(select, rehearsals.map(r=>`<option value="${esc(r.id)}">${esc(r.date||'sin fecha')} · ${esc(r.place||'Ensayo')}</option>`).join(''), prev);
-  const memberSelect=document.getElementById('attendanceMemberSelect');
-  const prevMember=memberSelect?.value||'';
-  fillSelectKeep(memberSelect, memberOptions(prevMember), prevMember);
-  const r=rehearsals.find(x=>Number(x.id)===Number(select.value)) || rehearsals[0];
-  if(r && !select.value) select.value=r.id;
-  const mId=normalizeMemberKey(memberSelect?.value || bandMembers()[0]?.id);
-  const saved=(r?.attendance||{})[mId] || {};
-  const summary=document.getElementById('concertAttendanceSummary');
-  if(summary){
-    summary.innerHTML=r?`
-      <div class="detailItem"><small>Ensayo seleccionado</small><div><strong>${esc(r.date||'sin fecha')} · ${esc(r.place||'Ensayo')}</strong><br><span style="color:var(--muted)">${esc([r.startTime,r.endTime].filter(Boolean).join(' - ')||'sin horario')} ${r.objective?'· '+esc(r.objective):''}</span></div></div>
-      <div class="hr"></div>
-      <h4>Estado guardado por miembro</h4>
-      ${attendancePills(r.attendance)}
-      ${saved.notes?`<p class="muted">Nota guardada de ${esc(memberLabel(mId))}: ${esc(saved.notes)}</p>`:''}
-    `:'<p class="muted">No hay ensayos creados todavía.</p>';
-  }
-  fixRehearsalAttendanceLabels();
-}
-
-function selectedRehearsalForAttendance(){
-  const id=Number(document.getElementById('attendanceConcertSelect')?.value||0);
-  return (db.rehearsals||[]).find(r=>Number(r.id)===id) || (db.rehearsals||[])[0];
-}
-
-function fixRehearsalAttendanceLabels(){
-  const root=document.getElementById('rehearsals');
-  if(!root)return;
-  root.querySelectorAll('h1,h2,h3,h4,p,small,label,button,span,option').forEach(el=>{
-    el.childNodes.forEach(node=>{
-      if(node.nodeType === 3){
-        node.nodeValue = node.nodeValue
-          .replace(/confirmar asistencia a concierto/gi,'Confirmar asistencia a ensayo')
-          .replace(/asistencia a concierto/gi,'asistencia a ensayo')
-          .replace(/concierto seleccionado/gi,'Ensayo seleccionado')
-          .replace(/concierto:/gi,'Ensayo:')
-          .replace(/\bconcierto\b/gi,'ensayo')
-          .replace(/\bconciertos\b/gi,'ensayos');
-      }
-    });
-  });
-}
-
 function selectedConcertForAttendance(){
   const id=Number(document.getElementById('attendanceConcertSelect')?.value||0);
   return (db.concerts||[]).find(c=>Number(c.id)===id) || (db.concerts||[])[0];
 }
 function copyConcertAttendanceMessage(){
-  if(currentTabId && currentTabId()==='rehearsals'){
-    const r=selectedRehearsalForAttendance();
-    if(!r){alert('No hay ensayo seleccionado.');return;}
-    const mId=normalizeMemberKey(document.getElementById('attendanceMemberSelect')?.value || bandMembers()[0]?.id);
-    const status=document.getElementById('attendanceStatusSelect')?.value || 'Confirmo asistencia';
-    const notes=document.getElementById('attendanceNotesInput')?.value || '';
-    const msg=[
-      'Breathless Cover Band · Confirmación de asistencia a ensayo',
-      `Ensayo: ${r.date||'fecha pendiente'} · ${[r.startTime,r.endTime].filter(Boolean).join(' - ')||'sin horario'}`,
-      `Lugar: ${r.place||'pendiente'}`,
-      `Miembro: ${memberLabel(mId)}`,
-      `Estado: ${status}`,
-      notes?`Notas: ${notes}`:'Notas: —'
-    ].join('\n');
-    copyText(msg);
-    return;
-  }
-
   const c=selectedConcertForAttendance();
   if(!c){alert('No hay concierto seleccionado.');return;}
   const mId=document.getElementById('attendanceMemberSelect')?.value || bandMembers()[0]?.id;
@@ -3515,32 +3650,7 @@ function copyConcertAttendanceMessage(){
   ].join('\n');
   copyText(msg);
 }
-
 function saveConcertAttendance(){
-  if(currentTabId && currentTabId()==='rehearsals'){
-    const r=selectedRehearsalForAttendance();
-    if(!r){alert('No hay ensayo seleccionado.');return;}
-    const mId=normalizeMemberKey(document.getElementById('attendanceMemberSelect')?.value || bandMembers()[0]?.id);
-    const status=document.getElementById('attendanceStatusSelect')?.value || 'Pendiente';
-    const notes=document.getElementById('attendanceNotesInput')?.value || '';
-    r.attendance=r.attendance||{};
-    r.attendance[mId]={status,notes,updatedAt:new Date().toISOString()};
-
-    pushRehearsalToSheet(r)
-      .then(()=>{
-        upsertLocalArrayItem('rehearsals', r);
-        saveData({refresh:false});
-        return syncRehearsalsFromGoogleSheet({silent:true, reason:'afterRehearsalAttendanceWrite'});
-      })
-      .then(()=>{
-        renderRehearsals();
-        rehearsalSheetStatus('Asistencia de ensayo guardada en Google Sheet.','ok');
-        alert('Asistencia de ensayo guardada en Google Sheet.');
-      })
-      .catch(alertSheetWriteError);
-    return;
-  }
-
   const c=selectedConcertForAttendance();
   if(!c){alert('No hay concierto seleccionado.');return;}
   const mId=document.getElementById('attendanceMemberSelect')?.value || bandMembers()[0]?.id;
@@ -3553,7 +3663,6 @@ function saveConcertAttendance(){
     .then(()=>alert('Confirmación guardada en Google Sheet.'))
     .catch(alertSheetWriteError);
 }
-
 function rehearsalHeaders(){return [
   {label:'ID',key:'id'},
   {label:'Fecha',key:'date'},
@@ -3612,14 +3721,14 @@ function openPosterHelp(){
 }
 
 function setlistRows(){
-  const base = db.strategicSetlist || INITIAL_DATA.strategicSetlist || {blocks:[]};
-  const st = pruneStrategicSetlistToCurrentRepertoire(base) || {blocks:[]};
-  if(db.strategicSetlist) db.strategicSetlist = st;
-  return (st.blocks||[]).flatMap(b=>(b.songs||[]).map(song=>Object.assign({blockId:b.id,blockName:b.name,blockObjective:b.objective,stageControl:b.stageControl,blockDuration:b.musicDuration},song)));
+  const st=db.strategicSetlist || INITIAL_DATA.strategicSetlist || {blocks:[]};
+  return (st.blocks||[]).flatMap(b=>(b.songs||[])
+    .filter(song=>setlistSongIsActive(song))
+    .map(song=>Object.assign({blockId:b.id,blockName:b.name,blockObjective:b.objective,stageControl:b.stageControl,blockDuration:b.musicDuration},song)));
 }
 function vocalClass(v){const x=norm(v); if(x.includes('miguel'))return 'vocal vocal-miguel'; if(x.includes('carmen'))return 'vocal vocal-carmen'; if(x.includes('ambos'))return 'vocal vocal-ambos'; if(x.includes('teo'))return 'vocal vocal-teo'; return 'vocal';}
 function renderSetlist(){
-  const st=pruneStrategicSetlistToCurrentRepertoire(db.strategicSetlist || INITIAL_DATA.strategicSetlist); if(!st)return; if(db.strategicSetlist) db.strategicSetlist=st;
+  const st=db.strategicSetlist || INITIAL_DATA.strategicSetlist; if(!st)return;
   const rows=setlistRows();
   const el=id=>document.getElementById(id);
   if(!el('setlistTitle'))return;
@@ -3630,7 +3739,7 @@ function renderSetlist(){
   el('setlistFinal').innerHTML=`<strong>Final obligatorio:</strong> ${esc(st.finalMandatory||'')}`;
   el('setlistSummary').innerHTML=[['Música',st.musicDuration],['Ágil',st.agileDuration],['Amplio',st.extendedDuration]].map(x=>`<div class="detailItem"><small>${esc(x[0])}</small><div><strong>${esc(x[1])}</strong></div></div>`).join('');
   el('setlistPromoterReading').innerHTML=`<p><strong>Lectura para salas/promotores:</strong><br>${esc(st.promoterReading||'')}</p>`;
-  el('setlistBlocks').innerHTML=(st.blocks||[]).map(b=>`<div class="card setlistBlock" data-no="${b.id}"><h4>${b.id} · ${esc(b.name)}</h4><p>${esc(b.objective)}</p><div class="setlistMeta"><div class="detailItem"><small>Duración música</small><div>${esc(b.musicDuration)}</div></div><div class="detailItem"><small>Control de escenario</small><div>${esc(b.stageControl)}</div></div><div class="detailItem"><small>Temas</small><div>${(b.songs||[]).length}</div></div></div><div class="setlistSongs">${(b.songs||[]).map(song=>`<div class="setlistSong"><span class="num">${song.order}</span><strong>${esc(song.title)}</strong><span class="${vocalClass(song.vocal)}">${esc(song.vocal)}</span></div>`).join('')}</div></div>`).join('');
+  el('setlistBlocks').innerHTML=(st.blocks||[]).map(b=>`<div class="card setlistBlock" data-no="${b.id}"><h4>${b.id} · ${esc(b.name)}</h4><p>${esc(b.objective)}</p><div class="setlistMeta"><div class="detailItem"><small>Duración música</small><div>${esc(b.musicDuration)}</div></div><div class="detailItem"><small>Control de escenario</small><div>${esc(b.stageControl)}</div></div><div class="detailItem"><small>Temas</small><div>${(b.songs||[]).filter(song=>setlistSongIsActive(song)).length}</div></div></div><div class="setlistSongs">${(b.songs||[]).filter(song=>setlistSongIsActive(song)).map(song=>`<div class="setlistSong"><span class="num">${song.order}</span><strong>${esc(song.title)}</strong><span class="${vocalClass(song.vocal)}">${esc(song.vocal)}</span></div>`).join('')}</div></div>`).join('');
   renderBars('setlistVocalBars', counts(rows,'vocal'));
   document.querySelector('#setlistTable tbody').innerHTML=rows.map(r=>`<tr><td><strong>${r.order}</strong></td><td>${esc(r.title)}</td><td><span class="${vocalClass(r.vocal)}">${esc(r.vocal)}</span></td><td>${r.blockId} · ${esc(r.blockName)}</td><td>${esc(r.blockObjective)}</td><td>${esc(r.stageControl)}</td></tr>`).join('');
 }
@@ -3655,6 +3764,7 @@ function repertoireFiltered(){
   const status=document.getElementById('fRepStatus')?.value||'';
   const singer=document.getElementById('fRepSinger')?.value||'';
   return (db.repertoire||[]).filter(s=>{
+    if(!status && isSongInactive(s)) return false;
     const blob=[
       s.title,s.titleCanonical,s.artist,s.versionReference,s.singer,s.leadVocal,
       s.duration,s.durationLive,s.durationOriginal,s.durationStatus,
@@ -3688,7 +3798,7 @@ function renderRepertoire(){
   }
 
   artists.innerHTML=(db.artistReferences||[]).map(a=>`<span class="pill">${esc(a)}</span>`).join('');
-  renderBars('repBars', counts(db.repertoire||[],'block'));
+  renderBars('repBars', counts(activeRepertoire(),'block'));
   const rows=repertoireFiltered();
   const tbody=document.querySelector('#repTable tbody');
   if(!tbody)return;
@@ -3707,7 +3817,7 @@ function renderRepertoire(){
     <td>
       <button class="btn small dark" onclick="viewSongModal(${s.id})">Ver</button>
       <button class="btn small gold" onclick="openSongModal(${s.id})">Editar</button>
-      <button class="btn small red" onclick="deleteRecord('repertoire',${s.id})">Borrar</button>
+      <button class="btn small red" onclick="deactivateSong(${s.id})">Dar baja</button>
     </td>
   </tr>`).join('');
 }
@@ -3746,7 +3856,7 @@ function openSongModal(id=null){
   const item=id?db.repertoire.find(x=>x.id===id):{block:'Bloque 1',status:'Activo',durationStatus:'Pendiente validar',keyStatus:'Pendiente validar',spotifyPlaylistUrl:db.createdFrom?.spotifyPlaylistUrl||''};
   modalContext={type:'song',id};
   document.getElementById('modalTitle').textContent=id?'Editar canción':'Nueva canción';
-  document.getElementById('modalBody').innerHTML=renderForm(songFields(), item)+`<div class="hr"></div><div class="actions"><button class="btn gold" onclick="saveSong()">Guardar</button><button class="btn dark" onclick="closeModal()">Cancelar</button>${id?`<button class="btn red" onclick="deleteRecord('repertoire',${id})">Borrar</button>`:''}</div>`;
+  document.getElementById('modalBody').innerHTML=renderForm(songFields(), item)+`<div class="hr"></div><div class="actions"><button class="btn gold" onclick="saveSong()">Guardar</button><button class="btn dark" onclick="closeModal()">Cancelar</button>${id?`<button class="btn red" onclick="deactivateSong(${id})">Dar baja</button>`:''}</div>`;
   openModal();
 }
 function viewSongModal(id){
@@ -4097,18 +4207,22 @@ function initialTabFromUrl(){
   }catch(e){ return 'dashboard'; }
 }
 
-// BCB v5.8 · guardado estable:
- // No forzamos 32 temas en cada arranque. El Google Sheet y las acciones del admin son la fuente de verdad.
+// BCB v5.6 · refuerzo final: repertorio y setlist v11 siempre 32.
 function forceBCBSetlistV11Clean32(){
   try{
+    if(Array.isArray(INITIAL_DATA.repertoire) && INITIAL_DATA.repertoire.length === 32){
+      db.repertoire = clone(INITIAL_DATA.repertoire);
+    }
+    if(INITIAL_DATA.strategicSetlist && Array.isArray(INITIAL_DATA.strategicSetlist.blocks)){
+      db.strategicSetlist = clone(INITIAL_DATA.strategicSetlist);
+    }
     db.createdFrom = Object.assign({}, db.createdFrom||{}, {
-      setlistPatch: 'v5.8: guardado estable; repertorio y setlist ya no se fuerzan desde INITIAL_DATA',
-      guardadoEstablePatch: 'v5.8: ensayos, pagos, repertorio y setlist se leen en vivo desde Apps Script tras cada guardado'
+      setlistPatch: 'v5.6: setlist v11 limpio 32 temas aplicado por parche directo BAT',
+      repertoireSetlistV11AppliedAt: '2026-06-20'
     });
     persistDataOnly();
-  }catch(e){ console.warn('BCB guardado estable patch warning', e); }
+  }catch(e){ console.warn('BCB setlist v11 clean32 patch warning', e); }
 }
-
 
 clearOldLocalCaches();
 forceBCBSetlistV11Clean32();
@@ -4131,120 +4245,6 @@ function appBcbAutoSync(reason){
     setTimeout(run, reason==='startup' ? 2500 : 1500);
   }
 }
-setTimeout(()=>appBcbAutoSync('startup'), 800);
+setTimeout(()=>appBcbAutoSync('startup'), 2500);
 window.addEventListener('focus',()=>appBcbAutoSync('focus'));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden) appBcbAutoSync('visible');});
-
-
-
-/* APP-BCB v5.9 FIX · guardado estable: pagos/ensayos/repertorio
-   Parche defensivo: define funciones que v5.8 llamaba pero no tenía declaradas.
-   No modifica CRM, miembros ni histórico. */
-(function(){
-  "use strict";
-
-  function bcbPick(row, keys){
-    if(!row) return "";
-    for(var i=0;i<keys.length;i++){
-      var k=keys[i];
-      if(Object.prototype.hasOwnProperty.call(row,k) && row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") return row[k];
-    }
-    return "";
-  }
-
-  if(typeof window.fetchSheetTabViaAppsScript !== "function"){
-    window.fetchSheetTabViaAppsScript = async function(tab, limit){
-      limit = limit || 500;
-      if(typeof appsScriptJsonpOnly !== "function") throw new Error("appsScriptJsonpOnly no disponible.");
-      var payload = await appsScriptJsonpOnly({action:"sheet", tab:tab, limit:String(limit)});
-      if(!payload || payload.ok === false) throw new Error((payload && payload.error) || ("Apps Script no devolvió "+tab));
-      if(Array.isArray(payload.rows)) return payload.rows;
-      if(typeof findPayloadSheet === "function" && typeof rowsFromPayloadSheet === "function"){
-        var sheet = findPayloadSheet(payload, [tab]);
-        var rows = rowsFromPayloadSheet(sheet);
-        if(Array.isArray(rows)) return rows;
-      }
-      return [];
-    };
-  }
-
-  if(typeof window.applyLocalPaymentsFromSheet !== "function"){
-    window.applyLocalPaymentsFromSheet = function(rows){
-      rows = Array.isArray(rows) ? rows : [];
-      var items = rows.map(function(row){
-        var month = normalizeMonthValue(bcbPick(row, ["mes","Mes","month","Month","MES"]));
-        var memberRaw = bcbPick(row, ["memberId","ID Miembro","id_miembro","Miembro ID","nombre","Nombre","miembro","Miembro"]);
-        var memberId = normalizeMemberKey(memberRaw);
-        if(!month || !memberId) return null;
-        var amount = parseEuroValue(bcbPick(row, ["cuota","Cuota","importe","Importe","amount","Amount"]));
-        var paidRaw = bcbPick(row, ["pagado","Pagado","estado_pago","Estado pago","paid","Paid","estado","Estado"]);
-        var paid = isPaymentPaid(paidRaw) ? "SI" : "NO";
-        return {
-          id: bcbPick(row, ["id","ID"]) || (month+"|"+memberId),
-          month: month,
-          memberId: memberId,
-          name: memberDisplayName(memberId, bcbPick(row, ["nombre","Nombre","miembro","Miembro"])),
-          amount: amount || localMemberAmount(),
-          paid: paid,
-          paidDate: bcbPick(row, ["fecha_pago","Fecha pago","Fecha Pago","paidDate","paid_date"]),
-          updatedAt: bcbPick(row, ["actualizado_en","Última actualización","Ultima actualizacion","updatedAt","updated_at"]),
-          notes: bcbPick(row, ["notas","Notas","notes","Notes"]),
-          sheetRow: row.sheetRow || row.__row || row.Fila || row["Nº fila"] || "",
-          raw: row
-        };
-      }).filter(Boolean);
-
-      if(items.length){
-        db.localPayments = mergeLocalPaymentRows(db.localPayments || [], items);
-      }
-      return items.length;
-    };
-  }
-
-  if(typeof window.syncLocalPaymentsFromGoogleSheet !== "function"){
-    window.syncLocalPaymentsFromGoogleSheet = async function(opts){
-      opts = opts || {};
-      var silent = !!opts.silent;
-      try{
-        if(typeof sheetStatus === "function") sheetStatus("Actualizando pagos de local desde Google Sheet…");
-        var rows = await fetchSheetTabLive("PAGOS_LOCAL", 800);
-        var count = applyLocalPaymentsFromSheet(rows);
-        if(!localSelectedMonth) localSelectedMonth = currentYYYYMM();
-        if(typeof saveData === "function") saveData({refresh:false});
-        if(typeof renderLocalPayments === "function") renderLocalPayments();
-        if(typeof renderShell === "function") renderShell();
-        if(typeof sheetStatus === "function") sheetStatus("Pagos de local actualizados: "+count+" filas leídas.", "ok");
-        if(!silent) alert("Pagos de local actualizados: "+count+" filas.");
-        return true;
-      }catch(err){
-        if(typeof sheetStatus === "function") sheetStatus("No se pudo actualizar PAGOS_LOCAL desde Google Sheet: "+esc(err.message||err), "bad");
-        if(!silent) alert("No se pudo actualizar PAGOS_LOCAL:\n\n"+(err.message||err));
-        return false;
-      }
-    };
-  }
-
-  if(typeof window.syncRehearsalsFromGoogleSheet !== "function"){
-    window.syncRehearsalsFromGoogleSheet = async function(opts){
-      opts = opts || {};
-      var silent = !!opts.silent;
-      try{
-        if(typeof sheetStatus === "function") sheetStatus("Actualizando ensayos desde Google Sheet…");
-        var rows = await fetchSheetTabLive("ENSAYOS", 800);
-        var count = applyRehearsalsFromSheet(rows);
-        if(typeof saveData === "function") saveData({refresh:false});
-        if(typeof renderRehearsals === "function") renderRehearsals();
-        if(typeof renderShell === "function") renderShell();
-        if(typeof sheetStatus === "function") sheetStatus("Ensayos actualizados: "+count+" filas leídas.", "ok");
-        if(!silent) alert("Ensayos actualizados: "+count+" filas.");
-        return true;
-      }catch(err){
-        if(typeof sheetStatus === "function") sheetStatus("No se pudo actualizar ENSAYOS desde Google Sheet: "+esc(err.message||err), "bad");
-        if(!silent) alert("No se pudo actualizar ENSAYOS:\n\n"+(err.message||err));
-        return false;
-      }
-    };
-  }
-
-})();
-
