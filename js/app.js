@@ -4248,3 +4248,223 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden) appBcbAut
 
 })();
 
+
+
+/* APP-BCB v6.1 FIX · Canciones/Repertorio + Setlist estable
+   Base: js actual aportado por el usuario.
+   Objetivo:
+   - Dar de baja canciones como "Descartado" en Google Sheet, no borrarlas a ciegas.
+   - No mostrar canciones descartadas en Canciones activas.
+   - Quitar automáticamente del Setlist cualquier canción descartada.
+   - Guardar ediciones de canción sin que el setlist base vuelva a pisarlas.
+   - No tocar ensayos, pagos, miembros, CRM ni histórico.
+*/
+(function(){
+  "use strict";
+
+  function bcbSongVisible(song){
+    try{
+      if(typeof songIsVisibleInApp === "function") return songIsVisibleInApp(song);
+    }catch(e){}
+    var st = (song && (song.status || song.Estado || song.estado || "Activo")) || "Activo";
+    st = String(st).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+    return !(st.indexOf("borrad")>=0 || st.indexOf("eliminad")>=0 || st.indexOf("inactiv")>=0 || st.indexOf("archiv")>=0 || st.indexOf("descart")>=0);
+  }
+
+  function bcbVisibleRepertoire(){
+    return (db.repertoire || []).filter(bcbSongVisible);
+  }
+
+  function bcbRefreshAfterRepertoireChange(){
+    try{ if(typeof pruneSetlistAfterRepertoireChange === "function") pruneSetlistAfterRepertoireChange(); }catch(e){}
+    try{ if(typeof saveData === "function") saveData({refresh:false}); }catch(e){}
+    try{ if(typeof renderRepertoire === "function") renderRepertoire(); }catch(e){}
+    try{ if(typeof renderSetlist === "function") renderSetlist(); }catch(e){}
+    try{ if(typeof renderDashboard === "function") renderDashboard(); }catch(e){}
+    try{ if(typeof renderNav === "function") renderNav(); }catch(e){}
+  }
+
+  // Contadores laterales: Canciones debe contar solo canciones activas/visibles.
+  try{
+    tabCount = window.tabCount = function(id){
+      if(id==="crm") return db.crm.length;
+      if(id==="gmail") return db.gmailResponses.length;
+      if(id==="concerts") return db.concerts.length;
+      if(id==="rehearsals") return (db.rehearsals||[]).length;
+      if(id==="tasks") return db.tasks.length;
+      if(id==="repertoire") return bcbVisibleRepertoire().length;
+      if(id==="setlist") return setlistRows().length;
+      return "";
+    };
+  }catch(e){ console.warn("BCB v6.1 no pudo parchear tabCount", e); }
+
+  try{
+    fillRepertoireFilters = window.fillRepertoireFilters = function(){
+      const fill=(id,values,label)=>{
+        const el=document.getElementById(id); if(!el)return;
+        const current=el.value;
+        el.innerHTML=`<option value="">${label}</option>`+[...new Set(values.filter(Boolean).map(String))].sort((a,b)=>a.localeCompare(b,'es')).map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+        el.value=current;
+      };
+      const active = bcbVisibleRepertoire();
+      fill('fRepBlock', active.map(s=>s.block), 'Bloque');
+      fill('fRepStatus', active.map(s=>s.status), 'Estado');
+      fill('fRepSinger', active.map(s=>s.singer||s.leadVocal), 'Voz');
+    };
+  }catch(e){ console.warn("BCB v6.1 no pudo parchear filtros de repertorio", e); }
+
+  try{
+    repertoireFiltered = window.repertoireFiltered = function(){
+      const q=norm(document.getElementById('qRep')?.value||'');
+      const block=document.getElementById('fRepBlock')?.value||'';
+      const status=document.getElementById('fRepStatus')?.value||'';
+      const singer=document.getElementById('fRepSinger')?.value||'';
+      return bcbVisibleRepertoire().filter(s=>{
+        const blob=[
+          s.title,s.titleCanonical,s.artist,s.versionReference,s.singer,s.leadVocal,
+          s.duration,s.durationLive,s.durationOriginal,s.durationStatus,
+          s.tone,s.originalKey,s.currentKey,s.rehearsalKey,s.keyStatus,
+          s.keyMiguel,s.keyCarmen,s.transposeNotes,s.capo,s.bpm,
+          s.block,s.status,s.spotifyPlaylistUrl,s.spotifyUrl,s.youtubeUrl,s.chordsUrl,
+          s.chordsText,s.structure,s.lyricsNotes,s.notes,s.sourceNotes
+        ].join(' ');
+        return (!q||norm(blob).includes(q)) && (!block||s.block===block) && (!status||s.status===status) && (!singer||(s.singer||s.leadVocal)===singer);
+      });
+    };
+  }catch(e){ console.warn("BCB v6.1 no pudo parchear repertoireFiltered", e); }
+
+  async function bcbArchiveSong(id){
+    const idx=(db.repertoire||[]).findIndex(x=>String(x.id)===String(id));
+    if(idx === -1){
+      alert("No se ha encontrado la canción en la app. Actualiza repertorio y vuelve a intentarlo.");
+      return;
+    }
+    const current=db.repertoire[idx];
+    if(!confirm("¿Dar de baja esta canción?\n\nNo se borrará a ciegas: quedará como Descartado en Google Sheet y desaparecerá de Canciones activas y del Setlist.")) return;
+
+    const archived=Object.assign({}, current, {
+      status:"Descartado",
+      Estado:"Descartado",
+      archivedAt:new Date().toISOString(),
+      notes: [current.notes||"", "Dada de baja desde APP-BCB"].filter(Boolean).join(" | ")
+    });
+
+    try{
+      if(typeof sheetStatus === "function") sheetStatus("Dando de baja canción en Google Sheet…");
+      // Escritura sin sincronización inmediata: evitamos que una lectura antigua vuelva a pisar el cambio.
+      await pushSheetRow("upsertRepertoire", songToSheetRow(archived), {afterWrite:"none"});
+      db.repertoire[idx]=archived;
+      bcbRefreshAfterRepertoireChange();
+      if(typeof sheetStatus === "function") sheetStatus("Canción dada de baja y retirada del Setlist.", "ok");
+      alert("Canción dada de baja.\n\nYa no aparecerá en Canciones activas ni en Setlist.");
+    }catch(err){
+      if(typeof sheetStatus === "function") sheetStatus("NO se ha dado de baja. Google Sheet no confirmó el cambio: "+esc(err.message||err), "bad");
+      alert("No se ha podido dar de baja en Google Sheet.\n\nMotivo: "+(err.message||err)+"\n\nNo la he quitado de la app para no dejar datos falsos.");
+    }
+  }
+
+  try{
+    deleteRecord = window.deleteRecord = function(arrName,id){
+      if(arrName === "repertoire") return bcbArchiveSong(id);
+
+      // Resto de módulos conserva el borrado original.
+      if(!confirm('¿Borrar este registro de APP-BCB y del Google Sheet maestro?'))return;
+      const list=Array.isArray(db[arrName]) ? db[arrName] : [];
+      const record=list.find(x=>String(x.id)===String(id)) || {};
+      if(!record || !Object.keys(record).length){
+        alert('No se ha encontrado el registro en la app. Actualiza desde Google Sheet y vuelve a intentarlo.');
+        return;
+      }
+
+      pushDeleteToSheet(arrName,id,record)
+        .then(()=>{
+          removeLocalArrayItem(arrName,id);
+          closeModal();
+          saveData();
+          sheetStatus('Registro borrado en Google Sheet maestro y retirado de la app.','ok');
+        })
+        .catch(err=>{
+          sheetStatus('NO se ha borrado. Google Sheet no confirmó el borrado: '+esc(err.message||err),'bad');
+          alert('No se ha podido borrar en Google Sheet.\n\nMotivo: '+(err.message||err)+'\n\nNo lo he quitado de la app para no dejar datos falsos.');
+        });
+    };
+  }catch(e){ console.warn("BCB v6.1 no pudo parchear deleteRecord", e); }
+
+  try{
+    saveSong = window.saveSong = function(){
+      const obj=readForm(songFields());
+      obj.duration = obj.durationLive || obj.duration || '';
+      obj.tone = obj.currentKey || obj.tone || '';
+      obj.leadVocal = obj.leadVocal || obj.singer || '';
+      obj.status = obj.status || "Activo";
+      let saved;
+      if(modalContext.id){
+        const idx=db.repertoire.findIndex(x=>String(x.id)===String(modalContext.id));
+        if(idx === -1){ alert('No se ha encontrado la canción en la app. Actualiza el repertorio y vuelve a intentarlo.'); return; }
+        saved=Object.assign({}, db.repertoire[idx], obj);
+      }else{
+        saved=Object.assign({id:nextId(db.repertoire), order:nextId(db.repertoire), status:"Activo"}, obj);
+      }
+
+      // Escritura sin sync inmediata para evitar que una lectura antigua de Google Sheet pise el cambio.
+      pushSheetRow('upsertRepertoire', songToSheetRow(saved), {afterWrite:'none'})
+        .then(()=>{
+          upsertLocalArrayItem('repertoire', saved);
+          closeModal();
+          bcbRefreshAfterRepertoireChange();
+          sheetStatus('Canción guardada en Google Sheet maestro.', 'ok');
+          alert('Canción guardada.');
+        })
+        .catch(alertSheetWriteError);
+    };
+  }catch(e){ console.warn("BCB v6.1 no pudo parchear saveSong", e); }
+
+  try{
+    renderRepertoire = window.renderRepertoire = function(){
+      const artists=document.getElementById('artists');
+      if(!artists)return;
+      fillRepertoireFilters();
+
+      const playlistUrl = db.createdFrom?.spotifyPlaylistUrl || db.repertoire?.find(x=>x.spotifyPlaylistUrl)?.spotifyPlaylistUrl || '';
+      const playlistBox = document.getElementById('spotifyPlaylistBox');
+      if(playlistBox){
+        playlistBox.innerHTML = playlistUrl
+          ? `<p>Playlist de referencia cargada para el repertorio de BCB.</p><div class="actions"><a class="btn gold" target="_blank" rel="noopener" href="${esc(playlistUrl)}">Abrir playlist Spotify</a><button class="btn dark" onclick="copyText('${esc(playlistUrl)}')">Copiar URL</button></div>${db.createdFrom?.spotifyEmbedUrl ? `<div class="spotifyEmbedWrap"><iframe style="border-radius:12px;margin-top:12px" src="${esc(db.createdFrom.spotifyEmbedUrl)}" width="100%" height="152" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div>` : ``}`
+          : `<p>No hay playlist general cargada todavía.</p>`;
+      }
+
+      artists.innerHTML=(db.artistReferences||[]).map(a=>`<span class="pill">${esc(a)}</span>`).join('');
+      renderBars('repBars', counts(bcbVisibleRepertoire(),'block'));
+      const rows=repertoireFiltered();
+      const tbody=document.querySelector('#repTable tbody');
+      if(!tbody)return;
+      tbody.innerHTML=rows.map(s=>`<tr>
+        <td><strong>${esc(s.title)}</strong><br><small>#${esc(s.order||s.id||'—')}</small></td>
+        <td>${esc(s.artist||'—')}</td>
+        <td>${esc(s.singer||s.leadVocal||'—')}</td>
+        <td>${esc(s.durationLive||s.duration||'—')}<br><small>${esc(s.durationStatus||'')}</small></td>
+        <td>${esc(s.currentKey||s.tone||'—')}<br><small>${esc(s.keyStatus||'')}</small></td>
+        <td><small>Miguel</small> ${esc(s.keyMiguel||'—')}<br><small>Carmen</small> ${esc(s.keyCarmen||'—')}</td>
+        <td>${esc(s.block||'—')}</td>
+        <td>${badge(s.status||'—')}</td>
+        <td>${songLinkButtons(s)}</td>
+        <td>${(s.chordsText||s.structure||s.lyricsNotes||s.chordsUrl)?'<span class="status s-blue">Ficha</span>':'—'}</td>
+        <td>${esc(compact(s.notes||s.transposeNotes||s.lyricsNotes||'',80))}</td>
+        <td>
+          <button class="btn small dark" onclick="viewSongModal(${s.id})">Ver</button>
+          <button class="btn small gold" onclick="openSongModal(${s.id})">Editar</button>
+          <button class="btn small red" onclick="deleteRecord('repertoire',${s.id})">Dar baja</button>
+        </td>
+      </tr>`).join('');
+    };
+  }catch(e){ console.warn("BCB v6.1 no pudo parchear renderRepertoire", e); }
+
+  try{
+    if(db && Array.isArray(db.repertoire)){
+      pruneSetlistAfterRepertoireChange();
+      persistDataOnly();
+    }
+  }catch(e){}
+
+  console.log("APP-BCB v6.1 fix canciones/setlist cargado.");
+})();
