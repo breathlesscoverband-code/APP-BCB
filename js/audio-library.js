@@ -1,4 +1,4 @@
-/* Audio Library Player v1.1 · Ñ / BCB
+/* Audio Library Player v1.2 · Ñ / BCB
    Lee un library.json y reproduce pistas ya separadas.
    No separa audio. No necesita Windows.
 */
@@ -10,6 +10,21 @@
     const m = Math.floor(sec/60);
     const s = Math.floor(sec%60);
     return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+  function escapeHtml(value){
+    return String(value || '').replace(/[&<>"']/g, ch => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+    }[ch]));
+  }
+  function researchLinksHtml(song){
+    const research = song && song.research ? song.research : null;
+    if (!research || !Array.isArray(research.sources) || !research.sources.length) return '';
+    const items = research.sources.map(src => {
+      if (!src || !src.url) return '';
+      return `<a href="${escapeHtml(src.url)}" target="_blank" rel="noopener">${escapeHtml(src.label || src.id || 'Referencia')}</a>`;
+    }).join('');
+    if (!items) return '';
+    return `<div class="audio-lib-research"><strong>Referencias del tema</strong><div>${items}</div></div>`;
   }
   function isAbsoluteUrl(value){
     return /^https?:\/\//i.test(value || '') || /^data:/i.test(value || '') || /^blob:/i.test(value || '');
@@ -52,7 +67,7 @@
             <div>
               <p class="audio-lib-eyebrow">Biblioteca de pistas</p>
               <h3>${this.config.bandLabel || 'Biblioteca'}</h3>
-              <p class="audio-lib-muted">Pistas ya separadas para ensayo: volumen por pista, mute/solo, velocidad, loop y variantes de tono si existen.</p>
+              <p class="audio-lib-muted">Pistas ya separadas para ensayo: volumen general, volumen por pista, mute/solo, velocidad, loop y variantes de tono si existen.</p>
             </div>
             <div class="audio-lib-actions">
               <button type="button" class="audio-lib-btn audio-lib-load-default">Cargar biblioteca</button>
@@ -185,6 +200,7 @@
             <p class="audio-lib-eyebrow">Sesión</p>
             <h3>${song.title || 'Tema'}</h3>
             <p class="audio-lib-muted">${tracks.length} pista(s). ${song.notes || ''}</p>
+            ${researchLinksHtml(song)}
           </div>
           <div class="audio-lib-transport-buttons">
             <button type="button" class="audio-lib-btn play">▶ Play</button>
@@ -208,6 +224,7 @@
               <option value="1.50">1.50x</option>
             </select>
           </label>
+          <label>Volumen general <input type="range" class="master-volume" min="0" max="100" value="100"></label>
           <label>Tono
             <select class="variant" ${toneDisabled}>${variantOptions}</select>
             <small class="audio-lib-tone-note">${toneNotice}</small>
@@ -289,6 +306,8 @@
       q(player, '.stop').addEventListener('click', () => this.stopAll());
       q(player, '.home').addEventListener('click', () => this.syncTo(0));
       q(player, '.speed').addEventListener('change', e => this.applySpeed(parseFloat(e.target.value || '1')));
+      const master = q(player, '.master-volume');
+      if (master) master.addEventListener('input', () => this.updateVolumes());
       q(player, '.loop').addEventListener('click', e => {
         this.loopOn = !this.loopOn;
         e.target.textContent = this.loopOn ? 'Loop ON' : 'Loop OFF';
@@ -316,10 +335,13 @@
     applySpeed(rate){ this.tracks.forEach(t => { t.audio.playbackRate = rate; t.audio.preservesPitch = true; t.audio.mozPreservesPitch = true; t.audio.webkitPreservesPitch = true; }); }
     updateVolumes(){
       const solos = this.tracks.filter(t => t.solo).map(t => t.id);
+      const player = q(this.root, '.audio-lib-player');
+      const masterEl = player ? q(player, '.master-volume') : null;
+      const master = masterEl ? Math.max(0, Math.min(1, parseInt(masterEl.value || '100', 10)/100)) : 1;
       this.tracks.forEach(t => {
         const activeBySolo = solos.length === 0 || solos.includes(t.id);
         t.audio.muted = t.mute || !activeBySolo;
-        t.audio.volume = Math.max(0, Math.min(1, t.volume));
+        t.audio.volume = Math.max(0, Math.min(1, t.volume * master));
       });
     }
     async playAll(){
