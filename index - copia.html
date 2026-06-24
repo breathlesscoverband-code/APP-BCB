@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- APP-BCB v7.1 estable auditoría · auto-cachefix 20260625 -->
+<!-- APP-BCB v7.1 estable auditoría · cachefix 20260625 -->
 <title>Breathless Cover Band · APP-BCB control profesional</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#120608">
@@ -12,107 +12,85 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="css/styles.css?v=7.1-autocachefix-20260625">
-<link rel="stylesheet" href="css/news-modal.css?v=7.1-autocachefix-20260625">
-<link rel="stylesheet" href="css/admin-guard.css?v=7.1-autocachefix-20260625">
-<script defer src="js/admin-guard.js?v=7.1-autocachefix-20260625"></script>
+<link rel="stylesheet" href="css/styles.css?v=7.1-cachefix-20260625">
+<link rel="stylesheet" href="css/news-modal.css?v=7.1-cachefix-20260625">
+<link rel="stylesheet" href="css/admin-guard.css?v=7.1-cachefix-20260625">
+<script defer src="js/admin-guard.js?v=7.1-cachefix-20260625"></script>
 
 <script>
 (function(){
-  var AUTO_CACHEFIX_MARKER = 'BCB_AUTO_CACHEFIX_DONE_20260625';
   var p = new URLSearchParams(location.search);
-  var manualReset = p.get('reset') === '1' || p.get('cachefix') === '1';
-  var alreadyDone = false;
 
-  try {
-    alreadyDone = localStorage.getItem(AUTO_CACHEFIX_MARKER) === '1';
-  } catch(e) {}
+  if (p.get('reset') === '1' || p.get('cachefix') === '1') {
+    var nextUrl = './?v=7.1-cachefix-20260625';
 
-  function removeBCBStorage(){
-    try {
-      Object.keys(localStorage || {}).forEach(function(k){
-        var key = String(k || '');
-        if (
-          key !== AUTO_CACHEFIX_MARKER &&
-          (
+    function clearLocalData(){
+      try {
+        Object.keys(localStorage || {}).forEach(function(k){
+          var key = String(k || '');
+          if (
             key.indexOf('app_bcb_') === 0 ||
             key.indexOf('APP-BCB') >= 0 ||
             key.indexOf('bcb_') >= 0 ||
             key.indexOf('BCB_') >= 0
-          )
-        ) {
-          localStorage.removeItem(k);
-        }
-      });
-    } catch(e) {}
+          ) {
+            localStorage.removeItem(k);
+          }
+        });
+      } catch(e) {}
 
-    try {
-      Object.keys(sessionStorage || {}).forEach(function(k){
-        var key = String(k || '');
-        if (
-          key.indexOf('app_bcb_') === 0 ||
-          key.indexOf('APP-BCB') >= 0 ||
-          key.indexOf('bcb_') >= 0 ||
-          key.indexOf('BCB_') >= 0
-        ) {
-          sessionStorage.removeItem(k);
-        }
-      });
-    } catch(e) {}
-  }
+      try {
+        Object.keys(sessionStorage || {}).forEach(function(k){
+          var key = String(k || '');
+          if (
+            key.indexOf('app_bcb_') === 0 ||
+            key.indexOf('APP-BCB') >= 0 ||
+            key.indexOf('bcb_') >= 0 ||
+            key.indexOf('BCB_') >= 0
+          ) {
+            sessionStorage.removeItem(k);
+          }
+        });
+      } catch(e) {}
+    }
 
-  function clearCaches(){
-    if (!window.caches) return Promise.resolve();
-    return caches.keys()
-      .then(function(keys){
-        return Promise.all(keys.map(function(k){
-          return caches.delete(k);
-        }));
-      })
-      .catch(function(){});
-  }
+    function clearCaches(){
+      if (!window.caches) return Promise.resolve();
+      return caches.keys()
+        .then(function(keys){
+          return Promise.all(keys.map(function(k){
+            return caches.delete(k);
+          }));
+        })
+        .catch(function(){});
+    }
 
-  function unregisterServiceWorkers(){
-    if (!navigator.serviceWorker) return Promise.resolve();
-    return navigator.serviceWorker.getRegistrations()
-      .then(function(regs){
-        return Promise.all(regs.map(function(r){
-          return r.unregister();
-        }));
-      })
-      .catch(function(){});
-  }
+    function unregisterServiceWorkers(){
+      if (!navigator.serviceWorker) return Promise.resolve();
+      return navigator.serviceWorker.getRegistrations()
+        .then(function(regs){
+          return Promise.all(regs.map(function(r){
+            return r.unregister();
+          }));
+        })
+        .catch(function(){});
+    }
 
-  function markDone(){
-    try {
-      localStorage.setItem(AUTO_CACHEFIX_MARKER, '1');
-    } catch(e) {}
-  }
-
-  function redirectClean(){
-    var url = new URL(window.location.href);
-    url.searchParams.delete('reset');
-    url.searchParams.delete('cachefix');
-    url.searchParams.set('v', '7.1-autocachefix-20260625');
-    location.replace(url.toString());
-  }
-
-  if (manualReset || !alreadyDone) {
     Promise.resolve()
-      .then(removeBCBStorage)
+      .then(clearLocalData)
       .then(clearCaches)
       .then(unregisterServiceWorkers)
-      .then(markDone)
-      .then(redirectClean)
+      .then(function(){
+        location.replace(nextUrl);
+      })
       .catch(function(){
-        markDone();
-        redirectClean();
+        location.replace(nextUrl);
       });
   }
 })();
 </script>
 
-<link rel="stylesheet" href="css/audio-library.css?v=7.1-autocachefix-20260625">
+<link rel="stylesheet" href="css/audio-library.css?v=7.1-cachefix-20260625">
 </head>
 <body>
 <div class="app">
@@ -479,15 +457,15 @@
 
 <div class="modal" id="modal"><div class="modalPanel"><div class="modalHead"><strong id="modalTitle">Detalle</strong><button class="close" onclick="closeModal()">×</button></div><div class="modalBody" id="modalBody"></div></div></div>
 
-<script src="js/assets.js?v=7.1-autocachefix-20260625"></script>
-<script src="js/data.js?v=7.1-autocachefix-20260625"></script>
-<script src="js/audio-library.js?v=7.1-autocachefix-20260625"></script>
-<script src="js/app.js?v=7.1-autocachefix-20260625"></script>
-<script src="js/news-modal.js?v=7.1-autocachefix-20260625"></script>
+<script src="js/assets.js?v=7.1-cachefix-20260625"></script>
+<script src="js/data.js?v=7.1-cachefix-20260625"></script>
+<script src="js/audio-library.js?v=7.1-cachefix-20260625"></script>
+<script src="js/app.js?v=7.1-cachefix-20260625"></script>
+<script src="js/news-modal.js?v=7.1-cachefix-20260625"></script>
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function () {
-    navigator.serviceWorker.register("./sw.js?v=7.1-autocachefix-20260625").catch(function (error) {
+    navigator.serviceWorker.register("./sw.js?v=7.1-cachefix-20260625").catch(function (error) {
       console.warn("Service Worker no registrado:", error);
     });
   });
