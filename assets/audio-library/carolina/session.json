@@ -1,0 +1,232 @@
+{
+  "schema": "audio_studio_session_v1",
+  "band": "bcb",
+  "band_label": "Breathless Cover Band",
+  "title": "Carolina",
+  "slug": "carolina",
+  "source_job_id": "b17d3182b2",
+  "created_at": "2026-06-21 13:22:56",
+  "research": {
+    "schema": "audio_studio_song_research_v1",
+    "band": "bcb",
+    "band_label": "Breathless Cover Band",
+    "title": "Carolina",
+    "artist": "",
+    "slug": "carolina",
+    "query": "Carolina",
+    "created_at": "2026-06-21 13:22:18",
+    "status": "referencias_preparadas",
+    "sources": [
+      {
+        "id": "spotify_search",
+        "label": "Spotify",
+        "kind": "audio_referencia",
+        "url": "https://open.spotify.com/search/Carolina",
+        "note": "Buscar versión de referencia / original."
+      },
+      {
+        "id": "youtube_official",
+        "label": "YouTube · oficial/audio",
+        "kind": "video_referencia",
+        "url": "https://www.youtube.com/results?search_query=Carolina+official+audio+OR+videoclip",
+        "note": "Buscar vídeo oficial o audio de referencia."
+      },
+      {
+        "id": "youtube_live",
+        "label": "YouTube · directo",
+        "kind": "video_directo",
+        "url": "https://www.youtube.com/results?search_query=Carolina+live+directo",
+        "note": "Buscar referencia de directo."
+      },
+      {
+        "id": "chords_general",
+        "label": "Acordes · búsqueda general",
+        "kind": "acordes",
+        "url": "https://www.google.com/search?q=Carolina+acordes+guitarra",
+        "note": "Búsqueda amplia de acordes."
+      },
+      {
+        "id": "chords_lacuerda",
+        "label": "Acordes · LaCuerda",
+        "kind": "acordes",
+        "url": "https://www.google.com/search?q=site%3Aacordes.lacuerda.net+Carolina",
+        "note": "Búsqueda directa dentro de LaCuerda."
+      },
+      {
+        "id": "chords_ultimate_guitar",
+        "label": "Acordes · Ultimate Guitar",
+        "kind": "acordes",
+        "url": "https://www.ultimate-guitar.com/search.php?search_type=title&value=Carolina",
+        "note": "Búsqueda directa en Ultimate Guitar."
+      },
+      {
+        "id": "chords_cifraclub",
+        "label": "Acordes · Cifra Club",
+        "kind": "acordes",
+        "url": "https://www.google.com/search?q=site%3Acifraclub.com.br+Carolina",
+        "note": "Búsqueda directa dentro de Cifra Club."
+      },
+      {
+        "id": "lyrics_reference",
+        "label": "Letra · solo referencia",
+        "kind": "letra_referencia",
+        "url": "https://www.google.com/search?q=Carolina+letra",
+        "note": "Solo enlace de referencia. Audio Studio no copia letras por derechos."
+      }
+    ],
+    "musical_data": {
+      "key": "",
+      "bpm": "",
+      "time_signature": "",
+      "capo": "",
+      "structure": "",
+      "notes": ""
+    },
+    "admin_note": "Ficha generada automáticamente por Audio Studio v4.5. Revisa tonalidad/BPM/acordes antes de cerrar versión definitiva."
+  },
+  "storage_note": "Subir esta carpeta al Drive de la banda. Si se usa en una app web, revisar que las URLs de cada pista sean accesibles.",
+  "default_variant": "0",
+  "tracks": [
+    {
+      "id": "01_voz_principal",
+      "label": "Voz principal",
+      "source": "01_voz_principal.wav",
+      "file": "tracks/01_voz_principal.mp3",
+      "url": "tracks/01_voz_principal.mp3",
+      "drive_url": ""
+    },
+    {
+      "id": "02_voz_secundaria",
+      "label": "Voz secundaria / coros",
+      "source": "02_voz_secundaria.wav",
+      "file": "tracks/02_voz_secundaria.mp3",
+      "url": "tracks/02_voz_secundaria.mp3",
+      "drive_url": ""
+    },
+    {
+      "id": "03_guitarra_1",
+      "label": "Guitarra 1",
+      "source": "03_guitarra_1.wav",
+      "file": "tracks/03_guitarra_1.mp3",
+      "url": "tracks/03_guitarra_1.mp3",
+      "drive_url": ""
+    },
+    {
+      "id": "04_guitarra_2",
+      "label": "Guitarra 2",
+      "source": "04_guitarra_2.wav",
+      "file": "tracks/04_guitarra_2.mp3",
+      "url": "tracks/04_guitarra_2.mp3",
+      "drive_url": ""
+    },
+    {
+      "id": "05_bajo",
+      "label": "Bajo",
+      "source": "05_bajo.wav",
+      "file": "tracks/05_bajo.mp3",
+      "url": "tracks/05_bajo.mp3",
+      "drive_url": ""
+    },
+    {
+      "id": "06_bateria",
+      "label": "Batería",
+      "source": "06_bateria.wav",
+      "file": "tracks/06_bateria.mp3",
+      "url": "tracks/06_bateria.mp3",
+      "drive_url": ""
+    },
+    {
+      "id": "07_teclado_piano",
+      "label": "Teclado / piano",
+      "source": "07_teclado_piano.wav",
+      "file": "tracks/07_teclado_piano.mp3",
+      "url": "tracks/07_teclado_piano.mp3",
+      "drive_url": ""
+    },
+    {
+      "id": "08_resto",
+      "label": "Resto",
+      "source": "08_resto.wav",
+      "file": "tracks/08_resto.mp3",
+      "url": "tracks/08_resto.mp3",
+      "drive_url": ""
+    }
+  ],
+  "variants": {
+    "0": {
+      "label": "Original",
+      "semitones": 0,
+      "tracks": [
+        {
+          "id": "01_voz_principal",
+          "label": "Voz principal",
+          "source": "01_voz_principal.wav",
+          "file": "tracks/01_voz_principal.mp3",
+          "url": "tracks/01_voz_principal.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "02_voz_secundaria",
+          "label": "Voz secundaria / coros",
+          "source": "02_voz_secundaria.wav",
+          "file": "tracks/02_voz_secundaria.mp3",
+          "url": "tracks/02_voz_secundaria.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "03_guitarra_1",
+          "label": "Guitarra 1",
+          "source": "03_guitarra_1.wav",
+          "file": "tracks/03_guitarra_1.mp3",
+          "url": "tracks/03_guitarra_1.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "04_guitarra_2",
+          "label": "Guitarra 2",
+          "source": "04_guitarra_2.wav",
+          "file": "tracks/04_guitarra_2.mp3",
+          "url": "tracks/04_guitarra_2.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "05_bajo",
+          "label": "Bajo",
+          "source": "05_bajo.wav",
+          "file": "tracks/05_bajo.mp3",
+          "url": "tracks/05_bajo.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "06_bateria",
+          "label": "Batería",
+          "source": "06_bateria.wav",
+          "file": "tracks/06_bateria.mp3",
+          "url": "tracks/06_bateria.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "07_teclado_piano",
+          "label": "Teclado / piano",
+          "source": "07_teclado_piano.wav",
+          "file": "tracks/07_teclado_piano.mp3",
+          "url": "tracks/07_teclado_piano.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "08_resto",
+          "label": "Resto",
+          "source": "08_resto.wav",
+          "file": "tracks/08_resto.mp3",
+          "url": "tracks/08_resto.mp3",
+          "drive_url": ""
+        }
+      ]
+    }
+  },
+  "original_archive": {
+    "storage": "drive_local_sync",
+    "file": "carolina__original.mp3",
+    "path": "H:\\Mi unidad\\BCB\\Audio Studio\\Originales\\carolina__original.mp3"
+  }
+}

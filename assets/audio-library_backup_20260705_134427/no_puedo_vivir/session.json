@@ -1,0 +1,90 @@
+{
+  "schema": "audio_studio_session_v1",
+  "band": "bcb",
+  "band_label": "Breathless Cover Band",
+  "title": "No puedo vivir",
+  "slug": "no_puedo_vivir",
+  "source_job_id": "ee5e3bf22e",
+  "created_at": "2026-06-15 22:12:36",
+  "storage_note": "Subir esta carpeta al Drive de la banda. Si se usa en una app web, revisar que las URLs de cada pista sean accesibles.",
+  "default_variant": "0",
+  "tracks": [
+    {
+      "id": "bass",
+      "label": "Bajo",
+      "source": "bass.wav",
+      "file": "tracks/bass.mp3",
+      "url": "tracks/bass.mp3",
+      "drive_url": ""
+    },
+    {
+      "id": "drums",
+      "label": "Batería",
+      "source": "drums.wav",
+      "file": "tracks/drums.mp3",
+      "url": "tracks/drums.mp3",
+      "drive_url": ""
+    },
+    {
+      "id": "other",
+      "label": "Resto",
+      "source": "other.wav",
+      "file": "tracks/other.mp3",
+      "url": "tracks/other.mp3",
+      "drive_url": ""
+    },
+    {
+      "id": "vocals",
+      "label": "Voz",
+      "source": "vocals.wav",
+      "file": "tracks/vocals.mp3",
+      "url": "tracks/vocals.mp3",
+      "drive_url": ""
+    }
+  ],
+  "variants": {
+    "0": {
+      "label": "Original",
+      "semitones": 0,
+      "tracks": [
+        {
+          "id": "bass",
+          "label": "Bajo",
+          "source": "bass.wav",
+          "file": "tracks/bass.mp3",
+          "url": "tracks/bass.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "drums",
+          "label": "Batería",
+          "source": "drums.wav",
+          "file": "tracks/drums.mp3",
+          "url": "tracks/drums.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "other",
+          "label": "Resto",
+          "source": "other.wav",
+          "file": "tracks/other.mp3",
+          "url": "tracks/other.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "vocals",
+          "label": "Voz",
+          "source": "vocals.wav",
+          "file": "tracks/vocals.mp3",
+          "url": "tracks/vocals.mp3",
+          "drive_url": ""
+        }
+      ]
+    }
+  },
+  "original_archive": {
+    "storage": "drive_local_sync",
+    "file": "no_puedo_vivir__original.mp3",
+    "path": "H:\\Mi unidad\\BCB\\Audio Studio\\Originales\\no_puedo_vivir__original.mp3"
+  }
+}
