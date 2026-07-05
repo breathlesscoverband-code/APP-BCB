@@ -1,5 +1,5 @@
-/* APP-BCB · Service Worker v7.1 estable auditoría */
-const CACHE_NAME = "app-bcb-pwa-v7-1-estable";
+﻿/* APP-BCB Â· Service Worker v7.1 estable auditorÃ­a */
+const CACHE_NAME = "app-bcb-pwa-v7-1-audio-library-nocache-20260705_172557";
 const APP_SHELL = [
   "./",
   "./index.html?v=7.1.0-estable",
@@ -47,6 +47,18 @@ self.addEventListener("fetch", event => {
     return;
   }
 
+  // AUDIO_LIBRARY_NO_CACHE_PATCH
+  // La biblioteca y los audios deben ir siempre a red.
+  // Si el Service Worker cachea un 404 antiguo, la app pÃºblica puede quedarse sin canciones
+  // aunque GitHub y library_bcb.json estÃ©n actualizados.
+  if (url.pathname.includes("/assets/audio-library/")) {
+    event.respondWith(
+      fetch(request, { cache: "no-store" })
+        .then(response => response)
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
   const isCore =
     request.mode === "navigate" ||
     url.pathname.endsWith(".html") ||
@@ -76,3 +88,4 @@ self.addEventListener("fetch", event => {
       }))
   );
 });
+
