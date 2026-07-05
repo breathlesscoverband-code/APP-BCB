@@ -1,0 +1,1020 @@
+{
+  "schema": "audio_studio_library_v1",
+  "band": "bcb",
+  "band_label": "Breathless Cover Band",
+  "updated_at": "2026-07-05 13:44:26",
+  "songs": [
+    {
+      "title": "aNOTHER bRICK IN THE WALL pULSE",
+      "slug": "another_brick_in_the_wall_pulse",
+      "band": "bcb",
+      "band_label": "Breathless Cover Band",
+      "created_at": "2026-07-05 13:44:22",
+      "default_variant": "0",
+      "research": {
+        "schema": "audio_studio_song_research_v1",
+        "band": "bcb",
+        "band_label": "Breathless Cover Band",
+        "title": "aNOTHER bRICK IN THE WALL pULSE",
+        "artist": "",
+        "slug": "another_brick_in_the_wall_pulse",
+        "query": "aNOTHER bRICK IN THE WALL pULSE",
+        "created_at": "2026-07-05 13:43:32",
+        "status": "referencias_preparadas",
+        "sources": [
+          {
+            "id": "spotify_search",
+            "label": "Spotify",
+            "kind": "audio_referencia",
+            "url": "https://open.spotify.com/search/aNOTHER%20bRICK%20IN%20THE%20WALL%20pULSE",
+            "note": "Buscar versión de referencia / original."
+          },
+          {
+            "id": "youtube_official",
+            "label": "YouTube · oficial/audio",
+            "kind": "video_referencia",
+            "url": "https://www.youtube.com/results?search_query=aNOTHER+bRICK+IN+THE+WALL+pULSE+official+audio+OR+videoclip",
+            "note": "Buscar vídeo oficial o audio de referencia."
+          },
+          {
+            "id": "youtube_live",
+            "label": "YouTube · directo",
+            "kind": "video_directo",
+            "url": "https://www.youtube.com/results?search_query=aNOTHER+bRICK+IN+THE+WALL+pULSE+live+directo",
+            "note": "Buscar referencia de directo."
+          },
+          {
+            "id": "chords_general",
+            "label": "Acordes · búsqueda general",
+            "kind": "acordes",
+            "url": "https://www.google.com/search?q=aNOTHER+bRICK+IN+THE+WALL+pULSE+acordes+guitarra",
+            "note": "Búsqueda amplia de acordes."
+          },
+          {
+            "id": "chords_lacuerda",
+            "label": "Acordes · LaCuerda",
+            "kind": "acordes",
+            "url": "https://www.google.com/search?q=site%3Aacordes.lacuerda.net+aNOTHER+bRICK+IN+THE+WALL+pULSE",
+            "note": "Búsqueda directa dentro de LaCuerda."
+          },
+          {
+            "id": "chords_ultimate_guitar",
+            "label": "Acordes · Ultimate Guitar",
+            "kind": "acordes",
+            "url": "https://www.ultimate-guitar.com/search.php?search_type=title&value=aNOTHER+bRICK+IN+THE+WALL+pULSE",
+            "note": "Búsqueda directa en Ultimate Guitar."
+          },
+          {
+            "id": "chords_cifraclub",
+            "label": "Acordes · Cifra Club",
+            "kind": "acordes",
+            "url": "https://www.google.com/search?q=site%3Acifraclub.com.br+aNOTHER+bRICK+IN+THE+WALL+pULSE",
+            "note": "Búsqueda directa dentro de Cifra Club."
+          },
+          {
+            "id": "lyrics_reference",
+            "label": "Letra · solo referencia",
+            "kind": "letra_referencia",
+            "url": "https://www.google.com/search?q=aNOTHER+bRICK+IN+THE+WALL+pULSE+letra",
+            "note": "Solo enlace de referencia. Audio Studio no copia letras por derechos."
+          }
+        ],
+        "musical_data": {
+          "key": "",
+          "bpm": "",
+          "time_signature": "",
+          "capo": "",
+          "structure": "",
+          "notes": ""
+        },
+        "admin_note": "Ficha generada automáticamente por Audio Studio v4.8. Revisa tonalidad/BPM/acordes antes de cerrar versión definitiva."
+      },
+      "tracks": [
+        {
+          "id": "vocals",
+          "label": "Voz",
+          "source": "vocals.wav",
+          "file": "tracks/vocals.mp3",
+          "url": "assets/audio-library/another_brick_in_the_wall_pulse/tracks/vocals.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "drums",
+          "label": "Batería",
+          "source": "drums.wav",
+          "file": "tracks/drums.mp3",
+          "url": "assets/audio-library/another_brick_in_the_wall_pulse/tracks/drums.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "bass",
+          "label": "Bajo",
+          "source": "bass.wav",
+          "file": "tracks/bass.mp3",
+          "url": "assets/audio-library/another_brick_in_the_wall_pulse/tracks/bass.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "guitar",
+          "label": "Guitarra",
+          "source": "guitar.wav",
+          "file": "tracks/guitar.mp3",
+          "url": "assets/audio-library/another_brick_in_the_wall_pulse/tracks/guitar.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "piano",
+          "label": "Piano / teclado",
+          "source": "piano.wav",
+          "file": "tracks/piano.mp3",
+          "url": "assets/audio-library/another_brick_in_the_wall_pulse/tracks/piano.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "other",
+          "label": "Resto",
+          "source": "other.wav",
+          "file": "tracks/other.mp3",
+          "url": "assets/audio-library/another_brick_in_the_wall_pulse/tracks/other.mp3",
+          "drive_url": ""
+        }
+      ],
+      "variants": {
+        "0": {
+          "label": "Original",
+          "semitones": 0,
+          "tracks": [
+            {
+              "id": "vocals",
+              "label": "Voz",
+              "source": "vocals.wav",
+              "file": "tracks/vocals.mp3",
+              "url": "assets/audio-library/another_brick_in_the_wall_pulse/tracks/vocals.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "drums",
+              "label": "Batería",
+              "source": "drums.wav",
+              "file": "tracks/drums.mp3",
+              "url": "assets/audio-library/another_brick_in_the_wall_pulse/tracks/drums.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "bass",
+              "label": "Bajo",
+              "source": "bass.wav",
+              "file": "tracks/bass.mp3",
+              "url": "assets/audio-library/another_brick_in_the_wall_pulse/tracks/bass.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "guitar",
+              "label": "Guitarra",
+              "source": "guitar.wav",
+              "file": "tracks/guitar.mp3",
+              "url": "assets/audio-library/another_brick_in_the_wall_pulse/tracks/guitar.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "piano",
+              "label": "Piano / teclado",
+              "source": "piano.wav",
+              "file": "tracks/piano.mp3",
+              "url": "assets/audio-library/another_brick_in_the_wall_pulse/tracks/piano.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "other",
+              "label": "Resto",
+              "source": "other.wav",
+              "file": "tracks/other.mp3",
+              "url": "assets/audio-library/another_brick_in_the_wall_pulse/tracks/other.mp3",
+              "drive_url": ""
+            }
+          ]
+        }
+      },
+      "notes": "URLs relativas. Si los audios están en Drive, sustituir url por enlace directo reproducible si hace falta.",
+      "original_archive": {
+        "storage": "drive_local_sync",
+        "file": "another_brick_in_the_wall_pulse__original.wav",
+        "path": "H:\\Mi unidad\\BCB\\Audio Studio\\Originales\\another_brick_in_the_wall_pulse__original.wav"
+      },
+      "storage": "drive_local_sync",
+      "folder": "another_brick_in_the_wall_pulse",
+      "published_at": "2026-07-05 13:44:26"
+    },
+    {
+      "title": "Cadiillac",
+      "slug": "cadiillac",
+      "band": "bcb",
+      "band_label": "Breathless Cover Band",
+      "created_at": "2026-06-15 21:21:28",
+      "default_variant": "0",
+      "tracks": [
+        {
+          "id": "bass",
+          "label": "Bajo",
+          "source": "bass.wav",
+          "file": "tracks/bass.mp3",
+          "url": "assets/audio-library/cadiillac/tracks/bass.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "drums",
+          "label": "Batería",
+          "source": "drums.wav",
+          "file": "tracks/drums.mp3",
+          "url": "assets/audio-library/cadiillac/tracks/drums.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "other",
+          "label": "Resto",
+          "source": "other.wav",
+          "file": "tracks/other.mp3",
+          "url": "assets/audio-library/cadiillac/tracks/other.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "vocals",
+          "label": "Voz",
+          "source": "vocals.wav",
+          "file": "tracks/vocals.mp3",
+          "url": "assets/audio-library/cadiillac/tracks/vocals.mp3",
+          "drive_url": ""
+        }
+      ],
+      "variants": {
+        "0": {
+          "label": "Original",
+          "semitones": 0,
+          "tracks": [
+            {
+              "id": "bass",
+              "label": "Bajo",
+              "source": "bass.wav",
+              "file": "tracks/bass.mp3",
+              "url": "assets/audio-library/cadiillac/tracks/bass.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "drums",
+              "label": "Batería",
+              "source": "drums.wav",
+              "file": "tracks/drums.mp3",
+              "url": "assets/audio-library/cadiillac/tracks/drums.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "other",
+              "label": "Resto",
+              "source": "other.wav",
+              "file": "tracks/other.mp3",
+              "url": "assets/audio-library/cadiillac/tracks/other.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "vocals",
+              "label": "Voz",
+              "source": "vocals.wav",
+              "file": "tracks/vocals.mp3",
+              "url": "assets/audio-library/cadiillac/tracks/vocals.mp3",
+              "drive_url": ""
+            }
+          ]
+        }
+      },
+      "notes": "URLs relativas. Si los audios están en Drive, sustituir url por enlace directo reproducible si hace falta.",
+      "original_archive": {
+        "storage": "drive_local_sync",
+        "file": "cadiillac__original.mp3",
+        "path": "H:\\Mi unidad\\BCB\\Audio Studio\\Originales\\cadiillac__original.mp3"
+      },
+      "storage": "drive_local_sync",
+      "folder": "cadiillac",
+      "published_at": "2026-06-15 21:21:30"
+    },
+    {
+      "title": "Carolina",
+      "slug": "carolina",
+      "band": "bcb",
+      "band_label": "Breathless Cover Band",
+      "created_at": "2026-06-21 13:22:56",
+      "default_variant": "0",
+      "research": {
+        "schema": "audio_studio_song_research_v1",
+        "band": "bcb",
+        "band_label": "Breathless Cover Band",
+        "title": "Carolina",
+        "artist": "",
+        "slug": "carolina",
+        "query": "Carolina",
+        "created_at": "2026-06-21 13:22:18",
+        "status": "referencias_preparadas",
+        "sources": [
+          {
+            "id": "spotify_search",
+            "label": "Spotify",
+            "kind": "audio_referencia",
+            "url": "https://open.spotify.com/search/Carolina",
+            "note": "Buscar versión de referencia / original."
+          },
+          {
+            "id": "youtube_official",
+            "label": "YouTube · oficial/audio",
+            "kind": "video_referencia",
+            "url": "https://www.youtube.com/results?search_query=Carolina+official+audio+OR+videoclip",
+            "note": "Buscar vídeo oficial o audio de referencia."
+          },
+          {
+            "id": "youtube_live",
+            "label": "YouTube · directo",
+            "kind": "video_directo",
+            "url": "https://www.youtube.com/results?search_query=Carolina+live+directo",
+            "note": "Buscar referencia de directo."
+          },
+          {
+            "id": "chords_general",
+            "label": "Acordes · búsqueda general",
+            "kind": "acordes",
+            "url": "https://www.google.com/search?q=Carolina+acordes+guitarra",
+            "note": "Búsqueda amplia de acordes."
+          },
+          {
+            "id": "chords_lacuerda",
+            "label": "Acordes · LaCuerda",
+            "kind": "acordes",
+            "url": "https://www.google.com/search?q=site%3Aacordes.lacuerda.net+Carolina",
+            "note": "Búsqueda directa dentro de LaCuerda."
+          },
+          {
+            "id": "chords_ultimate_guitar",
+            "label": "Acordes · Ultimate Guitar",
+            "kind": "acordes",
+            "url": "https://www.ultimate-guitar.com/search.php?search_type=title&value=Carolina",
+            "note": "Búsqueda directa en Ultimate Guitar."
+          },
+          {
+            "id": "chords_cifraclub",
+            "label": "Acordes · Cifra Club",
+            "kind": "acordes",
+            "url": "https://www.google.com/search?q=site%3Acifraclub.com.br+Carolina",
+            "note": "Búsqueda directa dentro de Cifra Club."
+          },
+          {
+            "id": "lyrics_reference",
+            "label": "Letra · solo referencia",
+            "kind": "letra_referencia",
+            "url": "https://www.google.com/search?q=Carolina+letra",
+            "note": "Solo enlace de referencia. Audio Studio no copia letras por derechos."
+          }
+        ],
+        "musical_data": {
+          "key": "",
+          "bpm": "",
+          "time_signature": "",
+          "capo": "",
+          "structure": "",
+          "notes": ""
+        },
+        "admin_note": "Ficha generada automáticamente por Audio Studio v4.5. Revisa tonalidad/BPM/acordes antes de cerrar versión definitiva."
+      },
+      "tracks": [
+        {
+          "id": "01_voz_principal",
+          "label": "Voz principal",
+          "source": "01_voz_principal.wav",
+          "file": "tracks/01_voz_principal.mp3",
+          "url": "assets/audio-library/carolina/tracks/01_voz_principal.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "02_voz_secundaria",
+          "label": "Voz secundaria / coros",
+          "source": "02_voz_secundaria.wav",
+          "file": "tracks/02_voz_secundaria.mp3",
+          "url": "assets/audio-library/carolina/tracks/02_voz_secundaria.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "03_guitarra_1",
+          "label": "Guitarra 1",
+          "source": "03_guitarra_1.wav",
+          "file": "tracks/03_guitarra_1.mp3",
+          "url": "assets/audio-library/carolina/tracks/03_guitarra_1.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "04_guitarra_2",
+          "label": "Guitarra 2",
+          "source": "04_guitarra_2.wav",
+          "file": "tracks/04_guitarra_2.mp3",
+          "url": "assets/audio-library/carolina/tracks/04_guitarra_2.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "05_bajo",
+          "label": "Bajo",
+          "source": "05_bajo.wav",
+          "file": "tracks/05_bajo.mp3",
+          "url": "assets/audio-library/carolina/tracks/05_bajo.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "06_bateria",
+          "label": "Batería",
+          "source": "06_bateria.wav",
+          "file": "tracks/06_bateria.mp3",
+          "url": "assets/audio-library/carolina/tracks/06_bateria.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "07_teclado_piano",
+          "label": "Teclado / piano",
+          "source": "07_teclado_piano.wav",
+          "file": "tracks/07_teclado_piano.mp3",
+          "url": "assets/audio-library/carolina/tracks/07_teclado_piano.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "08_resto",
+          "label": "Resto",
+          "source": "08_resto.wav",
+          "file": "tracks/08_resto.mp3",
+          "url": "assets/audio-library/carolina/tracks/08_resto.mp3",
+          "drive_url": ""
+        }
+      ],
+      "variants": {
+        "0": {
+          "label": "Original",
+          "semitones": 0,
+          "tracks": [
+            {
+              "id": "01_voz_principal",
+              "label": "Voz principal",
+              "source": "01_voz_principal.wav",
+              "file": "tracks/01_voz_principal.mp3",
+              "url": "assets/audio-library/carolina/tracks/01_voz_principal.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "02_voz_secundaria",
+              "label": "Voz secundaria / coros",
+              "source": "02_voz_secundaria.wav",
+              "file": "tracks/02_voz_secundaria.mp3",
+              "url": "assets/audio-library/carolina/tracks/02_voz_secundaria.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "03_guitarra_1",
+              "label": "Guitarra 1",
+              "source": "03_guitarra_1.wav",
+              "file": "tracks/03_guitarra_1.mp3",
+              "url": "assets/audio-library/carolina/tracks/03_guitarra_1.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "04_guitarra_2",
+              "label": "Guitarra 2",
+              "source": "04_guitarra_2.wav",
+              "file": "tracks/04_guitarra_2.mp3",
+              "url": "assets/audio-library/carolina/tracks/04_guitarra_2.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "05_bajo",
+              "label": "Bajo",
+              "source": "05_bajo.wav",
+              "file": "tracks/05_bajo.mp3",
+              "url": "assets/audio-library/carolina/tracks/05_bajo.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "06_bateria",
+              "label": "Batería",
+              "source": "06_bateria.wav",
+              "file": "tracks/06_bateria.mp3",
+              "url": "assets/audio-library/carolina/tracks/06_bateria.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "07_teclado_piano",
+              "label": "Teclado / piano",
+              "source": "07_teclado_piano.wav",
+              "file": "tracks/07_teclado_piano.mp3",
+              "url": "assets/audio-library/carolina/tracks/07_teclado_piano.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "08_resto",
+              "label": "Resto",
+              "source": "08_resto.wav",
+              "file": "tracks/08_resto.mp3",
+              "url": "assets/audio-library/carolina/tracks/08_resto.mp3",
+              "drive_url": ""
+            }
+          ]
+        }
+      },
+      "notes": "URLs relativas. Si los audios están en Drive, sustituir url por enlace directo reproducible si hace falta.",
+      "original_archive": {
+        "storage": "drive_local_sync",
+        "file": "carolina__original.mp3",
+        "path": "H:\\Mi unidad\\BCB\\Audio Studio\\Originales\\carolina__original.mp3"
+      },
+      "storage": "drive_local_sync",
+      "folder": "carolina",
+      "published_at": "2026-06-21 13:23:00"
+    },
+    {
+      "title": "Insurrecion",
+      "slug": "insurrecion",
+      "band": "bcb",
+      "band_label": "Breathless Cover Band",
+      "created_at": "2026-06-16 00:45:10",
+      "default_variant": "0",
+      "tracks": [
+        {
+          "id": "bass",
+          "label": "Bajo",
+          "source": "bass.wav",
+          "file": "tracks/bass.mp3",
+          "url": "assets/audio-library/insurrecion/tracks/bass.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "drums",
+          "label": "Batería",
+          "source": "drums.wav",
+          "file": "tracks/drums.mp3",
+          "url": "assets/audio-library/insurrecion/tracks/drums.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "guitar",
+          "label": "Guitarra",
+          "source": "guitar.wav",
+          "file": "tracks/guitar.mp3",
+          "url": "assets/audio-library/insurrecion/tracks/guitar.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "other",
+          "label": "Resto",
+          "source": "other.wav",
+          "file": "tracks/other.mp3",
+          "url": "assets/audio-library/insurrecion/tracks/other.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "piano",
+          "label": "Piano / teclado",
+          "source": "piano.wav",
+          "file": "tracks/piano.mp3",
+          "url": "assets/audio-library/insurrecion/tracks/piano.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "vocals",
+          "label": "Voz",
+          "source": "vocals.wav",
+          "file": "tracks/vocals.mp3",
+          "url": "assets/audio-library/insurrecion/tracks/vocals.mp3",
+          "drive_url": ""
+        }
+      ],
+      "variants": {
+        "0": {
+          "label": "Original",
+          "semitones": 0,
+          "tracks": [
+            {
+              "id": "bass",
+              "label": "Bajo",
+              "source": "bass.wav",
+              "file": "tracks/bass.mp3",
+              "url": "assets/audio-library/insurrecion/tracks/bass.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "drums",
+              "label": "Batería",
+              "source": "drums.wav",
+              "file": "tracks/drums.mp3",
+              "url": "assets/audio-library/insurrecion/tracks/drums.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "guitar",
+              "label": "Guitarra",
+              "source": "guitar.wav",
+              "file": "tracks/guitar.mp3",
+              "url": "assets/audio-library/insurrecion/tracks/guitar.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "other",
+              "label": "Resto",
+              "source": "other.wav",
+              "file": "tracks/other.mp3",
+              "url": "assets/audio-library/insurrecion/tracks/other.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "piano",
+              "label": "Piano / teclado",
+              "source": "piano.wav",
+              "file": "tracks/piano.mp3",
+              "url": "assets/audio-library/insurrecion/tracks/piano.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "vocals",
+              "label": "Voz",
+              "source": "vocals.wav",
+              "file": "tracks/vocals.mp3",
+              "url": "assets/audio-library/insurrecion/tracks/vocals.mp3",
+              "drive_url": ""
+            }
+          ]
+        }
+      },
+      "notes": "URLs relativas. Si los audios están en Drive, sustituir url por enlace directo reproducible si hace falta.",
+      "original_archive": {
+        "storage": "drive_local_sync",
+        "file": "insurrecion__original_20260616_004511.mp3",
+        "path": "H:\\Mi unidad\\BCB\\Audio Studio\\Originales\\insurrecion__original_20260616_004511.mp3"
+      },
+      "storage": "drive_local_sync",
+      "folder": "insurrecion",
+      "published_at": "2026-06-16 00:45:12"
+    },
+    {
+      "title": "Moriria por vos",
+      "slug": "moriria_por_vos",
+      "band": "bcb",
+      "band_label": "Breathless Cover Band",
+      "created_at": "2026-06-15 21:44:52",
+      "default_variant": "0",
+      "tracks": [
+        {
+          "id": "bass",
+          "label": "Bajo",
+          "source": "bass.wav",
+          "file": "tracks/bass.mp3",
+          "url": "assets/audio-library/moriria_por_vos/tracks/bass.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "drums",
+          "label": "Batería",
+          "source": "drums.wav",
+          "file": "tracks/drums.mp3",
+          "url": "assets/audio-library/moriria_por_vos/tracks/drums.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "other",
+          "label": "Resto",
+          "source": "other.wav",
+          "file": "tracks/other.mp3",
+          "url": "assets/audio-library/moriria_por_vos/tracks/other.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "vocals",
+          "label": "Voz",
+          "source": "vocals.wav",
+          "file": "tracks/vocals.mp3",
+          "url": "assets/audio-library/moriria_por_vos/tracks/vocals.mp3",
+          "drive_url": ""
+        }
+      ],
+      "variants": {
+        "0": {
+          "label": "Original",
+          "semitones": 0,
+          "tracks": [
+            {
+              "id": "bass",
+              "label": "Bajo",
+              "source": "bass.wav",
+              "file": "tracks/bass.mp3",
+              "url": "assets/audio-library/moriria_por_vos/tracks/bass.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "drums",
+              "label": "Batería",
+              "source": "drums.wav",
+              "file": "tracks/drums.mp3",
+              "url": "assets/audio-library/moriria_por_vos/tracks/drums.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "other",
+              "label": "Resto",
+              "source": "other.wav",
+              "file": "tracks/other.mp3",
+              "url": "assets/audio-library/moriria_por_vos/tracks/other.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "vocals",
+              "label": "Voz",
+              "source": "vocals.wav",
+              "file": "tracks/vocals.mp3",
+              "url": "assets/audio-library/moriria_por_vos/tracks/vocals.mp3",
+              "drive_url": ""
+            }
+          ]
+        }
+      },
+      "notes": "URLs relativas. Si los audios están en Drive, sustituir url por enlace directo reproducible si hace falta.",
+      "original_archive": {
+        "storage": "drive_local_sync",
+        "file": "moriria_por_vos__original.mp3",
+        "path": "H:\\Mi unidad\\BCB\\Audio Studio\\Originales\\moriria_por_vos__original.mp3"
+      },
+      "storage": "drive_local_sync",
+      "folder": "moriria_por_vos",
+      "published_at": "2026-06-15 21:44:54"
+    },
+    {
+      "title": "No puedo vivir",
+      "slug": "no_puedo_vivir",
+      "band": "bcb",
+      "band_label": "Breathless Cover Band",
+      "created_at": "2026-06-15 22:12:36",
+      "default_variant": "0",
+      "tracks": [
+        {
+          "id": "bass",
+          "label": "Bajo",
+          "source": "bass.wav",
+          "file": "tracks/bass.mp3",
+          "url": "assets/audio-library/no_puedo_vivir/tracks/bass.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "drums",
+          "label": "Batería",
+          "source": "drums.wav",
+          "file": "tracks/drums.mp3",
+          "url": "assets/audio-library/no_puedo_vivir/tracks/drums.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "other",
+          "label": "Resto",
+          "source": "other.wav",
+          "file": "tracks/other.mp3",
+          "url": "assets/audio-library/no_puedo_vivir/tracks/other.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "vocals",
+          "label": "Voz",
+          "source": "vocals.wav",
+          "file": "tracks/vocals.mp3",
+          "url": "assets/audio-library/no_puedo_vivir/tracks/vocals.mp3",
+          "drive_url": ""
+        }
+      ],
+      "variants": {
+        "0": {
+          "label": "Original",
+          "semitones": 0,
+          "tracks": [
+            {
+              "id": "bass",
+              "label": "Bajo",
+              "source": "bass.wav",
+              "file": "tracks/bass.mp3",
+              "url": "assets/audio-library/no_puedo_vivir/tracks/bass.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "drums",
+              "label": "Batería",
+              "source": "drums.wav",
+              "file": "tracks/drums.mp3",
+              "url": "assets/audio-library/no_puedo_vivir/tracks/drums.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "other",
+              "label": "Resto",
+              "source": "other.wav",
+              "file": "tracks/other.mp3",
+              "url": "assets/audio-library/no_puedo_vivir/tracks/other.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "vocals",
+              "label": "Voz",
+              "source": "vocals.wav",
+              "file": "tracks/vocals.mp3",
+              "url": "assets/audio-library/no_puedo_vivir/tracks/vocals.mp3",
+              "drive_url": ""
+            }
+          ]
+        }
+      },
+      "notes": "URLs relativas. Si los audios están en Drive, sustituir url por enlace directo reproducible si hace falta.",
+      "original_archive": {
+        "storage": "drive_local_sync",
+        "file": "no_puedo_vivir__original.mp3",
+        "path": "H:\\Mi unidad\\BCB\\Audio Studio\\Originales\\no_puedo_vivir__original.mp3"
+      },
+      "storage": "drive_local_sync",
+      "folder": "no_puedo_vivir",
+      "published_at": "2026-06-15 22:12:38"
+    },
+    {
+      "title": "with or",
+      "slug": "with_or",
+      "band": "bcb",
+      "band_label": "Breathless Cover Band",
+      "created_at": "2026-06-15 21:54:36",
+      "default_variant": "0",
+      "tracks": [
+        {
+          "id": "bass",
+          "label": "Bajo",
+          "source": "bass.wav",
+          "file": "tracks/bass.mp3",
+          "url": "assets/audio-library/with_or/tracks/bass.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "drums",
+          "label": "Batería",
+          "source": "drums.wav",
+          "file": "tracks/drums.mp3",
+          "url": "assets/audio-library/with_or/tracks/drums.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "other",
+          "label": "Resto",
+          "source": "other.wav",
+          "file": "tracks/other.mp3",
+          "url": "assets/audio-library/with_or/tracks/other.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "vocals",
+          "label": "Voz",
+          "source": "vocals.wav",
+          "file": "tracks/vocals.mp3",
+          "url": "assets/audio-library/with_or/tracks/vocals.mp3",
+          "drive_url": ""
+        }
+      ],
+      "variants": {
+        "0": {
+          "label": "Original",
+          "semitones": 0,
+          "tracks": [
+            {
+              "id": "bass",
+              "label": "Bajo",
+              "source": "bass.wav",
+              "file": "tracks/bass.mp3",
+              "url": "assets/audio-library/with_or/tracks/bass.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "drums",
+              "label": "Batería",
+              "source": "drums.wav",
+              "file": "tracks/drums.mp3",
+              "url": "assets/audio-library/with_or/tracks/drums.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "other",
+              "label": "Resto",
+              "source": "other.wav",
+              "file": "tracks/other.mp3",
+              "url": "assets/audio-library/with_or/tracks/other.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "vocals",
+              "label": "Voz",
+              "source": "vocals.wav",
+              "file": "tracks/vocals.mp3",
+              "url": "assets/audio-library/with_or/tracks/vocals.mp3",
+              "drive_url": ""
+            }
+          ]
+        }
+      },
+      "notes": "URLs relativas. Si los audios están en Drive, sustituir url por enlace directo reproducible si hace falta.",
+      "original_archive": {
+        "storage": "drive_local_sync",
+        "file": "with_or__original.mp3",
+        "path": "H:\\Mi unidad\\BCB\\Audio Studio\\Originales\\with_or__original.mp3"
+      },
+      "storage": "drive_local_sync",
+      "folder": "with_or",
+      "published_at": "2026-06-15 21:54:38"
+    },
+    {
+      "title": "Zombie",
+      "slug": "zombie",
+      "band": "bcb",
+      "band_label": "Breathless Cover Band",
+      "created_at": "2026-06-15 16:10:51",
+      "default_variant": "0",
+      "tracks": [
+        {
+          "id": "bass",
+          "label": "Bajo",
+          "source": "bass.wav",
+          "file": "tracks/bass.mp3",
+          "url": "assets/audio-library/zombie/tracks/bass.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "drums",
+          "label": "Batería",
+          "source": "drums.wav",
+          "file": "tracks/drums.mp3",
+          "url": "assets/audio-library/zombie/tracks/drums.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "other",
+          "label": "Resto",
+          "source": "other.wav",
+          "file": "tracks/other.mp3",
+          "url": "assets/audio-library/zombie/tracks/other.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "vocals",
+          "label": "Voz",
+          "source": "vocals.wav",
+          "file": "tracks/vocals.mp3",
+          "url": "assets/audio-library/zombie/tracks/vocals.mp3",
+          "drive_url": ""
+        }
+      ],
+      "variants": {
+        "0": {
+          "label": "Original",
+          "semitones": 0,
+          "tracks": [
+            {
+              "id": "bass",
+              "label": "Bajo",
+              "source": "bass.wav",
+              "file": "tracks/bass.mp3",
+              "url": "assets/audio-library/zombie/tracks/bass.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "drums",
+              "label": "Batería",
+              "source": "drums.wav",
+              "file": "tracks/drums.mp3",
+              "url": "assets/audio-library/zombie/tracks/drums.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "other",
+              "label": "Resto",
+              "source": "other.wav",
+              "file": "tracks/other.mp3",
+              "url": "assets/audio-library/zombie/tracks/other.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "vocals",
+              "label": "Voz",
+              "source": "vocals.wav",
+              "file": "tracks/vocals.mp3",
+              "url": "assets/audio-library/zombie/tracks/vocals.mp3",
+              "drive_url": ""
+            }
+          ]
+        }
+      },
+      "notes": "URLs relativas. Si los audios están en Drive, sustituir url por enlace directo reproducible si hace falta.",
+      "original_archive": {
+        "storage": "drive_local_sync",
+        "file": "zombie__original.mp4",
+        "path": "H:\\Mi unidad\\BCB\\Audio Studio\\Originales\\zombie__original.mp4"
+      },
+      "storage": "drive_local_sync",
+      "folder": "zombie",
+      "published_at": "2026-06-15 16:10:53"
+    }
+  ]
+}

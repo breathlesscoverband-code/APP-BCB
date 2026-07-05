@@ -2,7 +2,7 @@
   "schema": "audio_studio_library_v1",
   "band": "bcb",
   "band_label": "Breathless Cover Band",
-  "updated_at": "2026-07-05 13:44:26",
+  "updated_at": "2026-07-05 17:03:49",
   "songs": [
     {
       "title": "aNOTHER bRICK IN THE WALL pULSE",
@@ -528,6 +528,207 @@
       "storage": "drive_local_sync",
       "folder": "carolina",
       "published_at": "2026-06-21 13:23:00"
+    },
+    {
+      "title": "cien gaviotas",
+      "slug": "cien_gaviotas",
+      "band": "bcb",
+      "band_label": "Breathless Cover Band",
+      "created_at": "2026-07-05 17:03:46",
+      "default_variant": "0",
+      "research": {
+        "schema": "audio_studio_song_research_v1",
+        "band": "bcb",
+        "band_label": "Breathless Cover Band",
+        "title": "cien gaviotas",
+        "artist": "",
+        "slug": "cien_gaviotas",
+        "query": "cien gaviotas",
+        "created_at": "2026-07-05 17:03:17",
+        "status": "referencias_preparadas",
+        "sources": [
+          {
+            "id": "spotify_search",
+            "label": "Spotify",
+            "kind": "audio_referencia",
+            "url": "https://open.spotify.com/search/cien%20gaviotas",
+            "note": "Buscar versión de referencia / original."
+          },
+          {
+            "id": "youtube_official",
+            "label": "YouTube · oficial/audio",
+            "kind": "video_referencia",
+            "url": "https://www.youtube.com/results?search_query=cien+gaviotas+official+audio+OR+videoclip",
+            "note": "Buscar vídeo oficial o audio de referencia."
+          },
+          {
+            "id": "youtube_live",
+            "label": "YouTube · directo",
+            "kind": "video_directo",
+            "url": "https://www.youtube.com/results?search_query=cien+gaviotas+live+directo",
+            "note": "Buscar referencia de directo."
+          },
+          {
+            "id": "chords_general",
+            "label": "Acordes · búsqueda general",
+            "kind": "acordes",
+            "url": "https://www.google.com/search?q=cien+gaviotas+acordes+guitarra",
+            "note": "Búsqueda amplia de acordes."
+          },
+          {
+            "id": "chords_lacuerda",
+            "label": "Acordes · LaCuerda",
+            "kind": "acordes",
+            "url": "https://www.google.com/search?q=site%3Aacordes.lacuerda.net+cien+gaviotas",
+            "note": "Búsqueda directa dentro de LaCuerda."
+          },
+          {
+            "id": "chords_ultimate_guitar",
+            "label": "Acordes · Ultimate Guitar",
+            "kind": "acordes",
+            "url": "https://www.ultimate-guitar.com/search.php?search_type=title&value=cien+gaviotas",
+            "note": "Búsqueda directa en Ultimate Guitar."
+          },
+          {
+            "id": "chords_cifraclub",
+            "label": "Acordes · Cifra Club",
+            "kind": "acordes",
+            "url": "https://www.google.com/search?q=site%3Acifraclub.com.br+cien+gaviotas",
+            "note": "Búsqueda directa dentro de Cifra Club."
+          },
+          {
+            "id": "lyrics_reference",
+            "label": "Letra · solo referencia",
+            "kind": "letra_referencia",
+            "url": "https://www.google.com/search?q=cien+gaviotas+letra",
+            "note": "Solo enlace de referencia. Audio Studio no copia letras por derechos."
+          }
+        ],
+        "musical_data": {
+          "key": "",
+          "bpm": "",
+          "time_signature": "",
+          "capo": "",
+          "structure": "",
+          "notes": ""
+        },
+        "admin_note": "Ficha generada automáticamente por Audio Studio v4.8. Revisa tonalidad/BPM/acordes antes de cerrar versión definitiva."
+      },
+      "tracks": [
+        {
+          "id": "vocals",
+          "label": "Voz",
+          "source": "vocals.wav",
+          "file": "tracks/vocals.mp3",
+          "url": "assets/audio-library/cien_gaviotas/tracks/vocals.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "drums",
+          "label": "Batería",
+          "source": "drums.wav",
+          "file": "tracks/drums.mp3",
+          "url": "assets/audio-library/cien_gaviotas/tracks/drums.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "bass",
+          "label": "Bajo",
+          "source": "bass.wav",
+          "file": "tracks/bass.mp3",
+          "url": "assets/audio-library/cien_gaviotas/tracks/bass.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "guitar",
+          "label": "Guitarra",
+          "source": "guitar.wav",
+          "file": "tracks/guitar.mp3",
+          "url": "assets/audio-library/cien_gaviotas/tracks/guitar.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "piano",
+          "label": "Piano / teclado",
+          "source": "piano.wav",
+          "file": "tracks/piano.mp3",
+          "url": "assets/audio-library/cien_gaviotas/tracks/piano.mp3",
+          "drive_url": ""
+        },
+        {
+          "id": "other",
+          "label": "Resto",
+          "source": "other.wav",
+          "file": "tracks/other.mp3",
+          "url": "assets/audio-library/cien_gaviotas/tracks/other.mp3",
+          "drive_url": ""
+        }
+      ],
+      "variants": {
+        "0": {
+          "label": "Original",
+          "semitones": 0,
+          "tracks": [
+            {
+              "id": "vocals",
+              "label": "Voz",
+              "source": "vocals.wav",
+              "file": "tracks/vocals.mp3",
+              "url": "assets/audio-library/cien_gaviotas/tracks/vocals.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "drums",
+              "label": "Batería",
+              "source": "drums.wav",
+              "file": "tracks/drums.mp3",
+              "url": "assets/audio-library/cien_gaviotas/tracks/drums.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "bass",
+              "label": "Bajo",
+              "source": "bass.wav",
+              "file": "tracks/bass.mp3",
+              "url": "assets/audio-library/cien_gaviotas/tracks/bass.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "guitar",
+              "label": "Guitarra",
+              "source": "guitar.wav",
+              "file": "tracks/guitar.mp3",
+              "url": "assets/audio-library/cien_gaviotas/tracks/guitar.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "piano",
+              "label": "Piano / teclado",
+              "source": "piano.wav",
+              "file": "tracks/piano.mp3",
+              "url": "assets/audio-library/cien_gaviotas/tracks/piano.mp3",
+              "drive_url": ""
+            },
+            {
+              "id": "other",
+              "label": "Resto",
+              "source": "other.wav",
+              "file": "tracks/other.mp3",
+              "url": "assets/audio-library/cien_gaviotas/tracks/other.mp3",
+              "drive_url": ""
+            }
+          ]
+        }
+      },
+      "notes": "URLs relativas. Si los audios están en Drive, sustituir url por enlace directo reproducible si hace falta.",
+      "original_archive": {
+        "storage": "drive_local_sync",
+        "file": "cien_gaviotas__original.mp3",
+        "path": "H:\\Mi unidad\\BCB\\Audio Studio\\Originales\\cien_gaviotas__original.mp3"
+      },
+      "storage": "drive_local_sync",
+      "folder": "cien_gaviotas",
+      "published_at": "2026-07-05 17:03:49"
     },
     {
       "title": "Insurrecion",
