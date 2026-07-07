@@ -1,5 +1,5 @@
 /* APP-BCB - Service Worker - biblioteca publica no-cache - 20260705-181434 */
-const CACHE_NAME = "app-bcb-pwa-biblioteca-publica-20260705-181434";
+const CACHE_NAME = "app-bcb-pwa-reproductor-fix-20260707-174016";
 
 const APP_SHELL = [
   "./",
@@ -13,7 +13,7 @@ const APP_SHELL = [
   "./js/app.js",
   "./js/news-modal.js",
   "./js/admin-guard.js",
-  "./js/audio-library.js?v=20260705-181434",
+  "./js/audio-library.js?v=20260707-174016",
   "./assets/bcb_logo_main.png",
   "./assets/bcb_home_background.png",
   "./icons/icon-192.png",
