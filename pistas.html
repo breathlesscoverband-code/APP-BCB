@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BCB - Pistas de ensayo</title>
+  <style>
+    :root{--bg:#12070b;--panel:#21151a;--panel2:#2b1c22;--gold:#f2c45c;--txt:#fff3dc;--muted:#cdbb9a;--line:rgba(242,196,92,.25)}
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(135deg,#10070b,#25101a 45%,#0b0709);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    header{position:sticky;top:0;z-index:5;background:rgba(18,7,11,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:14px 18px}
+    header h1{margin:0;font-size:20px}
+    header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+    main{max-width:1160px;margin:0 auto;padding:18px}
+    .card{background:rgba(255,255,255,.055);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 18px 45px rgba(0,0,0,.25)}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    button,.btn{border:0;border-radius:10px;padding:10px 14px;background:var(--gold);color:#201207;font-weight:800;cursor:pointer;text-decoration:none;display:inline-block}
+    button.secondary{background:#3a2a31;color:var(--txt);border:1px solid var(--line)}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    input,select{border:1px solid var(--line);background:#160d12;color:var(--txt);border-radius:10px;padding:10px}
+    input[type=range]{padding:0}
+    .muted{color:var(--muted)}
+    .layout{display:grid;grid-template-columns:320px 1fr;gap:14px}
+    @media(max-width:850px){.layout{grid-template-columns:1fr}}
+    .song{display:block;width:100%;text-align:left;margin:0 0 8px;background:#2d2025;color:var(--txt);border:1px solid rgba(255,255,255,.1)}
+    .song.active{outline:2px solid var(--gold)}
+    .song strong{display:block}
+    .song small{color:var(--muted)}
+    .player-title{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+    .transport{display:flex;gap:8px;flex-wrap:wrap}
+    .track{display:grid;grid-template-columns:1.2fr 160px 70px 70px 70px;gap:10px;align-items:center;background:#21151a;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin:8px 0}
+    @media(max-width:760px){.track{grid-template-columns:1fr}.track label{display:flex;gap:8px;align-items:center}}
+    .status{padding:10px;border-radius:12px;background:#1d1217;border:1px solid var(--line);color:var(--muted);margin-top:10px}
+    .error{color:#ffb4a8;border-color:#a33;background:#2b1111}
+    .links a{color:var(--gold);margin-right:8px}
+    .time{font-variant-numeric:tabular-nums;color:var(--muted)}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Breathless Cover Band - Pistas de ensayo</h1>
+  <p>Pagina limpia sin service worker. Reproduce la biblioteca publicada por AudioStudio.</p>
+</header>
+
+<main>
+  <section class="card">
+    <div class="row">
+      <button id="reload">Recargar biblioteca</button>
+      <a class="btn" href="./?tab=audio-library">Volver a APP-BCB</a>
+      <span id="status" class="muted">Preparado.</span>
+    </div>
+  </section>
+
+  <section class="layout">
+    <aside class="card">
+      <input id="search" type="search" placeholder="Buscar tema..." style="width:100%;margin-bottom:12px">
+      <div id="songList"></div>
+    </aside>
+
+    <section class="card">
+      <div id="player">
+        <p class="muted">Carga la biblioteca y elige un tema.</p>
+      </div>
+    </section>
+  </section>
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  const LIB_URL = "https://breathlesscoverband-code.github.io/APP-BCB/assets/audio-library/library_bcb.json";
+  let library = null;
+  let currentSong = null;
+  let tracks = [];
+  let isPlaying = false;
+  let timer = null;
+  let loopOn = false;
+  let seeking = false;
+
+  const $ = (s, root=document) => root.querySelector(s);
+  const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
+
+  function status(msg, isError=false){
+    const el = $("#status");
+    el.textContent = msg || "";
+    el.className = isError ? "error" : "muted";
+  }
+
+  function fmt(sec){
+    sec = Math.max(0, sec || 0);
+    const m = Math.floor(sec/60);
+    const s = Math.floor(sec%60);
+    return String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+  }
+
+  function appBase(){
+    return "https://breathlesscoverband-code.github.io/APP-BCB/";
+  }
+
+  function trackUrl(track){
+    const candidate = track.drive_url || track.url || track.file || "";
+    if (!candidate) return "";
+    if (/^https?:\/\//i.test(candidate)) return candidate;
+    if (/^assets\/audio-library\//i.test(candidate)) return new URL(candidate, appBase()).href;
+    if (currentSong && currentSong.slug) return new URL("assets/audio-library/" + currentSong.slug + "/" + candidate, appBase()).href;
+    return new URL(candidate, appBase()).href;
+  }
+
+  async function loadLibrary(){
+    try{
+      status("Cargando biblioteca...");
+      const res = await fetch(LIB_URL + "?t=" + Date.now(), {cache:"no-store"});
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      library = await res.json();
+      const n = (library.songs || []).length;
+      status(n + " tema(s) cargado(s).");
+      renderSongs();
+      if(n) openSong(library.songs[0]);
+    }catch(err){
+      status("No se pudo cargar la biblioteca: " + err.message, true);
+    }
+  }
+
+  function renderSongs(){
+    const list = $("#songList");
+    const q = ($("#search").value || "").toLowerCase().trim();
+    const songs = (library && library.songs ? library.songs : []).filter(s => !q || String(s.title || "").toLowerCase().includes(q));
+    list.innerHTML = "";
+    if(!songs.length){
+      list.innerHTML = '<p class="muted">No hay temas.</p>';
+      return;
+    }
+    songs.forEach(song => {
+      const btn = document.createElement("button");
+      btn.className = "song" + (currentSong && currentSong.slug === song.slug ? " active" : "");
+      const count = (song.tracks || []).length;
+      btn.innerHTML = "<strong>" + (song.title || song.slug || "Tema") + "</strong><small>" + count + " pista(s)</small>";
+      btn.addEventListener("click", () => openSong(song));
+      list.appendChild(btn);
+    });
+  }
+
+  function variantTracks(song){
+    const key = song.default_variant || "0";
+    if(song.variants && song.variants[key] && Array.isArray(song.variants[key].tracks)) return song.variants[key].tracks;
+    return Array.isArray(song.tracks) ? song.tracks : [];
+  }
+
+  function openSong(song){
+    pauseAll();
+    currentSong = song;
+    const rawTracks = variantTracks(song);
+    tracks = rawTracks.map((tr, idx) => {
+      const audio = new Audio(trackUrl(tr));
+      audio.preload = "metadata";
+      return {
+        id: tr.id || tr.label || String(idx),
+        label: tr.label || tr.name || tr.id || "Pista",
+        audio,
+        url: audio.src,
+        volume: 1,
+        mute: false,
+        solo: false
+      };
+    });
+    renderPlayer();
+    renderSongs();
+    startTimer();
+  }
+
+  function renderPlayer(){
+    const player = $("#player");
+    const title = currentSong ? (currentSong.title || currentSong.slug || "Tema") : "Tema";
+    player.innerHTML = `
+      <div class="player-title">
+        <div>
+          <p class="muted">Sesion</p>
+          <h2 style="margin-top:0">${title}</h2>
+          <p class="muted">${tracks.length} pista(s)</p>
+        </div>
+        <div class="transport">
+          <button id="play">Play</button>
+          <button id="stop" class="secondary">Stop</button>
+          <button id="home" class="secondary">Inicio</button>
+        </div>
+      </div>
+
+      <div class="row" style="margin:12px 0">
+        <input id="seek" type="range" min="0" max="1000" value="0" style="flex:1">
+        <span id="time" class="time">00:00 / 00:00</span>
+      </div>
+
+      <div class="row">
+        <label>Velocidad <select id="speed">
+          <option value="0.75">0.75x</option>
+          <option value="0.85">0.85x</option>
+          <option value="1" selected>1.00x</option>
+          <option value="1.10">1.10x</option>
+          <option value="1.25">1.25x</option>
+        </select></label>
+        <label>Volumen general <input id="master" type="range" min="0" max="100" value="100"></label>
+        <label>Loop A <input id="loopA" type="number" min="0" step="0.1" placeholder="segundos"></label>
+        <label>Loop B <input id="loopB" type="number" min="0" step="0.1" placeholder="segundos"></label>
+        <button id="loop" class="secondary">Loop OFF</button>
+      </div>
+
+      <div id="tracks"></div>
+    `;
+
+    $("#play").addEventListener("click", () => isPlaying ? pauseAll() : playAll());
+    $("#stop").addEventListener("click", stopAll);
+    $("#home").addEventListener("click", () => syncTo(0));
+    $("#speed").addEventListener("change", e => applySpeed(parseFloat(e.target.value || "1")));
+    $("#master").addEventListener("input", updateVolumes);
+    $("#loop").addEventListener("click", e => {
+      loopOn = !loopOn;
+      e.target.textContent = loopOn ? "Loop ON" : "Loop OFF";
+    });
+    $("#seek").addEventListener("input", () => {
+      seeking = true;
+      const d = duration();
+      const pos = d * (parseInt($("#seek").value,10)/1000);
+      $("#time").textContent = fmt(pos) + " / " + fmt(d);
+    });
+    $("#seek").addEventListener("change", () => {
+      const d = duration();
+      const pos = d * (parseInt($("#seek").value,10)/1000);
+      syncTo(pos);
+      seeking = false;
+    });
+
+    renderTrackRows();
+  }
+
+  function renderTrackRows(){
+    const box = $("#tracks");
+    box.innerHTML = "";
+    tracks.forEach(t => {
+      const row = document.createElement("div");
+      row.className = "track";
+      row.innerHTML = `
+        <strong>${t.label}</strong>
+        <label>Vol <input class="vol" type="range" min="0" max="100" value="100"></label>
+        <label><input class="mute" type="checkbox"> Mute</label>
+        <label><input class="solo" type="checkbox"> Solo</label>
+        <a class="btn" href="${t.url}" target="_blank" rel="noopener">Abrir</a>
+      `;
+      box.appendChild(row);
+      $(".vol", row).addEventListener("input", e => { t.volume = parseInt(e.target.value,10)/100; updateVolumes(); });
+      $(".mute", row).addEventListener("change", e => { t.mute = e.target.checked; updateVolumes(); });
+      $(".solo", row).addEventListener("change", e => { t.solo = e.target.checked; updateVolumes(); });
+    });
+    updateVolumes();
+  }
+
+  function primary(){ return tracks.length ? tracks[0].audio : null; }
+  function duration(){ const a = primary(); return a && isFinite(a.duration) ? a.duration : 0; }
+
+  function syncTo(time){
+    tracks.forEach(t => {
+      try { t.audio.currentTime = Math.max(0, Math.min(time, t.audio.duration || time)); } catch(e){}
+    });
+    updateSeek();
+  }
+
+  function applySpeed(rate){
+    tracks.forEach(t => {
+      t.audio.playbackRate = rate;
+      t.audio.preservesPitch = true;
+      t.audio.mozPreservesPitch = true;
+      t.audio.webkitPreservesPitch = true;
+    });
+  }
+
+  function updateVolumes(){
+    const solos = tracks.filter(t => t.solo).map(t => t.id);
+    const master = Math.max(0, Math.min(1, parseInt(($("#master") && $("#master").value) || "100", 10)/100));
+    tracks.forEach(t => {
+      const active = solos.length === 0 || solos.includes(t.id);
+      t.audio.muted = t.mute || !active;
+      t.audio.volume = Math.max(0, Math.min(1, t.volume * master));
+    });
+  }
+
+  async function playAll(){
+    updateVolumes();
+    applySpeed(parseFloat(($("#speed") && $("#speed").value) || "1"));
+    const start = primary() ? primary().currentTime : 0;
+    syncTo(start);
+    try{
+      await Promise.all(tracks.map(t => t.audio.play()));
+      isPlaying = true;
+      $("#play").textContent = "Pausa";
+    }catch(err){
+      status("El navegador ha bloqueado el audio o falta una pista: " + err.message, true);
+    }
+  }
+
+  function pauseAll(){
+    tracks.forEach(t => t.audio.pause());
+    isPlaying = false;
+    const b = $("#play");
+    if(b) b.textContent = "Play";
+  }
+
+  function stopAll(){
+    pauseAll();
+    syncTo(0);
+  }
+
+  function updateSeek(){
+    const d = duration();
+    const t = primary() ? primary().currentTime : 0;
+    const time = $("#time");
+    const seek = $("#seek");
+    if(time) time.textContent = fmt(t) + " / " + fmt(d);
+    if(seek && !seeking && d > 0) seek.value = Math.round((t/d)*1000);
+  }
+
+  function checkLoop(){
+    if(!loopOn || !primary()) return;
+    const a = parseFloat($("#loopA").value);
+    const b = parseFloat($("#loopB").value);
+    if(!isFinite(a) || !isFinite(b) || b <= a) return;
+    if(primary().currentTime >= b) syncTo(a);
+  }
+
+  function startTimer(){
+    if(timer) clearInterval(timer);
+    timer = setInterval(() => {
+      updateSeek();
+      checkLoop();
+      if(isPlaying && primary() && primary().ended) pauseAll();
+    }, 150);
+  }
+
+  $("#reload").addEventListener("click", loadLibrary);
+  $("#search").addEventListener("input", renderSongs);
+  loadLibrary();
+})();
+</script>
+</body>
+</html>
