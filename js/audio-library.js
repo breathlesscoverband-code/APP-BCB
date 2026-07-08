@@ -1,7 +1,4 @@
-/* AUDIO_LIBRARY_TRACK_URL_FIX: corrige rutas de pistas y textos del reproductor. */
-/* AUDIO_LIBRARY_PUBLIC_URL_FIX: biblioteca BCB publica forzada a URL absoluta. */
-/* AUDIO_LIBRARY_FETCH_NOSTORE_PATCH */
-/* Audio Library Player v1.2  -  N / BCB
+/* Audio Library Player v1.2 · Ñ / BCB
    Lee un library.json y reproduce pistas ya separadas.
    No separa audio. No necesita Windows.
 */
@@ -32,26 +29,11 @@
   function isAbsoluteUrl(value){
     return /^https?:\/\//i.test(value || '') || /^data:/i.test(value || '') || /^blob:/i.test(value || '');
   }
-  function appBaseUrl(){
-    const path = window.location.pathname || '/';
-    const folder = path.endsWith('/') ? path : path.replace(/[^\\/]*$/, '');
-    return window.location.origin + folder;
-  }
-
   function resolveTrackUrl(track, baseUrl){
     const candidate = track.drive_url || track.url || track.file || '';
     if (!candidate) return '';
     if (isAbsoluteUrl(candidate)) return candidate;
-
-    // Si el JSON se carga desde /assets/audio-library/library_bcb.json,
-    // las pistas con ruta assets/audio-library/... deben resolverse desde la raiz de la app,
-    // no desde la carpeta del propio JSON. Si no, se duplica assets/audio-library.
-    if (/^assets\/audio-library\//i.test(candidate)) {
-      try { return new URL(candidate, appBaseUrl()).href; }
-      catch(e){ return candidate; }
-    }
-
-    try { return new URL(candidate, baseUrl || appBaseUrl()).href; }
+    try { return new URL(candidate, baseUrl || window.location.href).href; }
     catch(e){ return candidate; }
   }
 
@@ -136,8 +118,8 @@
             const data = JSON.parse(reader.result);
             this.libraryBaseUrl = window.location.href;
             this.setLibrary(data);
-            this.setStatus('Biblioteca importada desde archivo. Nota: las rutas relativas solo funcionaran si son accesibles desde esta app.');
-          } catch(err){ this.setStatus('JSON no valido: ' + err.message, true); }
+            this.setStatus('Biblioteca importada desde archivo. Nota: las rutas relativas solo funcionarán si son accesibles desde esta app.');
+          } catch(err){ this.setStatus('JSON no válido: ' + err.message, true); }
         };
         reader.readAsText(file);
       });
@@ -160,7 +142,7 @@
         this.setLibrary(data);
         try { localStorage.setItem('audio_library_url_' + this.config.band, url); } catch(e){}
       } catch(err){
-        this.setStatus('No se pudo cargar library.json: ' + err.message + '. Revisa permisos/URL del Drive o usa un indice dentro de assets/audio-library/.', true);
+        this.setStatus('No se pudo cargar library.json: ' + err.message + '. Revisa permisos/URL del Drive o usa un índice dentro de assets/audio-library/.', true);
       }
     }
 
@@ -189,7 +171,7 @@
         btn.className = 'audio-lib-song';
         if (this.currentSong && this.currentSong.slug === song.slug) btn.classList.add('active');
         const variants = song.variants ? Object.keys(song.variants).length : 1;
-        btn.innerHTML = `<strong>${song.title || song.slug || 'Tema'}</strong><small>${(song.tracks||[]).length} pista(s)  -  ${variants} tono(s)</small>`;
+        btn.innerHTML = `<strong>${song.title || song.slug || 'Tema'}</strong><small>${(song.tracks||[]).length} pista(s) · ${variants} tono(s)</small>`;
         btn.addEventListener('click', () => this.openSong(song));
         holder.appendChild(btn);
       });
@@ -209,21 +191,21 @@
       const variantOptions = this.variantOptions(song);
       const variantCount = this.variantCount(song);
       const toneNotice = variantCount > 1
-        ? 'Tono disponible: elige variante y se cargaran las pistas ya preparadas.'
+        ? 'Tono disponible: elige variante y se cargarán las pistas ya preparadas.'
         : 'Solo tono original disponible. Para cambiar tono, el administrador debe publicar variantes (-2, -1, +1, +2) desde Audio Studio.';
       const toneDisabled = variantCount > 1 ? '' : 'disabled';
       player.innerHTML = `
         <div class="audio-lib-player-head">
           <div>
-            <p class="audio-lib-eyebrow">Sesion</p>
+            <p class="audio-lib-eyebrow">Sesión</p>
             <h3>${song.title || 'Tema'}</h3>
             <p class="audio-lib-muted">${tracks.length} pista(s). ${song.notes || ''}</p>
             ${researchLinksHtml(song)}
           </div>
           <div class="audio-lib-transport-buttons">
-            <button type="button" class="audio-lib-btn play">Play</button>
-            <button type="button" class="audio-lib-btn secondary stop">Stop</button>
-            <button type="button" class="audio-lib-btn secondary home">Inicio</button>
+            <button type="button" class="audio-lib-btn play">▶ Play</button>
+            <button type="button" class="audio-lib-btn secondary stop">■ Stop</button>
+            <button type="button" class="audio-lib-btn secondary home">↺ Inicio</button>
           </div>
         </div>
         <div class="audio-lib-seek-row">
@@ -370,13 +352,13 @@
       await Promise.all(this.tracks.map(t => t.audio.play().catch(()=>{})));
       this.isPlaying = true;
       const btn = q(this.root, '.audio-lib-player .play');
-      if (btn) btn.textContent = 'Pausa';
+      if (btn) btn.textContent = '⏸ Pausa';
     }
     pauseAll(){
       this.tracks.forEach(t => t.audio.pause());
       this.isPlaying = false;
       const btn = q(this.root, '.audio-lib-player .play');
-      if (btn) btn.textContent = 'Play';
+      if (btn) btn.textContent = '▶ Play';
     }
     stopAll(){ this.pauseAll(); this.syncTo(0); }
     updateSeek(){
@@ -415,6 +397,3 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.initAudioLibraryPlayers);
   else window.initAudioLibraryPlayers();
 })();
-
-
-

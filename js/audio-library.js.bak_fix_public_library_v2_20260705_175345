@@ -1,0 +1,402 @@
+﻿/* Audio Library Player v1.2 Â· Ã‘ / BCB
+   Lee un library.json y reproduce pistas ya separadas.
+   No separa audio. No necesita Windows.
+*/
+(function(){
+  function q(root, sel){ return root.querySelector(sel); }
+  function qa(root, sel){ return Array.from(root.querySelectorAll(sel)); }
+  function fmt(sec){
+    sec = Math.max(0, sec || 0);
+    const m = Math.floor(sec/60);
+    const s = Math.floor(sec%60);
+    return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+  function escapeHtml(value){
+    return String(value || '').replace(/[&<>"']/g, ch => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+    }[ch]));
+  }
+  function researchLinksHtml(song){
+    const research = song && song.research ? song.research : null;
+    if (!research || !Array.isArray(research.sources) || !research.sources.length) return '';
+    const items = research.sources.map(src => {
+      if (!src || !src.url) return '';
+      return `<a href="${escapeHtml(src.url)}" target="_blank" rel="noopener">${escapeHtml(src.label || src.id || 'Referencia')}</a>`;
+    }).join('');
+    if (!items) return '';
+    return `<div class="audio-lib-research"><strong>Referencias del tema</strong><div>${items}</div></div>`;
+  }
+  function isAbsoluteUrl(value){
+    return /^https?:\/\//i.test(value || '') || /^data:/i.test(value || '') || /^blob:/i.test(value || '');
+  }
+  function resolveTrackUrl(track, baseUrl){
+    const candidate = track.drive_url || track.url || track.file || '';
+    if (!candidate) return '';
+    if (isAbsoluteUrl(candidate)) return candidate;
+    try { return new URL(candidate, baseUrl || window.location.href).href; }
+    catch(e){ return candidate; }
+  }
+
+  class MultiTrackPlayer {
+    constructor(root){
+      this.root = root;
+      this.config = {
+        band: root.dataset.band || '',
+        bandLabel: root.dataset.bandLabel || '',
+        defaultLibraryUrl: root.dataset.libraryUrl || ''
+      };
+      this.library = null;
+      this.libraryBaseUrl = this.config.defaultLibraryUrl || window.location.href;
+      this.currentSong = null;
+      this.currentVariantKey = '0';
+      this.tracks = [];
+      this.isPlaying = false;
+      this.loopOn = false;
+      this.seeking = false;
+      this.timer = null;
+      this.renderShell();
+      this.bind();
+      if (this.config.defaultLibraryUrl) this.loadLibraryFromUrl(this.config.defaultLibraryUrl);
+      else this.setStatus('Configura la URL del library.json o importa un archivo JSON.');
+    }
+
+    renderShell(){
+      this.root.innerHTML = `
+        <div class="audio-lib-shell">
+          <div class="audio-lib-head">
+            <div>
+              <p class="audio-lib-eyebrow">Biblioteca de pistas</p>
+              <h3>${this.config.bandLabel || 'Biblioteca'}</h3>
+              <p class="audio-lib-muted">Pistas ya separadas para ensayo: volumen general, volumen por pista, mute/solo, velocidad, loop y variantes de tono si existen.</p>
+            </div>
+            <div class="audio-lib-actions">
+              <button type="button" class="audio-lib-btn audio-lib-load-default">Cargar biblioteca</button>
+            </div>
+          </div>
+
+          <div class="audio-lib-config">
+            <label>URL de library.json
+              <input type="url" class="audio-lib-url" placeholder="https://..." value="${this.config.defaultLibraryUrl || ''}">
+            </label>
+            <button type="button" class="audio-lib-btn audio-lib-load-url">Cargar URL</button>
+            <label class="audio-lib-file-btn">Importar JSON
+              <input type="file" class="audio-lib-file" accept=".json,application/json">
+            </label>
+          </div>
+
+          <div class="audio-lib-status"></div>
+
+          <div class="audio-lib-layout">
+            <aside class="audio-lib-list">
+              <input type="search" class="audio-lib-search" placeholder="Buscar tema...">
+              <div class="audio-lib-songs"></div>
+            </aside>
+            <section class="audio-lib-player">
+              <div class="audio-lib-empty">Carga una biblioteca y elige un tema.</div>
+            </section>
+          </div>
+        </div>
+      `;
+    }
+
+    bind(){
+      q(this.root, '.audio-lib-load-default').addEventListener('click', () => {
+        const url = q(this.root, '.audio-lib-url').value.trim() || this.config.defaultLibraryUrl;
+        if (url) this.loadLibraryFromUrl(url);
+      });
+      q(this.root, '.audio-lib-load-url').addEventListener('click', () => {
+        const url = q(this.root, '.audio-lib-url').value.trim();
+        if (!url) return this.setStatus('Pega una URL de library.json.', true);
+        this.loadLibraryFromUrl(url);
+      });
+      q(this.root, '.audio-lib-file').addEventListener('change', e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            this.libraryBaseUrl = window.location.href;
+            this.setLibrary(data);
+            this.setStatus('Biblioteca importada desde archivo. Nota: las rutas relativas solo funcionarÃ¡n si son accesibles desde esta app.');
+          } catch(err){ this.setStatus('JSON no vÃ¡lido: ' + err.message, true); }
+        };
+        reader.readAsText(file);
+      });
+      q(this.root, '.audio-lib-search').addEventListener('input', () => this.renderSongs());
+    }
+
+    setStatus(msg, error=false){
+      const el = q(this.root, '.audio-lib-status');
+      el.textContent = msg || '';
+      el.classList.toggle('is-error', !!error);
+    }
+
+    async loadLibraryFromUrl(url){
+      try {
+        this.setStatus('Cargando biblioteca...');
+        const res = await fetch(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        this.libraryBaseUrl = url;
+        this.setLibrary(data);
+        try { localStorage.setItem('audio_library_url_' + this.config.band, url); } catch(e){}
+      } catch(err){
+        this.setStatus('No se pudo cargar library.json: ' + err.message + '. Revisa permisos/URL del Drive o usa un Ã­ndice dentro de assets/audio-library/.', true);
+      }
+    }
+
+    setLibrary(data){
+      const songs = Array.isArray(data.songs) ? data.songs : [];
+      this.library = Object.assign({}, data, {songs});
+      this.setStatus(`${songs.length} tema(s) cargado(s).`);
+      this.renderSongs();
+      if (songs.length) this.openSong(songs[0]);
+    }
+
+    renderSongs(){
+      const holder = q(this.root, '.audio-lib-songs');
+      const search = (q(this.root, '.audio-lib-search').value || '').toLowerCase().trim();
+      const songs = (this.library && this.library.songs ? this.library.songs : []).filter(s =>
+        !search || String(s.title || '').toLowerCase().includes(search)
+      );
+      holder.innerHTML = '';
+      if (!songs.length) {
+        holder.innerHTML = '<div class="audio-lib-muted">No hay temas que mostrar.</div>';
+        return;
+      }
+      songs.forEach(song => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'audio-lib-song';
+        if (this.currentSong && this.currentSong.slug === song.slug) btn.classList.add('active');
+        const variants = song.variants ? Object.keys(song.variants).length : 1;
+        btn.innerHTML = `<strong>${song.title || song.slug || 'Tema'}</strong><small>${(song.tracks||[]).length} pista(s) Â· ${variants} tono(s)</small>`;
+        btn.addEventListener('click', () => this.openSong(song));
+        holder.appendChild(btn);
+      });
+    }
+
+    variantTracks(song, key){
+      if (song.variants && song.variants[key] && Array.isArray(song.variants[key].tracks)) return song.variants[key].tracks;
+      return Array.isArray(song.tracks) ? song.tracks : [];
+    }
+
+    openSong(song, variantKey){
+      this.pauseAll();
+      this.currentSong = song;
+      this.currentVariantKey = variantKey || song.default_variant || '0';
+      const tracks = this.variantTracks(song, this.currentVariantKey);
+      const player = q(this.root, '.audio-lib-player');
+      const variantOptions = this.variantOptions(song);
+      const variantCount = this.variantCount(song);
+      const toneNotice = variantCount > 1
+        ? 'Tono disponible: elige variante y se cargarÃ¡n las pistas ya preparadas.'
+        : 'Solo tono original disponible. Para cambiar tono, el administrador debe publicar variantes (-2, -1, +1, +2) desde Audio Studio.';
+      const toneDisabled = variantCount > 1 ? '' : 'disabled';
+      player.innerHTML = `
+        <div class="audio-lib-player-head">
+          <div>
+            <p class="audio-lib-eyebrow">SesiÃ³n</p>
+            <h3>${song.title || 'Tema'}</h3>
+            <p class="audio-lib-muted">${tracks.length} pista(s). ${song.notes || ''}</p>
+            ${researchLinksHtml(song)}
+          </div>
+          <div class="audio-lib-transport-buttons">
+            <button type="button" class="audio-lib-btn play">â–¶ Play</button>
+            <button type="button" class="audio-lib-btn secondary stop">â–  Stop</button>
+            <button type="button" class="audio-lib-btn secondary home">â†º Inicio</button>
+          </div>
+        </div>
+        <div class="audio-lib-seek-row">
+          <input type="range" class="seek" min="0" max="1000" value="0">
+          <span class="time">00:00 / 00:00</span>
+        </div>
+        <div class="audio-lib-controls">
+          <label>Velocidad
+            <select class="speed">
+              <option value="0.5">0.50x</option>
+              <option value="0.75">0.75x</option>
+              <option value="0.85">0.85x</option>
+              <option value="1" selected>1.00x</option>
+              <option value="1.10">1.10x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.50">1.50x</option>
+            </select>
+          </label>
+          <label>Volumen general <input type="range" class="master-volume" min="0" max="100" value="100"></label>
+          <label>Tono
+            <select class="variant" ${toneDisabled}>${variantOptions}</select>
+            <small class="audio-lib-tone-note">${toneNotice}</small>
+          </label>
+          <label>Loop A <input type="number" class="loop-a" min="0" step="0.1" placeholder="segundos"></label>
+          <label>Loop B <input type="number" class="loop-b" min="0" step="0.1" placeholder="segundos"></label>
+          <button type="button" class="audio-lib-btn secondary loop">Loop OFF</button>
+        </div>
+        <div class="audio-lib-track-list"></div>
+      `;
+      this.tracks = tracks.map((track, idx) => {
+        const url = resolveTrackUrl(track, this.libraryBaseUrl);
+        const au = new Audio(url);
+        au.preload = 'auto';
+        const state = { id: track.id || track.label || String(idx), label: track.label || track.name || track.id || 'Pista', url, audio: au, volume: 1, mute: false, solo: false };
+        return state;
+      });
+      this.renderTrackRows();
+      this.bindPlayerControls();
+      this.renderSongs();
+      this.startTimer();
+      this.scrollSessionIntoView();
+    }
+
+    scrollSessionIntoView(){
+      const player = q(this.root, '.audio-lib-player');
+      if (!player) return;
+      window.setTimeout(() => {
+        try {
+          player.scrollIntoView({behavior:'smooth', block:'start'});
+        } catch(e) {
+          try { player.scrollIntoView(); } catch(_e) {}
+        }
+        const play = q(player, '.play');
+        if (play && window.matchMedia && window.matchMedia('(max-width: 800px)').matches) {
+          try { play.focus({preventScroll:true}); } catch(e) {}
+        }
+      }, 80);
+    }
+
+    variantCount(song){
+      const variants = song.variants || {'0': {label:'Original', semitones:0}};
+      return Object.keys(variants).length;
+    }
+
+    variantOptions(song){
+      const variants = song.variants || {'0': {label:'Original', semitones:0}};
+      return Object.keys(variants).sort((a,b)=>parseInt(a)-parseInt(b)).map(key => {
+        const v = variants[key] || {};
+        const selected = String(key) === String(this.currentVariantKey) ? 'selected' : '';
+        return `<option value="${key}" ${selected}>${v.label || (key === '0' ? 'Original' : key + ' semitonos')}</option>`;
+      }).join('');
+    }
+
+    renderTrackRows(){
+      const list = q(this.root, '.audio-lib-track-list');
+      list.innerHTML = '';
+      this.tracks.forEach(t => {
+        const row = document.createElement('div');
+        row.className = 'audio-lib-track';
+        row.innerHTML = `
+          <div><strong>${t.label}</strong><small>${t.url ? '' : 'URL no configurada'}</small></div>
+          <label>Vol <input type="range" class="vol" min="0" max="100" value="100"></label>
+          <label><input type="checkbox" class="mute"> Mute</label>
+          <label><input type="checkbox" class="solo"> Solo</label>
+          <a href="${t.url}" target="_blank" rel="noopener">Abrir</a>
+        `;
+        list.appendChild(row);
+        row.querySelector('.vol').addEventListener('input', e => { t.volume = parseInt(e.target.value,10)/100; this.updateVolumes(); });
+        row.querySelector('.mute').addEventListener('change', e => { t.mute = e.target.checked; this.updateVolumes(); });
+        row.querySelector('.solo').addEventListener('change', e => { t.solo = e.target.checked; this.updateVolumes(); });
+      });
+      this.updateVolumes();
+    }
+
+    bindPlayerControls(){
+      const player = q(this.root, '.audio-lib-player');
+      q(player, '.play').addEventListener('click', () => this.isPlaying ? this.pauseAll() : this.playAll());
+      q(player, '.stop').addEventListener('click', () => this.stopAll());
+      q(player, '.home').addEventListener('click', () => this.syncTo(0));
+      q(player, '.speed').addEventListener('change', e => this.applySpeed(parseFloat(e.target.value || '1')));
+      const master = q(player, '.master-volume');
+      if (master) master.addEventListener('input', () => this.updateVolumes());
+      q(player, '.loop').addEventListener('click', e => {
+        this.loopOn = !this.loopOn;
+        e.target.textContent = this.loopOn ? 'Loop ON' : 'Loop OFF';
+        e.target.classList.toggle('active', this.loopOn);
+      });
+      q(player, '.variant').addEventListener('change', e => this.openSong(this.currentSong, e.target.value));
+      const seek = q(player, '.seek');
+      seek.addEventListener('input', () => {
+        this.seeking = true;
+        const d = this.duration();
+        const pos = d * (parseInt(seek.value,10)/1000);
+        q(player, '.time').textContent = fmt(pos) + ' / ' + fmt(d);
+      });
+      seek.addEventListener('change', () => {
+        const d = this.duration();
+        const pos = d * (parseInt(seek.value,10)/1000);
+        this.syncTo(pos);
+        this.seeking = false;
+      });
+    }
+
+    primary(){ return this.tracks.length ? this.tracks[0].audio : null; }
+    duration(){ const a = this.primary(); return a && isFinite(a.duration) ? a.duration : 0; }
+    syncTo(time){ this.tracks.forEach(t => { try { t.audio.currentTime = Math.max(0, Math.min(time, t.audio.duration || time)); } catch(e){} }); this.updateSeek(); }
+    applySpeed(rate){ this.tracks.forEach(t => { t.audio.playbackRate = rate; t.audio.preservesPitch = true; t.audio.mozPreservesPitch = true; t.audio.webkitPreservesPitch = true; }); }
+    updateVolumes(){
+      const solos = this.tracks.filter(t => t.solo).map(t => t.id);
+      const player = q(this.root, '.audio-lib-player');
+      const masterEl = player ? q(player, '.master-volume') : null;
+      const master = masterEl ? Math.max(0, Math.min(1, parseInt(masterEl.value || '100', 10)/100)) : 1;
+      this.tracks.forEach(t => {
+        const activeBySolo = solos.length === 0 || solos.includes(t.id);
+        t.audio.muted = t.mute || !activeBySolo;
+        t.audio.volume = Math.max(0, Math.min(1, t.volume * master));
+      });
+    }
+    async playAll(){
+      this.updateVolumes();
+      this.applySpeed(parseFloat(q(this.root, '.audio-lib-player .speed').value || '1'));
+      const start = this.primary() ? this.primary().currentTime : 0;
+      this.syncTo(start);
+      await Promise.all(this.tracks.map(t => t.audio.play().catch(()=>{})));
+      this.isPlaying = true;
+      const btn = q(this.root, '.audio-lib-player .play');
+      if (btn) btn.textContent = 'â¸ Pausa';
+    }
+    pauseAll(){
+      this.tracks.forEach(t => t.audio.pause());
+      this.isPlaying = false;
+      const btn = q(this.root, '.audio-lib-player .play');
+      if (btn) btn.textContent = 'â–¶ Play';
+    }
+    stopAll(){ this.pauseAll(); this.syncTo(0); }
+    updateSeek(){
+      const player = q(this.root, '.audio-lib-player');
+      if (!player) return;
+      const seek = q(player, '.seek');
+      const time = q(player, '.time');
+      const d = this.duration();
+      const t = this.primary() ? this.primary().currentTime : 0;
+      if (time) time.textContent = fmt(t) + ' / ' + fmt(d);
+      if (seek && !this.seeking && d > 0) seek.value = Math.round((t/d)*1000);
+    }
+    checkLoop(){
+      if (!this.loopOn || !this.primary()) return;
+      const player = q(this.root, '.audio-lib-player');
+      const a = parseFloat(q(player, '.loop-a').value);
+      const b = parseFloat(q(player, '.loop-b').value);
+      if (!isFinite(a) || !isFinite(b) || b <= a) return;
+      if (this.primary().currentTime >= b) this.syncTo(a);
+    }
+    startTimer(){
+      if (this.timer) clearInterval(this.timer);
+      this.timer = setInterval(() => {
+        this.updateSeek();
+        this.checkLoop();
+        if (this.isPlaying && this.primary() && this.primary().ended) this.pauseAll();
+      }, 150);
+    }
+  }
+
+  window.initAudioLibraryPlayers = function(){
+    document.querySelectorAll('[data-audio-library]').forEach(root => {
+      if (!root.__audioLibraryPlayer) root.__audioLibraryPlayer = new MultiTrackPlayer(root);
+    });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.initAudioLibraryPlayers);
+  else window.initAudioLibraryPlayers();
+})();
+
+
+
