@@ -1,4 +1,4 @@
-/* Audio Library Player v1.2 · Ñ / BCB
+﻿/* Audio Library Player v1.2 · Ñ / BCB
    Lee un library.json y reproduce pistas ya separadas.
    No separa audio. No necesita Windows.
 */
@@ -33,8 +33,16 @@
     const candidate = track.drive_url || track.url || track.file || '';
     if (!candidate) return '';
     if (isAbsoluteUrl(candidate)) return candidate;
-    try { return new URL(candidate, baseUrl || window.location.href).href; }
-    catch(e){ return candidate; }
+
+    try {
+      if (/^assets\/audio-library\//i.test(candidate)) {
+        return new URL(candidate, window.location.origin + '/APP-BCB/').href;
+      }
+
+      return new URL(candidate, baseUrl || window.location.href).href;
+    } catch(e){
+      return candidate;
+    }
   }
 
   class MultiTrackPlayer {
@@ -397,3 +405,4 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.initAudioLibraryPlayers);
   else window.initAudioLibraryPlayers();
 })();
+
